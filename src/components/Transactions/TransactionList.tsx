@@ -32,65 +32,76 @@ import {
   Filter,
   Search, 
   ChevronLeft, 
-  ChevronRight
+  ChevronRight,
+  CreditCard
 } from 'lucide-react';
-import { categories, transactions, Transaction } from '@/lib/mockData';
+import { categories, expenses, getPaymentMethodName, Expense, PaymentMethod } from '@/lib/mockData';
 import CategoryBadge from '@/components/UI/CategoryBadge';
 import { cn } from '@/lib/utils';
 import { formatCurrency } from '@/lib/utils';
 import { format } from 'date-fns';
 
 const TransactionList = () => {
-  const [filteredTransactions, setFilteredTransactions] = useState<Transaction[]>(transactions);
+  const [filteredExpenses, setFilteredExpenses] = useState<Expense[]>(expenses);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [searchText, setSearchText] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
-  const [typeFilter, setTypeFilter] = useState('all');
+  const [paymentMethodFilter, setPaymentMethodFilter] = useState('all');
   const [page, setPage] = useState(1);
   const itemsPerPage = 5;
 
   // Apply all filters
   const applyFilters = () => {
-    let filtered = [...transactions];
+    let filtered = [...expenses];
     
     // Search text filter
     if (searchText) {
-      filtered = filtered.filter(transaction => 
-        transaction.description.toLowerCase().includes(searchText.toLowerCase()));
+      filtered = filtered.filter(expense => 
+        expense.notes.toLowerCase().includes(searchText.toLowerCase()) ||
+        expense.expenseItems.some(item => 
+          item.description.toLowerCase().includes(searchText.toLowerCase())
+        )
+      );
     }
     
     // Category filter
     if (categoryFilter !== 'all') {
-      filtered = filtered.filter(transaction => transaction.category === categoryFilter);
+      const categoryId = parseInt(categoryFilter);
+      filtered = filtered.filter(expense => 
+        expense.expenseItems.some(item => item.categoryId === categoryId)
+      );
     }
     
-    // Type filter
-    if (typeFilter !== 'all') {
-      filtered = filtered.filter(transaction => transaction.type === typeFilter);
+    // Payment method filter
+    if (paymentMethodFilter !== 'all') {
+      const paymentMethod = parseInt(paymentMethodFilter) as PaymentMethod;
+      filtered = filtered.filter(expense => 
+        expense.expenseItems.some(item => item.paymentMethod === paymentMethod)
+      );
     }
     
     // Date filter
     if (selectedDate) {
-      filtered = filtered.filter(transaction => {
-        const transactionDate = new Date(transaction.date);
+      filtered = filtered.filter(expense => {
+        const expenseDate = new Date(expense.date);
         return (
-          transactionDate.getDate() === selectedDate.getDate() &&
-          transactionDate.getMonth() === selectedDate.getMonth() &&
-          transactionDate.getFullYear() === selectedDate.getFullYear()
+          expenseDate.getDate() === selectedDate.getDate() &&
+          expenseDate.getMonth() === selectedDate.getMonth() &&
+          expenseDate.getFullYear() === selectedDate.getFullYear()
         );
       });
     }
     
-    setFilteredTransactions(filtered);
+    setFilteredExpenses(filtered);
   };
   
   // Reset all filters
   const resetFilters = () => {
     setSearchText('');
     setCategoryFilter('all');
-    setTypeFilter('all');
+    setPaymentMethodFilter('all');
     setSelectedDate(undefined);
-    setFilteredTransactions(transactions);
+    setFilteredExpenses(expenses);
   };
   
   // Handle search input change
@@ -100,26 +111,26 @@ const TransactionList = () => {
   };
   
   // Paginated data
-  const paginatedData = filteredTransactions.slice(
+  const paginatedData = filteredExpenses.slice(
     (page - 1) * itemsPerPage,
     page * itemsPerPage
   );
   
   // Calculate total pages
-  const totalPages = Math.ceil(filteredTransactions.length / itemsPerPage);
+  const totalPages = Math.ceil(filteredExpenses.length / itemsPerPage);
   
   React.useEffect(() => {
     applyFilters();
-  }, [searchText, categoryFilter, typeFilter, selectedDate]);
+  }, [searchText, categoryFilter, paymentMethodFilter, selectedDate]);
   
   return (
     <Card className="animate-fade-up animate-delay-100">
       <CardHeader>
         <div className="flex items-center justify-between">
           <div>
-            <CardTitle>Recent Transactions</CardTitle>
+            <CardTitle>Recent Expenses</CardTitle>
             <CardDescription>
-              You have {filteredTransactions.length} transactions
+              You have {filteredExpenses.length} expenses
             </CardDescription>
           </div>
           <Button size="sm">View All</Button>
@@ -130,7 +141,7 @@ const TransactionList = () => {
           <div className="relative">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Search transactions..."
+              placeholder="Search expenses..."
               className="pl-8 w-full md:w-60"
               value={searchText}
               onChange={handleSearch}
@@ -148,7 +159,7 @@ const TransactionList = () => {
               <SelectContent>
                 <SelectItem value="all">All Categories</SelectItem>
                 {categories.map((category) => (
-                  <SelectItem key={category.id} value={category.name}>
+                  <SelectItem key={category.id} value={category.id.toString()}>
                     {category.name}
                   </SelectItem>
                 ))}
@@ -156,16 +167,20 @@ const TransactionList = () => {
             </Select>
             
             <Select
-              value={typeFilter}
-              onValueChange={setTypeFilter}
+              value={paymentMethodFilter}
+              onValueChange={setPaymentMethodFilter}
             >
               <SelectTrigger className="w-full md:w-36">
-                <SelectValue placeholder="Type" />
+                <SelectValue placeholder="Payment" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Types</SelectItem>
-                <SelectItem value="income">Income</SelectItem>
-                <SelectItem value="expense">Expense</SelectItem>
+                <SelectItem value="all">All Methods</SelectItem>
+                <SelectItem value={PaymentMethod.Cash.toString()}>Cash</SelectItem>
+                <SelectItem value={PaymentMethod.CreditCard.toString()}>Credit Card</SelectItem>
+                <SelectItem value={PaymentMethod.QRCodePayment.toString()}>QR Code</SelectItem>
+                <SelectItem value={PaymentMethod.EWallet.toString()}>eWallet</SelectItem>
+                <SelectItem value={PaymentMethod.BankTransfer.toString()}>Bank Transfer</SelectItem>
+                <SelectItem value={PaymentMethod.DuitNow.toString()}>DuitNow</SelectItem>
               </SelectContent>
             </Select>
             
@@ -204,6 +219,7 @@ const TransactionList = () => {
                 <TableHead>Date</TableHead>
                 <TableHead>Description</TableHead>
                 <TableHead>Category</TableHead>
+                <TableHead>Payment</TableHead>
                 <TableHead className="text-right">
                   Amount
                   <ArrowUpDown className="ml-2 h-4 w-4 inline" />
@@ -213,29 +229,44 @@ const TransactionList = () => {
             <TableBody>
               {paginatedData.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={4} className="text-center h-32 text-muted-foreground">
-                    No transactions found
+                  <TableCell colSpan={5} className="text-center h-32 text-muted-foreground">
+                    No expenses found
                   </TableCell>
                 </TableRow>
               ) : (
-                paginatedData.map((transaction) => (
-                  <TableRow key={transaction.id}>
-                    <TableCell className="font-medium">
-                      {format(new Date(transaction.date), 'MMM dd, yyyy')}
-                    </TableCell>
-                    <TableCell>{transaction.description}</TableCell>
-                    <TableCell>
-                      <CategoryBadge category={transaction.category} />
-                    </TableCell>
-                    <TableCell className={cn(
-                      "text-right font-medium",
-                      transaction.type === 'income' ? "text-finance-income" : "text-finance-expense"
-                    )}>
-                      {transaction.type === 'income' ? '+' : '-'} 
-                      {formatCurrency(transaction.amount)}
-                    </TableCell>
-                  </TableRow>
-                ))
+                paginatedData.map((expense) => {
+                  // Most expenses will have only 1 item in our mock, but display the first one
+                  const firstItem = expense.expenseItems[0];
+                  const category = categories.find(c => c.id === firstItem?.categoryId);
+                  
+                  return (
+                    <TableRow key={expense.id}>
+                      <TableCell className="font-medium">
+                        {format(new Date(expense.date), 'MMM dd, yyyy')}
+                      </TableCell>
+                      <TableCell>
+                        {firstItem?.description}
+                        {expense.expenseItems.length > 1 && (
+                          <span className="ml-1 text-xs text-muted-foreground">
+                            (+{expense.expenseItems.length - 1} more)
+                          </span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {category && <CategoryBadge category={category.name} />}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1 text-sm">
+                          <CreditCard className="h-3 w-3 text-muted-foreground" />
+                          {getPaymentMethodName(firstItem?.paymentMethod)}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-right font-medium text-finance-expense">
+                        {formatCurrency(expense.totalAmount)}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
               )}
             </TableBody>
           </Table>
@@ -246,8 +277,8 @@ const TransactionList = () => {
           <div className="flex items-center justify-between mt-4">
             <p className="text-sm text-muted-foreground">
               Showing {(page - 1) * itemsPerPage + 1} to{' '}
-              {Math.min(page * itemsPerPage, filteredTransactions.length)} of{' '}
-              {filteredTransactions.length} entries
+              {Math.min(page * itemsPerPage, filteredExpenses.length)} of{' '}
+              {filteredExpenses.length} entries
             </p>
             <div className="flex items-center gap-1">
               <Button
