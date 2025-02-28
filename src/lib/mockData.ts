@@ -1,4 +1,3 @@
-
 export type Transaction = {
   id: string;
   date: string;
@@ -24,17 +23,17 @@ export type Budget = {
   period: 'monthly' | 'weekly' | 'yearly';
 };
 
-// Sample categories
+// Sample categories with iOS-like muted colors
 export const categories: Category[] = [
-  { id: '1', name: 'Housing', color: '#9B87F5', type: 'expense', icon: 'home' },
-  { id: '2', name: 'Food', color: '#55B3F3', type: 'expense', icon: 'utensils' },
-  { id: '3', name: 'Transport', color: '#FF8A65', type: 'expense', icon: 'car' },
-  { id: '4', name: 'Entertainment', color: '#4DB6AC', type: 'expense', icon: 'tv' },
-  { id: '5', name: 'Shopping', color: '#9575CD', type: 'expense', icon: 'shopping-bag' },
-  { id: '6', name: 'Utilities', color: '#FFB74D', type: 'expense', icon: 'zap' },
-  { id: '7', name: 'Salary', color: '#4CAF50', type: 'income', icon: 'briefcase' },
-  { id: '8', name: 'Investments', color: '#42A5F5', type: 'income', icon: 'trending-up' },
-  { id: '9', name: 'Gifts', color: '#EC407A', type: 'income', icon: 'gift' }
+  { id: '1', name: 'Housing', color: '#8E9BC7', type: 'expense', icon: 'home' },
+  { id: '2', name: 'Food', color: '#93C0DA', type: 'expense', icon: 'utensils' },
+  { id: '3', name: 'Transport', color: '#D6A99A', type: 'expense', icon: 'car' },
+  { id: '4', name: 'Entertainment', color: '#92C1B8', type: 'expense', icon: 'tv' },
+  { id: '5', name: 'Shopping', color: '#B7A7CC', type: 'expense', icon: 'shopping-bag' },
+  { id: '6', name: 'Utilities', color: '#D8B78E', type: 'expense', icon: 'zap' },
+  { id: '7', name: 'Salary', color: '#73B17C', type: 'income', icon: 'briefcase' },
+  { id: '8', name: 'Investments', color: '#7AADC8', type: 'income', icon: 'trending-up' },
+  { id: '9', name: 'Gifts', color: '#D48A9B', type: 'income', icon: 'gift' }
 ];
 
 // Sample transactions

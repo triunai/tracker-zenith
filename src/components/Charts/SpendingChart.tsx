@@ -102,7 +102,7 @@ const SpendingChart = () => {
                 <XAxis dataKey="name" />
                 <YAxis />
                 <Tooltip content={<CustomTooltip />} />
-                <Bar dataKey="value" nameKey="name">
+                <Bar dataKey="value">
                   {data.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}

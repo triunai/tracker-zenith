@@ -63,18 +63,18 @@ export default {
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
 				},
-				// Finance tracker custom colors
+				// Finance tracker custom colors - more muted for iOS look
 				finance: {
-					'income': '#4CAF50',
-					'expense': '#FF5252',
-					'budget-safe': '#E8F5E9',
-					'budget-warning': '#FFF8E1',
-					'budget-danger': '#FFEBEE',
-					'chart-1': '#9B87F5',
-					'chart-2': '#55B3F3',
-					'chart-3': '#FF8A65',
-					'chart-4': '#4DB6AC',
-					'chart-5': '#9575CD'
+					'income': '#73B17C', // Softer green
+					'expense': '#E57373', // Softer red
+					'budget-safe': '#F1F8F1', // Very light green
+					'budget-warning': '#FFF8E1', // Very light yellow
+					'budget-danger': '#FEF5F5', // Very light red
+					'chart-1': '#8E9BC7', // Muted blue-purple
+					'chart-2': '#93C0DA', // Muted light blue
+					'chart-3': '#D6A99A', // Muted salmon
+					'chart-4': '#92C1B8', // Muted teal
+					'chart-5': '#B7A7CC' // Muted lavender
 				}
 			},
 			borderRadius: {
@@ -132,8 +132,8 @@ export default {
 				'scale-in': 'scale-in 0.3s ease-out'
 			},
 			boxShadow: {
-				'soft': '0 2px 15px rgba(0, 0, 0, 0.05)',
-				'elevated': '0 10px 30px -5px rgba(0, 0, 0, 0.1)',
+				'soft': '0 2px 15px rgba(0, 0, 0, 0.03)',
+				'elevated': '0 10px 30px -5px rgba(0, 0, 0, 0.05)',
 				'inner-glow': 'inset 0 1px 2px rgba(255, 255, 255, 0.1)'
 			},
 			backdropBlur: {

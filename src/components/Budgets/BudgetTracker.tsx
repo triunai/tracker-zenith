@@ -115,7 +115,6 @@ const BudgetTracker = () => {
                   <Progress 
                     value={percentage > 100 ? 100 : percentage} 
                     className={cn("h-2", getBgColor())}
-                    indicatorClassName={getProgressColor()}
                   />
                 </div>
               </div>
