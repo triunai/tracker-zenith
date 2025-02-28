@@ -31,7 +31,7 @@ const BudgetTracker = () => {
       <CardContent>
         <div className="space-y-4">
           {budgets.map((budget) => {
-            const category = categories.find(c => c.name === budget.category);
+            const category = categories.find(c => c.name === budget.category?.name);
             const percentage = Math.round((budget.spent / budget.amount) * 100);
             const status = getBudgetStatus(budget);
             const remaining = budget.amount - budget.spent;
@@ -69,7 +69,7 @@ const BudgetTracker = () => {
                       className="w-3 h-3 rounded-full"
                       style={{ backgroundColor: category?.color }}
                     ></div>
-                    <h4 className="font-medium">{budget.category}</h4>
+                    <h4 className="font-medium">{budget.category?.name}</h4>
                   </div>
                   
                   {percentage >= 90 && (

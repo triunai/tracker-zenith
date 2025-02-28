@@ -473,6 +473,20 @@ export const getTotalExpenses = (): number => {
   return expenses.reduce((total, expense) => total + expense.totalAmount, 0);
 };
 
+// Add the missing functions for DashboardSummary
+export const getIncomeTotal = (): number => {
+  // For this mock, let's assume we have some hard-coded income
+  return 3500; // Example monthly income
+};
+
+export const getExpenseTotal = (): number => {
+  return getTotalExpenses();
+};
+
+export const getBalance = (): number => {
+  return getIncomeTotal() - getExpenseTotal();
+};
+
 // Get expenses by category
 export const getExpensesByCategory = (): ChartDataPoint[] => {
   const categoryTotals = new Map<number, number>();
