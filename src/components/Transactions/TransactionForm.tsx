@@ -14,9 +14,106 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 
+type FormErrors = {
+  date?: string;
+  category?: string;
+  paymentMethod?: string;
+  description?: string;
+  amount?: string;
+  quantity?: string;
+};
+
 const TransactionForm = () => {
-  const [date, setDate] = useState<Date>(new Date());
   const [open, setOpen] = useState(false);
+  
+  // Form state
+  const [date, setDate] = useState<Date>(new Date());
+  const [category, setCategory] = useState<string>("");
+  const [paymentMethod, setPaymentMethod] = useState<string>("");
+  const [description, setDescription] = useState<string>("");
+  const [amount, setAmount] = useState<string>("");
+  const [quantity, setQuantity] = useState<string>("1");
+  
+  // Form errors
+  const [errors, setErrors] = useState<FormErrors>({});
+
+  // Validate the form
+  const validateForm = () => {
+    const newErrors: FormErrors = {};
+    
+    // Date validation - cannot be in the future
+    if (date > new Date()) {
+      newErrors.date = "Date cannot be in the future";
+    }
+    
+    // Category validation - must be selected
+    if (!category) {
+      newErrors.category = "Please select a category";
+    }
+    
+    // Payment method validation - must be selected
+    if (!paymentMethod) {
+      newErrors.paymentMethod = "Please select a payment method";
+    }
+    
+    // Description validation - cannot be empty
+    if (!description.trim()) {
+      newErrors.description = "Description is required";
+    }
+    
+    // Amount validation - must be positive
+    const amountNum = parseFloat(amount);
+    if (isNaN(amountNum) || amountNum <= 0) {
+      newErrors.amount = "Amount must be a positive number";
+    }
+    
+    // Quantity validation - must be an integer >= 1
+    const quantityNum = parseInt(quantity);
+    if (isNaN(quantityNum) || quantityNum < 1 || !Number.isInteger(quantityNum)) {
+      newErrors.quantity = "Quantity must be a whole number greater than or equal to 1";
+    }
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  // Check if the form is valid
+  const isFormValid = () => {
+    return (
+      category !== "" &&
+      paymentMethod !== "" &&
+      description.trim() !== "" &&
+      parseFloat(amount) > 0 &&
+      parseInt(quantity) >= 1 &&
+      date <= new Date()
+    );
+  };
+
+  // Handle form submission
+  const handleSubmit = () => {
+    if (validateForm()) {
+      // This would be where we would handle the submission
+      console.log({
+        date,
+        category,
+        paymentMethod,
+        description,
+        amount: parseFloat(amount),
+        quantity: parseInt(quantity),
+      });
+      
+      // Close the dialog
+      setOpen(false);
+      
+      // Reset the form
+      setCategory("");
+      setPaymentMethod("");
+      setDescription("");
+      setAmount("");
+      setQuantity("1");
+      setDate(new Date());
+    }
+  };
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -59,6 +156,9 @@ const TransactionForm = () => {
                   />
                 </PopoverContent>
               </Popover>
+              {errors.date && (
+                <p className="text-destructive text-xs mt-1">{errors.date}</p>
+              )}
             </div>
           </div>
           
@@ -68,7 +168,7 @@ const TransactionForm = () => {
               Category
             </Label>
             <div className="col-span-3">
-              <Select>
+              <Select value={category} onValueChange={setCategory}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select category" />
                 </SelectTrigger>
@@ -86,6 +186,9 @@ const TransactionForm = () => {
                   ))}
                 </SelectContent>
               </Select>
+              {errors.category && (
+                <p className="text-destructive text-xs mt-1">{errors.category}</p>
+              )}
             </div>
           </div>
           
@@ -95,7 +198,7 @@ const TransactionForm = () => {
               Payment
             </Label>
             <div className="col-span-3">
-              <Select>
+              <Select value={paymentMethod} onValueChange={setPaymentMethod}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select payment method" />
                 </SelectTrigger>
@@ -109,6 +212,9 @@ const TransactionForm = () => {
                     ))}
                 </SelectContent>
               </Select>
+              {errors.paymentMethod && (
+                <p className="text-destructive text-xs mt-1">{errors.paymentMethod}</p>
+              )}
             </div>
           </div>
           
@@ -117,11 +223,17 @@ const TransactionForm = () => {
             <Label htmlFor="description" className="text-right">
               Description
             </Label>
-            <Input
-              id="description"
-              placeholder="Enter description"
-              className="col-span-3"
-            />
+            <div className="col-span-3">
+              <Input
+                id="description"
+                placeholder="Enter description"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+              />
+              {errors.description && (
+                <p className="text-destructive text-xs mt-1">{errors.description}</p>
+              )}
+            </div>
           </div>
           
           {/* Amount Field */}
@@ -140,7 +252,12 @@ const TransactionForm = () => {
                 step="0.01"
                 placeholder="0.00"
                 className="pl-8"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
               />
+              {errors.amount && (
+                <p className="text-destructive text-xs mt-1">{errors.amount}</p>
+              )}
             </div>
           </div>
           
@@ -149,20 +266,32 @@ const TransactionForm = () => {
             <Label htmlFor="quantity" className="text-right">
               Quantity
             </Label>
-            <Input
-              id="quantity"
-              type="number"
-              min="1"
-              defaultValue="1"
-              className="col-span-3"
-            />
+            <div className="col-span-3">
+              <Input
+                id="quantity"
+                type="number"
+                min="1"
+                defaultValue="1"
+                value={quantity}
+                onChange={(e) => setQuantity(e.target.value)}
+              />
+              {errors.quantity && (
+                <p className="text-destructive text-xs mt-1">{errors.quantity}</p>
+              )}
+            </div>
           </div>
         </div>
         <CardFooter className="flex justify-between">
           <DialogClose asChild>
             <Button variant="outline">Cancel</Button>
           </DialogClose>
-          <Button type="submit">Save Transaction</Button>
+          <Button 
+            type="submit" 
+            onClick={handleSubmit}
+            disabled={!isFormValid()}
+          >
+            Save Transaction
+          </Button>
         </CardFooter>
       </DialogContent>
     </Dialog>
