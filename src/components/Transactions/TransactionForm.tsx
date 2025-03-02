@@ -1,8 +1,8 @@
-
 import React, { useState } from 'react';
 import { format } from "date-fns";
 import { Calendar as CalendarIcon, Plus, X } from "lucide-react";
 import { categories, PaymentMethod, getPaymentMethodName } from '@/lib/utils';
+import { useToast } from "@/hooks/use-toast";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,10 +23,29 @@ type FormErrors = {
   quantity?: string;
 };
 
+interface TransactionData {
+  date: Date;
+  category: string;
+  paymentMethod: string;
+  description: string;
+  amount: number;
+  quantity: number;
+}
+
+const saveTransaction = (data: TransactionData): Promise<boolean> => {
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      const isSuccess = Math.random() < 0.9;
+      console.log("Transaction saved:", data);
+      resolve(isSuccess);
+    }, 1500);
+  });
+};
+
 const TransactionForm = () => {
   const [open, setOpen] = useState(false);
+  const { toast } = useToast();
   
-  // Form state
   const [date, setDate] = useState<Date>(new Date());
   const [category, setCategory] = useState<string>("");
   const [paymentMethod, setPaymentMethod] = useState<string>("");
@@ -34,40 +53,34 @@ const TransactionForm = () => {
   const [amount, setAmount] = useState<string>("");
   const [quantity, setQuantity] = useState<string>("1");
   
-  // Form errors
   const [errors, setErrors] = useState<FormErrors>({});
+  
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Validate the form
   const validateForm = () => {
     const newErrors: FormErrors = {};
     
-    // Date validation - cannot be in the future
     if (date > new Date()) {
       newErrors.date = "Date cannot be in the future";
     }
     
-    // Category validation - must be selected
     if (!category) {
       newErrors.category = "Please select a category";
     }
     
-    // Payment method validation - must be selected
     if (!paymentMethod) {
       newErrors.paymentMethod = "Please select a payment method";
     }
     
-    // Description validation - cannot be empty
     if (!description.trim()) {
       newErrors.description = "Description is required";
     }
     
-    // Amount validation - must be positive
     const amountNum = parseFloat(amount);
     if (isNaN(amountNum) || amountNum <= 0) {
       newErrors.amount = "Amount must be a positive number";
     }
     
-    // Quantity validation - must be an integer >= 1
     const quantityNum = parseInt(quantity);
     if (isNaN(quantityNum) || quantityNum < 1 || !Number.isInteger(quantityNum)) {
       newErrors.quantity = "Quantity must be a whole number greater than or equal to 1";
@@ -77,7 +90,6 @@ const TransactionForm = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  // Check if the form is valid
   const isFormValid = () => {
     return (
       category !== "" &&
@@ -89,29 +101,57 @@ const TransactionForm = () => {
     );
   };
 
-  // Handle form submission
-  const handleSubmit = () => {
+  const resetForm = () => {
+    setCategory("");
+    setPaymentMethod("");
+    setDescription("");
+    setAmount("");
+    setQuantity("1");
+    setDate(new Date());
+    setErrors({});
+  };
+
+  const handleSubmit = async () => {
     if (validateForm()) {
-      // This would be where we would handle the submission
-      console.log({
-        date,
-        category,
-        paymentMethod,
-        description,
-        amount: parseFloat(amount),
-        quantity: parseInt(quantity),
-      });
+      setIsSubmitting(true);
       
-      // Close the dialog
-      setOpen(false);
-      
-      // Reset the form
-      setCategory("");
-      setPaymentMethod("");
-      setDescription("");
-      setAmount("");
-      setQuantity("1");
-      setDate(new Date());
+      try {
+        const transactionData: TransactionData = {
+          date,
+          category,
+          paymentMethod,
+          description,
+          amount: parseFloat(amount),
+          quantity: parseInt(quantity),
+        };
+        
+        const success = await saveTransaction(transactionData);
+        
+        if (success) {
+          toast({
+            title: "Transaction saved",
+            description: "Your transaction was successfully recorded.",
+          });
+          
+          resetForm();
+          setOpen(false);
+        } else {
+          toast({
+            title: "Error",
+            description: "Failed to save transaction. Please try again.",
+            variant: "destructive",
+          });
+        }
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: "An unexpected error occurred. Please try again.",
+          variant: "destructive",
+        });
+        console.error("Transaction submission error:", error);
+      } finally {
+        setIsSubmitting(false);
+      }
     }
   };
 
@@ -128,7 +168,6 @@ const TransactionForm = () => {
           <DialogTitle className="text-xl font-medium">Add Transaction</DialogTitle>
         </DialogHeader>
         <div className="grid gap-4 py-4">
-          {/* Date Field */}
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="date" className="text-right">
               Date
@@ -162,7 +201,6 @@ const TransactionForm = () => {
             </div>
           </div>
           
-          {/* Category Field */}
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="category" className="text-right">
               Category
@@ -192,7 +230,6 @@ const TransactionForm = () => {
             </div>
           </div>
           
-          {/* Payment Method Field */}
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="paymentMethod" className="text-right">
               Payment
@@ -218,7 +255,6 @@ const TransactionForm = () => {
             </div>
           </div>
           
-          {/* Description Field */}
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="description" className="text-right">
               Description
@@ -236,7 +272,6 @@ const TransactionForm = () => {
             </div>
           </div>
           
-          {/* Amount Field */}
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="amount" className="text-right">
               Amount
@@ -261,7 +296,6 @@ const TransactionForm = () => {
             </div>
           </div>
           
-          {/* Quantity Field */}
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="quantity" className="text-right">
               Quantity
@@ -283,14 +317,14 @@ const TransactionForm = () => {
         </div>
         <CardFooter className="flex justify-between">
           <DialogClose asChild>
-            <Button variant="outline">Cancel</Button>
+            <Button variant="outline" disabled={isSubmitting}>Cancel</Button>
           </DialogClose>
           <Button 
             type="submit" 
             onClick={handleSubmit}
-            disabled={!isFormValid()}
+            disabled={!isFormValid() || isSubmitting}
           >
-            Save Transaction
+            {isSubmitting ? "Submitting..." : "Save Transaction"}
           </Button>
         </CardFooter>
       </DialogContent>
