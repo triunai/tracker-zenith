@@ -1,7 +1,7 @@
 
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
-import { PaymentMethod, categories } from '@/lib/mockData';
+import { PaymentMethod, categories, expenses } from '@/lib/mockData';
 import { Expense } from '@/lib/mockData';
 
 export function cn(...inputs: ClassValue[]) {
@@ -19,9 +19,6 @@ export function formatCurrency(amount: number): string {
 
 // Get the most recent expenses, limited by count
 export function getRecentExpenses(count: number): Expense[] {
-  // Import the expenses from mockData
-  const { expenses } = require('@/lib/mockData');
-  
   // Sort expenses by date (most recent first) and limit by count
   return [...expenses]
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
