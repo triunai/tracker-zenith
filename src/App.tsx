@@ -19,9 +19,9 @@ const App = () => (
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/transactions" element={<Transactions />} />
-          <Route path="/budgets" element={<Index />} /> {/* Placeholder for now */}
-          <Route path="/reports" element={<Index />} /> {/* Placeholder for now */}
-          <Route path="/settings" element={<Index />} /> {/* Placeholder for now */}
+          <Route path="/budgets" element={<Index />} />
+          <Route path="/reports" element={<Index />} />
+          <Route path="/settings" element={<Index />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

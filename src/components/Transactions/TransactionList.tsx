@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import { formatCurrency } from '@/lib/utils';
 import TransactionForm from './TransactionForm';
@@ -24,11 +25,11 @@ import {
   ChevronsUpDown
 } from 'lucide-react';
 
-// Import UI components with uppercase 'UI' path for consistency
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/UI/card";
-import { Button } from "@/components/UI/button";
-import { Input } from "@/components/UI/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/UI/select";
+// Import UI components with lowercase 'ui' path for consistency
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { categories, expenses, PaymentMethod, getPaymentMethodName } from '@/lib/mockData';
 
 // Custom MYR currency formatter with error handling
