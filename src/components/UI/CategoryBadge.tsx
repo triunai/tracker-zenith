@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Badge } from "@/components/ui/badge";
+import { Badge } from "@/components/UI/badge";
 import { cn } from '@/lib/utils';
 import { categories } from '@/lib/mockData';
 import { 

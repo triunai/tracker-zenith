@@ -9,14 +9,14 @@ import { validateTransaction, isFormValid } from '@/lib/validation/transactionVa
 import { saveTransaction } from '@/lib/api/transactionApi';
 import FormField from './FormField';
 
-import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Button } from "@/components/UI/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from "@/components/UI/dialog";
+import { Input } from "@/components/UI/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/UI/select";
+import { Calendar } from "@/components/UI/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/UI/popover";
 import { cn } from "@/lib/utils";
-import { CardFooter } from "@/components/ui/card";
+import { CardFooter } from "@/components/UI/card";
 
 const TransactionForm = () => {
   const [open, setOpen] = useState(false);
