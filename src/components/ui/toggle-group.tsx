@@ -1,40 +1,51 @@
+
 import * as React from "react"
-import {
-  Root,
-  type ToggleGroupProps,
-  type ToggleGroupSingleProps,
-  type ToggleGroupMultipleProps,
-  Item,
-  type ToggleGroupItemProps,
-  type ToggleGroupItemImplProps,
-} from "@radix-ui/react-toggle-group"
+import * as ToggleGroupPrimitive from "@radix-ui/react-toggle-group"
+import { ToggleGroupItemProps } from "@radix-ui/react-toggle-group"
+import { type VariantProps } from "class-variance-authority"
 
 import { cn } from "@/lib/utils"
-import { Toggle } from "@/components/ui/toggle"
+import { toggleVariants } from "@/components/ui/toggle"
 
 const ToggleGroup = React.forwardRef<
-  HTMLDivElement,
-  ToggleGroupProps
->(({ className, ...props }, ref) => (
-  <Root
+  React.ElementRef<typeof ToggleGroupPrimitive.Root>,
+  React.ComponentPropsWithoutRef<typeof ToggleGroupPrimitive.Root> & {
+    variant?: VariantProps<typeof toggleVariants>["variant"]
+    size?: VariantProps<typeof toggleVariants>["size"]
+  }
+>(({ className, variant = "default", size = "default", children, ...props }, ref) => (
+  <ToggleGroupPrimitive.Root
     ref={ref}
-    className={cn("flex items-center space-x-1", className)}
+    className={cn("flex items-center justify-center gap-1", className)}
     {...props}
-  />
+  >
+    {React.Children.map(children, (child) => {
+      if (React.isValidElement(child)) {
+        return React.cloneElement(child, {
+          variant,
+          size,
+          ...child.props,
+        })
+      }
+      return child
+    })}
+  </ToggleGroupPrimitive.Root>
 ))
-ToggleGroup.displayName = "ToggleGroup"
+
+ToggleGroup.displayName = ToggleGroupPrimitive.Root.displayName
 
 const ToggleGroupItem = React.forwardRef<
-  HTMLButtonElement,
-  ToggleGroupItemProps
->(({ className, ...props }, ref) => (
-  <Item
-    {...props}
+  React.ElementRef<typeof ToggleGroupPrimitive.Item>,
+  React.ComponentPropsWithoutRef<typeof ToggleGroupPrimitive.Item> &
+    VariantProps<typeof toggleVariants>
+>(({ className, variant, size, ...props }, ref) => (
+  <ToggleGroupPrimitive.Item
     ref={ref}
-    className={cn("bg-secondary text-secondary-foreground data-[state=on]:bg-accent data-[state=on]:text-accent-foreground", className)}
+    className={cn(toggleVariants({ variant, size }), className)}
+    {...props}
   />
 ))
-ToggleGroupItem.displayName = "ToggleGroupItem"
 
+ToggleGroupItem.displayName = ToggleGroupPrimitive.Item.displayName
 
 export { ToggleGroup, ToggleGroupItem }
