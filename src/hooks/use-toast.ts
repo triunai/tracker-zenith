@@ -1,6 +1,7 @@
 
+import * as React from "react"
 import {
-  Toast as ToastPrimitive,
+  Toast,
   ToastActionElement,
   ToastProps,
 } from "@/components/ui/toast"
@@ -31,7 +32,7 @@ type ToasterReturn = {
   /**
    * An array of toasts.
    */
-  toasts: (ToastPrimitive & { action?: ToastActionElement })[]
+  toasts: (Toast & { action?: ToastActionElement })[]
 }
 
 function useToast(): ToasterReturn {

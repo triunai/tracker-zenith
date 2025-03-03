@@ -60,7 +60,7 @@ export const useTransactionForm = (onSuccess?: () => void) => {
         if (success) {
           toast({
             title: "Transaction saved",
-            description: "Your transaction was successfully recorded.",
+            variant: "default",
           });
           
           resetForm();
@@ -69,14 +69,12 @@ export const useTransactionForm = (onSuccess?: () => void) => {
         } else {
           toast({
             title: "Error",
-            description: "Failed to save transaction. Please try again.",
             variant: "destructive",
           });
         }
       } catch (error) {
         toast({
-          title: "Error",
-          description: "An unexpected error occurred. Please try again.",
+          title: "An unexpected error occurred. Please try again.",
           variant: "destructive",
         });
         console.error("Transaction submission error:", error);
