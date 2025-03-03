@@ -4,9 +4,9 @@ import { Plus } from "lucide-react";
 import { useTransactionForm } from './hooks/useTransactionForm';
 import TransactionFormFields from './TransactionFormFields';
 
-import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from "@/components/ui/dialog";
-import { CardFooter } from "@/components/ui/card";
+import { Button } from "@/components/UI/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from "@/components/UI/dialog";
+import { CardFooter } from "@/components/UI/card";
 
 const TransactionForm = () => {
   const {

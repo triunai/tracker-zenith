@@ -6,11 +6,11 @@ import { categories, PaymentMethod, getPaymentMethodName } from '@/lib/utils';
 import FormField from './FormField';
 import { FormErrors } from '@/types/transaction';
 
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Button } from "@/components/UI/button";
+import { Input } from "@/components/UI/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/UI/select";
+import { Calendar } from "@/components/UI/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/UI/popover";
 import { cn } from "@/lib/utils";
 
 interface TransactionFormFieldsProps {

@@ -11,7 +11,7 @@ import {
 import { formatCurrency } from '@/lib/utils';
 import StatCard from '@/components/UI/StatCard';
 import { getBalance, getExpenseTotal, getIncomeTotal } from '@/lib/mockData';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/UI/button';
 import { cn } from '@/lib/utils';
 
 const DashboardSummary = () => {

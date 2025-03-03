@@ -1,32 +1,39 @@
+import React from 'react';
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+} from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { Toaster } from '@/components/UI/toaster';
+import { ToastProvider } from '@/components/UI/use-toast';
+import { TooltipProvider } from '@/components/UI/tooltip';
 
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Index from "./pages/Index";
-import Transactions from "./pages/Transactions";
-import NotFound from "./pages/NotFound";
+// Pages
+import Index from './pages/Index';
+import Transactions from './pages/Transactions';
+import NotFound from './pages/NotFound';
 
+// Create a client
 const queryClient = new QueryClient();
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/transactions" element={<Transactions />} />
-          <Route path="/budgets" element={<Index />} />
-          <Route path="/reports" element={<Index />} />
-          <Route path="/settings" element={<Index />} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
-);
+function App() {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <ToastProvider>
+        <TooltipProvider>
+          <Router>
+            <Routes>
+              <Route path="/" element={<Index />} />
+              <Route path="/transactions" element={<Transactions />} />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </Router>
+          <Toaster />
+        </TooltipProvider>
+      </ToastProvider>
+    </QueryClientProvider>
+  );
+}
 
 export default App;
