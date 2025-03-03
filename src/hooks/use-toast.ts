@@ -1,5 +1,6 @@
+
 import {
-  Toast,
+  Toast as ToastPrimitive,
   ToastActionElement,
   ToastProps,
 } from "@/components/ui/toast"
@@ -30,7 +31,7 @@ type ToasterReturn = {
   /**
    * An array of toasts.
    */
-  toasts: (Toast & { action?: ToastActionElement })[]
+  toasts: (ToastPrimitive & { action?: ToastActionElement })[]
 }
 
 function useToast(): ToasterReturn {
@@ -38,3 +39,9 @@ function useToast(): ToasterReturn {
 }
 
 export { useToast }
+
+// Direct toast function export to match what's being imported in use-toast.ts
+export const toast = (props: ToastProps) => {
+  const { toast: toastFunction } = useToastHook()
+  return toastFunction(props)
+}
