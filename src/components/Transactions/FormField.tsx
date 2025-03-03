@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Label } from "@/components/UI/label";
+import { Label } from "@/components/ui/label";
 
 interface FormFieldProps {
   id: string;
