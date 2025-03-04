@@ -1,4 +1,3 @@
-
 import { formatCurrency } from '@/lib/utils';
 
 // Enums
@@ -9,6 +8,14 @@ export enum PaymentMethod {
   EWallet = 4,
   BankTransfer = 5,
   DuitNow = 6
+}
+
+// Add Period enum to match API
+export enum Period {
+  Daily = 'daily',
+  Weekly = 'weekly',
+  Monthly = 'monthly',
+  Yearly = 'yearly'
 }
 
 // Types matching your database schema
@@ -60,14 +67,18 @@ export type ChartDataPoint = {
 
 export type BudgetStatus = 'safe' | 'caution' | 'warning' | 'danger';
 
+// Update Budget type to match API schema
 export type Budget = {
   id: number;
   categoryId: number;
   amount: number;
-  period: 'monthly' | 'weekly' | 'yearly';
-  // Calculated & joined fields
-  spent: number;
+  period: Period;
+  createdAt: string;
+  updatedAt: string | null;
+  // Joined fields
   category?: Category;
+  // Calculated fields (for UI purposes)
+  spent: number;
 };
 
 // Sample categories with iOS-like muted colors
@@ -403,57 +414,103 @@ export const expenses: Expense[] = [
   }
 ];
 
-// Sample budgets (manually created, not part of your schema)
+// Updated sample budgets with different periods
 export const budgets: Budget[] = [
   { 
     id: 1, 
     categoryId: 1, 
     amount: 1500, 
-    spent: 1200, 
-    period: 'monthly',
+    period: Period.Monthly,
+    createdAt: '2024-01-01T00:00:00Z',
+    updatedAt: null,
+    spent: 1200,
     category: categories.find(c => c.id === 1)
   },
   { 
     id: 2, 
     categoryId: 2, 
-    amount: 500, 
-    spent: 151.55, 
-    period: 'monthly',
+    amount: 100, 
+    period: Period.Weekly,
+    createdAt: '2024-01-01T00:00:00Z',
+    updatedAt: null,
+    spent: 85.50,
     category: categories.find(c => c.id === 2)
   },
   { 
     id: 3, 
     categoryId: 3, 
-    amount: 200, 
-    spent: 45.30, 
-    period: 'monthly',
+    amount: 20, 
+    period: Period.Daily,
+    createdAt: '2024-01-01T00:00:00Z',
+    updatedAt: null,
+    spent: 15.30,
     category: categories.find(c => c.id === 3)
   },
   { 
     id: 4, 
     categoryId: 4, 
-    amount: 200, 
-    spent: 25, 
-    period: 'monthly',
+    amount: 2400, 
+    period: Period.Yearly,
+    createdAt: '2024-01-01T00:00:00Z',
+    updatedAt: null,
+    spent: 1800,
     category: categories.find(c => c.id === 4)
   },
   { 
     id: 5, 
     categoryId: 5, 
     amount: 300, 
-    spent: 99.95, 
-    period: 'monthly',
+    period: Period.Monthly,
+    createdAt: '2024-01-01T00:00:00Z',
+    updatedAt: null,
+    spent: 299.95,
     category: categories.find(c => c.id === 5)
   },
   { 
     id: 6, 
     categoryId: 6, 
-    amount: 400, 
-    spent: 75.40, 
-    period: 'monthly',
+    amount: 80, 
+    period: Period.Weekly,
+    createdAt: '2024-01-01T00:00:00Z',
+    updatedAt: null,
+    spent: 75.40,
     category: categories.find(c => c.id === 6)
+  },
+  { 
+    id: 7, 
+    categoryId: 7, 
+    amount: 15, 
+    period: Period.Daily,
+    createdAt: '2024-01-01T00:00:00Z',
+    updatedAt: null,
+    spent: 12.50,
+    category: categories.find(c => c.id === 7)
+  },
+  { 
+    id: 8, 
+    categoryId: 8, 
+    amount: 1200, 
+    period: Period.Yearly,
+    createdAt: '2024-01-01T00:00:00Z',
+    updatedAt: null,
+    spent: 800,
+    category: categories.find(c => c.id === 8)
   }
 ];
+
+// Add a helper function to filter budgets by period
+export const getBudgetsByPeriod = (period: Period): Budget[] => {
+  return budgets.filter(budget => budget.period === period);
+};
+
+// Add a helper function to calculate total budget and spent by period
+export const getBudgetSummaryByPeriod = (period: Period) => {
+  const periodBudgets = getBudgetsByPeriod(period);
+  return {
+    totalBudget: periodBudgets.reduce((sum, budget) => sum + budget.amount, 0),
+    totalSpent: periodBudgets.reduce((sum, budget) => sum + budget.spent, 0)
+  };
+};
 
 // Utility functions
 export const getPaymentMethodName = (method: PaymentMethod): string => {

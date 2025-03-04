@@ -1,5 +1,4 @@
-
-import React from 'react';
+import React, { useState } from 'react';
 import { 
   Card, 
   CardContent, 
@@ -8,30 +7,55 @@ import {
   CardTitle 
 } from "@/components/UI/card";
 import { Progress } from "@/components/UI/progress";
-import { budgets, categories, getBudgetStatus } from '@/lib/mockData';
+import { 
+  budgets, 
+  categories, 
+  getBudgetStatus, 
+  Period,
+  getBudgetsByPeriod,
+  getBudgetSummaryByPeriod
+} from '@/lib/mockData';
 import { Button } from '@/components/UI/button';
 import { Plus, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatCurrency } from '@/lib/utils';
 
 const BudgetTracker = () => {
+  const [selectedPeriod, setSelectedPeriod] = useState<Period>(Period.Monthly);
+
+  // Period selection buttons
+  const periods: Period[] = [Period.Daily, Period.Weekly, Period.Monthly, Period.Yearly];
+
   return (
     <Card className="animate-fade-up animate-delay-200">
       <CardHeader>
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <CardTitle>Monthly Budgets</CardTitle>
+            <CardTitle>Budget Tracker</CardTitle>
             <CardDescription>Track your spending against budget goals</CardDescription>
           </div>
-          <Button size="sm" className="gap-1">
-            <Plus className="h-4 w-4" /> New Budget
-          </Button>
+          <div className="flex gap-2 flex-wrap">
+            {periods.map((period) => (
+              <Button
+                key={period}
+                size="sm"
+                variant={selectedPeriod === period ? 'default' : 'outline'}
+                onClick={() => setSelectedPeriod(period)}
+                className="capitalize"
+              >
+                {period}
+              </Button>
+            ))}
+            <Button size="sm" className="gap-1 ml-2">
+              <Plus className="h-4 w-4" /> New Budget
+            </Button>
+          </div>
         </div>
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
-          {budgets.map((budget) => {
-            const category = categories.find(c => c.name === budget.category?.name);
+          {getBudgetsByPeriod(selectedPeriod).map((budget) => {
+            const category = categories.find(c => c.id === budget.categoryId);
             const percentage = Math.round((budget.spent / budget.amount) * 100);
             const status = getBudgetStatus(budget);
             const remaining = budget.amount - budget.spent;

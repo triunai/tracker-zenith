@@ -14,6 +14,7 @@ import { ThemeProvider } from '@/components/theme-provider';
 import Index from './pages/Index';
 import Transactions from './pages/Transactions';
 import NotFound from './pages/NotFound';
+import BudgetPage from './pages/budgets';
 
 // Create a client
 const queryClient = new QueryClient();
@@ -28,6 +29,7 @@ function App() {
               <Routes>
                 <Route path="/" element={<Index />} />
                 <Route path="/transactions" element={<Transactions />} />
+                <Route path="/budgets" element={<BudgetPage />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </Router>
