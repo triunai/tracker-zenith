@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Plus } from "lucide-react";
 import { useTransactionForm } from './hooks/useTransactionForm';
@@ -32,12 +33,8 @@ const TransactionForm = () => {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button 
-          variant="default"
-          size="default" 
-          className="font-medium shadow-sm hover:shadow-md transition-all"
-        >
-          <Plus className="h-4 w-4" />
+        <Button className="w-full" size="lg">
+          <Plus className="mr-2 h-4 w-4" />
           Add Transaction
         </Button>
       </DialogTrigger>

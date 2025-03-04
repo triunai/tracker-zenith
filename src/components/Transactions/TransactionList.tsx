@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import { formatCurrency } from '@/lib/utils';
 import TransactionForm from './TransactionForm';
@@ -148,79 +149,75 @@ const TransactionList = () => {
 
     return (
       <Card className="col-span-3">
-        <CardHeader>
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="space-y-1.5">
-              <CardTitle className="text-2xl font-bold">Recent Transactions</CardTitle>
-              <CardDescription className="text-sm text-muted-foreground">
-                Recent expense transactions
-              </CardDescription>
+        <CardHeader className="flex flex-col space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="space-y-1">
+              <CardTitle>Recent Transactions</CardTitle>
+              <CardDescription>Recent expense transactions</CardDescription>
             </div>
-            <div>
-              <TransactionForm />
+            <TransactionForm />
+          </div>
+          
+          {/* Search and Filter Bar */}
+          <div className="flex gap-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search transactions..."
+                className="pl-8"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
             </div>
+            
+            {/* Category Filter */}
+            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+              <SelectTrigger className="w-[180px]">
+                <div className="flex items-center gap-2">
+                  <Package className="h-4 w-4" />
+                  <SelectValue placeholder="All Categories" />
+                </div>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Categories</SelectItem>
+                {categories.map((category) => (
+                  <SelectItem key={category.id} value={category.id.toString()}>
+                    <div className="flex items-center gap-2">
+                      <div
+                        className="w-3 h-3 rounded-full"
+                        style={{ backgroundColor: category.color }}
+                      ></div>
+                      {category.name}
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            
+            {/* Payment Method Filter */}
+            <Select value={selectedPaymentMethod} onValueChange={setSelectedPaymentMethod}>
+              <SelectTrigger className="w-[180px]">
+                <div className="flex items-center gap-2">
+                  <Wallet className="h-4 w-4" />
+                  <SelectValue placeholder="All Payment Methods" />
+                </div>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Payment Methods</SelectItem>
+                {Object.values(PaymentMethod)
+                  .filter(value => typeof value === 'number')
+                  .map((method) => (
+                    <SelectItem key={method} value={method.toString()}>
+                      {getPaymentMethodName(method as PaymentMethod)}
+                    </SelectItem>
+                  ))}
+              </SelectContent>
+            </Select>
           </div>
         </CardHeader>
 
         <CardContent>
           <div className="space-y-4">
-            {/* Search and Filter Bar */}
-            <div className="flex gap-4">
-              <div className="relative flex-1">
-                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search transactions..."
-                  className="pl-8"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-              </div>
-              
-              {/* Category Filter */}
-              <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                <SelectTrigger className="w-[180px]">
-                  <div className="flex items-center gap-2">
-                    <Package className="h-4 w-4" />
-                    <SelectValue placeholder="All Categories" />
-                  </div>
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Categories</SelectItem>
-                  {categories.map((category) => (
-                    <SelectItem key={category.id} value={category.id.toString()}>
-                      <div className="flex items-center gap-2">
-                        <div
-                          className="w-3 h-3 rounded-full"
-                          style={{ backgroundColor: category.color }}
-                        ></div>
-                        {category.name}
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              
-              {/* Payment Method Filter */}
-              <Select value={selectedPaymentMethod} onValueChange={setSelectedPaymentMethod}>
-                <SelectTrigger className="w-[180px]">
-                  <div className="flex items-center gap-2">
-                    <Wallet className="h-4 w-4" />
-                    <SelectValue placeholder="All Payment Methods" />
-                  </div>
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Payment Methods</SelectItem>
-                  {Object.values(PaymentMethod)
-                    .filter(value => typeof value === 'number')
-                    .map((method) => (
-                      <SelectItem key={method} value={method.toString()}>
-                        {getPaymentMethodName(method as PaymentMethod)}
-                      </SelectItem>
-                    ))}
-                </SelectContent>
-              </Select>
-            </div>
-
             {/* Transactions List */}
             {filteredTransactions.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
