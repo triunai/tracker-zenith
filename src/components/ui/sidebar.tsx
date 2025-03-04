@@ -1,228 +1,161 @@
-// Import the TooltipProvider from the correct location
 import * as React from "react"
-import { cva } from "class-variance-authority"
+import { ChevronLeft, ChevronRight, MoreHorizontal } from "lucide-react"
 
 import { cn } from "@/lib/utils"
-import { Button } from "@/components/UI/button"
-import { Input } from "@/components/UI/input"
-import { Separator } from "@/components/UI/separator"
-import { Sheet, SheetContent, SheetTrigger } from "@/components/UI/sheet"
-import { Skeleton } from "@/components/UI/skeleton"
+import { Slot } from "@radix-ui/react-slot"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Separator } from "@/components/ui/separator"
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
+import { Skeleton } from "@/components/ui/skeleton"
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from "@/components/UI/tooltip"
+} from "@/components/ui/tooltip"
 
-const sidebarVariants = cva(
-  "fixed inset-y-0 z-50 flex flex-col w-[var(--sidebar-width)] bg-secondary/50 backdrop-blur-sm border-r border-r-secondary/50",
-  {
-    variants: {
-      open: {
-        true: "translate-x-0",
-        false: "-translate-x-full",
-      },
-    },
-    defaultVariants: {
-      open: false,
-    },
-  }
-)
-
-interface SidebarProps extends React.HTMLAttributes<HTMLDivElement> {
-  open?: boolean
-  onOpenChange?: (open: boolean) => void
-}
-
-const Sidebar = React.forwardRef<HTMLDivElement, SidebarProps>(
-  ({ className, open, onOpenChange, ...props }, ref) => {
-    return (
-      <TooltipProvider>
-        <Sheet open={open} onOpenChange={onOpenChange}>
-          <SheetTrigger asChild>
-            <div
-              ref={ref}
-              className={cn(sidebarVariants({ open, className }))}
-              {...props}
-            />
-          </SheetTrigger>
-          <SheetContent side="left" className="p-0">
-            <div className="flex flex-col h-full">
-              <div className="flex-1 p-4">
-                <div className="space-y-2.5">
-                  <h2 className="mb-2 text-lg font-semibold tracking-tight">
-                    Dashboard
-                  </h2>
-                  <Separator />
-                  <div className="space-y-1">
-                    <p className="px-2 text-sm font-medium text-muted-foreground">
-                      Quick Actions
-                    </p>
-                    <Button variant="ghost" className="w-full justify-start">
-                      New Task
-                    </Button>
-                    <Button variant="ghost" className="w-full justify-start">
-                      New Event
-                    </Button>
-                    <Button variant="ghost" className="w-full justify-start">
-                      New Contact
-                    </Button>
-                  </div>
-                </div>
-              </div>
-              <div className="flex-1 p-4">
-                <div className="space-y-2.5">
-                  <h2 className="mb-2 text-lg font-semibold tracking-tight">
-                    Team Members
-                  </h2>
-                  <Separator />
-                  <div className="space-y-1">
-                    <div className="flex items-center space-x-2">
-                      <Skeleton className="h-8 w-8 rounded-full" />
-                      <div className="space-y-0.5">
-                        <h4 className="text-sm font-semibold">Lucille Ball</h4>
-                        <p className="text-xs text-muted-foreground">
-                          @lucille.ball
-                        </p>
-                      </div>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            className="ml-auto h-8 w-8"
-                          >
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              width="24"
-                              height="24"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth="2"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              className="h-4 w-4"
-                            >
-                              <path d="M12 5v14M5 12h14" />
-                            </svg>
-                            <span className="sr-only">Add</span>
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>Add to team</TooltipContent>
-                      </Tooltip>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Skeleton className="h-8 w-8 rounded-full" />
-                      <div className="space-y-0.5">
-                        <h4 className="text-sm font-semibold">
-                          Desi Arnaz
-                        </h4>
-                        <p className="text-xs text-muted-foreground">
-                          @desi.arnaz
-                        </p>
-                      </div>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            className="ml-auto h-8 w-8"
-                          >
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              width="24"
-                              height="24"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth="2"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              className="h-4 w-4"
-                            >
-                              <path d="M12 5v14M5 12h14" />
-                            </svg>
-                            <span className="sr-only">Add</span>
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>Add to team</TooltipContent>
-                      </Tooltip>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Skeleton className="h-8 w-8 rounded-full" />
-                      <div className="space-y-0.5">
-                        <h4 className="text-sm font-semibold">Vivian Vance</h4>
-                        <p className="text-xs text-muted-foreground">
-                          @vivian.vance
-                        </p>
-                      </div>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            className="ml-auto h-8 w-8"
-                          >
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              width="24"
-                              height="24"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth="2"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              className="h-4 w-4"
-                            >
-                              <path d="M12 5v14M5 12h14" />
-                            </svg>
-                            <span className="sr-only">Add</span>
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>Add to team</TooltipContent>
-                      </Tooltip>
-                    </div>
-                    <Button variant="ghost" className="w-full justify-start">
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        width="24"
-                        height="24"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        className="mr-2 h-4 w-4"
-                      >
-                        <path d="M12 5v14M5 12h14" />
-                      </svg>
-                      Add Member
-                    </Button>
-                  </div>
-                </div>
-              </div>
-              <div className="p-4">
-                <div className="space-y-2.5">
-                  <h2 className="mb-2 text-lg font-semibold tracking-tight">
-                    Search
-                  </h2>
-                  <Separator />
-                  <div className="space-y-1">
-                    <Input placeholder="Search..." />
-                  </div>
-                </div>
-              </div>
-            </div>
-          </SheetContent>
-        </Sheet>
-      </TooltipProvider>
-    )
-  }
-)
+const Sidebar = React.forwardRef<
+  HTMLDivElement,
+  React.HTMLAttributes<HTMLDivElement>
+>(({ className, ...props }, ref) => (
+  <div
+    className={cn(
+      "flex h-full w-[260px] flex-col border-r bg-secondary",
+      className
+    )}
+    ref={ref}
+    {...props}
+  />
+))
 Sidebar.displayName = "Sidebar"
 
-export { Sidebar }
+const SidebarHeader = React.forwardRef<
+  HTMLDivElement,
+  React.HTMLAttributes<HTMLDivElement>
+>(({ className, ...props }, ref) => (
+  <div
+    className={cn("flex items-center justify-between py-4 px-6", className)}
+    ref={ref}
+    {...props}
+  />
+))
+SidebarHeader.displayName = "SidebarHeader"
+
+const SidebarTitle = React.forwardRef<
+  HTMLDivElement,
+  React.HTMLAttributes<HTMLDivElement>
+>(({ className, ...props }, ref) => (
+  <div className={cn("text-lg font-semibold", className)} ref={ref} {...props} />
+))
+SidebarTitle.displayName = "SidebarTitle"
+
+const SidebarDescription = React.forwardRef<
+  HTMLDivElement,
+  React.HTMLAttributes<HTMLDivElement>
+>(({ className, ...props }, ref) => (
+  <div className={cn("text-sm text-muted-foreground", className)} ref={ref} {...props} />
+))
+SidebarDescription.displayName = "SidebarDescription"
+
+const SidebarNav = React.forwardRef<
+  HTMLDivElement,
+  React.HTMLAttributes<HTMLDivElement>
+>(({ className, ...props }, ref) => (
+  <div className={cn("flex flex-col gap-2 py-4 px-3", className)} ref={ref} {...props} />
+))
+SidebarNav.displayName = "SidebarNav"
+
+const SidebarNavItem = React.forwardRef<
+  HTMLAnchorElement,
+  React.HTMLAttributes<HTMLAnchorElement>
+>(({ className, active, ...props }, ref) => (
+  <a
+    href="#"
+    className={cn(
+      "group flex w-full items-center rounded-md border border-transparent px-3 py-2 text-sm font-medium hover:bg-secondary hover:text-accent-foreground [&.active]:bg-secondary/80 [&.active]:font-semibold",
+      active && "active",
+      className
+    )}
+    ref={ref}
+    {...props}
+  />
+))
+SidebarNavItem.displayName = "SidebarNavItem"
+
+const SidebarFooter = React.forwardRef<
+  HTMLDivElement,
+  React.HTMLAttributes<HTMLDivElement>
+>(({ className, ...props }, ref) => (
+  <div
+    className={cn(
+      "mt-auto border-t py-4 px-6",
+      className
+    )}
+    ref={ref}
+    {...props}
+  />
+))
+SidebarFooter.displayName = "SidebarFooter"
+
+const SidebarMenu = React.forwardRef<
+  HTMLDivElement,
+  React.HTMLAttributes<HTMLDivElement>
+>(({ className, ...props }, ref) => (
+  <div className={cn("relative", className)} ref={ref} {...props} />
+))
+SidebarMenu.displayName = "SidebarMenu"
+
+const SidebarMenuItem = React.forwardRef<
+  HTMLButtonElement,
+  React.HTMLAttributes<HTMLButtonElement>
+>(({ className, ...props }, ref) => (
+  <Button
+    variant="ghost"
+    size="sm"
+    className={cn(
+      "h-auto px-2 py-1.5 text-sm",
+      className
+    )}
+    ref={ref}
+    {...props}
+  />
+))
+SidebarMenuItem.displayName = "SidebarMenuItem"
+
+const SidebarToggleButton = React.forwardRef<
+  HTMLButtonElement,
+  React.HTMLAttributes<HTMLButtonElement>
+>(({ className, ...props }, ref) => (
+  <TooltipProvider>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button
+          variant="ghost"
+          size="sm"
+          className={cn(
+            "absolute right-0 top-0 rounded-none p-1.5 opacity-0 group-hover:opacity-100 data-[state=open]:bg-secondary",
+            className
+          )}
+          ref={ref}
+          {...props}
+        />
+      </TooltipTrigger>
+      <TooltipContent side="bottom">Toggle Sidebar</TooltipContent>
+    </Tooltip>
+  </TooltipProvider>
+))
+SidebarToggleButton.displayName = "SidebarToggleButton"
+
+export {
+  Sidebar,
+  SidebarHeader,
+  SidebarTitle,
+  SidebarDescription,
+  SidebarNav,
+  SidebarNavItem,
+  SidebarFooter,
+  SidebarMenu,
+  SidebarMenuItem,
+  SidebarToggleButton,
+}

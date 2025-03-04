@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { 
   Card, 
@@ -6,8 +5,8 @@ import {
   CardDescription, 
   CardHeader, 
   CardTitle 
-} from "@/components/UI/card";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/UI/tabs";
+} from "@/components/ui/card";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { getSpendingByCategory, getExpensesByPaymentMethod } from '@/lib/mockData';
 import { formatCurrency } from '@/lib/utils';
 import { 
