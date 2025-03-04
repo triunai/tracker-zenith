@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { FormErrors, TransactionData } from '@/types/transaction';
 import { validateTransaction, isFormValid } from '@/lib/validation/transactionValidation';
