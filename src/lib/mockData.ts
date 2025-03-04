@@ -64,7 +64,7 @@ export type Budget = {
   id: number;
   categoryId: number;
   amount: number;
-  period: 'monthly' | 'weekly' | 'yearly';
+  period: 'daily'|'monthly' | 'weekly' | 'yearly';
   // Calculated & joined fields
   spent: number;
   category?: Category;
