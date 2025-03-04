@@ -1,4 +1,3 @@
-
 import React from 'react';
 import {
   BrowserRouter as Router,
@@ -6,9 +5,9 @@ import {
   Route,
 } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { Toaster } from '@/components/ui/toaster';
-import { ToastProvider } from '@/components/ui/use-toast';
-import { TooltipProvider } from '@/components/ui/tooltip';
+import { Toaster } from '@/components/UI/toaster';
+import { ToastProvider } from '@/components/UI/use-toast';
+import { TooltipProvider } from '@/components/UI/tooltip';
 import { ThemeProvider } from '@/components/theme-provider';
 
 // Pages
