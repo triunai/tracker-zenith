@@ -1,5 +1,6 @@
+
 import * as React from "react";
-import type { ToastProps } from "@/components/UI/toast";
+import type { ToastProps } from "@/components/ui/toast";
 
 // Define our toast types
 type ToastType = {
