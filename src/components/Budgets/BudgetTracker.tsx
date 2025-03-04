@@ -12,16 +12,17 @@ import {
   categories, 
   getBudgetStatus, 
   Period,
-  getBudgetsByPeriod,
-  getBudgetSummaryByPeriod
+  getBudgetsByPeriod
 } from '@/lib/mockData';
 import { Button } from '@/components/UI/button';
 import { Plus, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatCurrency } from '@/lib/utils';
+import BudgetForm from '@/components/Budgets/BudgetForm';
 
 const BudgetTracker = () => {
   const [selectedPeriod, setSelectedPeriod] = useState<Period>(Period.Monthly);
+  const [isNewBudgetOpen, setIsNewBudgetOpen] = useState(false);
 
   // Period selection buttons
   const periods: Period[] = [Period.Daily, Period.Weekly, Period.Monthly, Period.Yearly];
@@ -46,7 +47,11 @@ const BudgetTracker = () => {
                 {period}
               </Button>
             ))}
-            <Button size="sm" className="gap-1 ml-2">
+            <Button 
+              size="sm" 
+              className="gap-1 ml-2"
+              onClick={() => setIsNewBudgetOpen(true)}
+            >
               <Plus className="h-4 w-4" /> New Budget
             </Button>
           </div>
@@ -144,8 +149,30 @@ const BudgetTracker = () => {
               </div>
             );
           })}
+
+          {getBudgetsByPeriod(selectedPeriod).length === 0 && (
+            <div className="text-center py-6 text-muted-foreground">
+              No budgets found for {selectedPeriod.toLowerCase()} period.
+              <div className="mt-2">
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => setIsNewBudgetOpen(true)}
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create your first budget
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       </CardContent>
+
+      {/* Budget Form Modal */}
+      <BudgetForm 
+        open={isNewBudgetOpen} 
+        onOpenChange={setIsNewBudgetOpen}
+      />
     </Card>
   );
 };
