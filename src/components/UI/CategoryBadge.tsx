@@ -1,7 +1,6 @@
-
 import React from 'react';
 import { cn } from '@/lib/utils';
-import { Badge } from '@/components/ui/badge';
+import { Badge } from '@/components/UI/badge';
 import { categories } from '@/lib/mockData';
 import { 
   Home, Utensils, Car, Tv, ShoppingBag, Zap, 

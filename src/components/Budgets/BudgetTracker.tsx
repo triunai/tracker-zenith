@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { 
   Card, 
@@ -5,10 +6,10 @@ import {
   CardDescription, 
   CardHeader, 
   CardTitle 
-} from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
+} from "@/components/UI/card";
+import { Progress } from "@/components/UI/progress";
 import { budgets, categories, getBudgetStatus } from '@/lib/mockData';
-import { Button } from "@/components/ui/button";
+import { Button } from '@/components/UI/button';
 import { Plus, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatCurrency } from '@/lib/utils';
