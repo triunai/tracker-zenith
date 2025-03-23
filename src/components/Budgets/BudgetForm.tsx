@@ -30,6 +30,7 @@ import { Button } from '@/components/UI/button';
 import { Period, categories } from '@/lib/mockData';
 import { Loader2 } from 'lucide-react';
 import { useToast } from '@/components/UI/use-toast';
+import { Label } from '@/components/UI/label';
 
 // Form validation schema
 const budgetFormSchema = z.object({
@@ -139,20 +140,25 @@ const BudgetForm = ({ open, onOpenChange }: BudgetFormProps) => {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Budget Amount</FormLabel>
-                  <FormControl>
+                  <div className="grid gap-2">
                     <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-                        $
-                      </span>
-                      <Input 
+                      <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                        <span className="text-gray-500">RM</span>
+                      </div>
+                      <Input
+                        id="amount"
                         type="number"
+                        min="0.01"
+                        step="0.01"
                         placeholder="0.00"
-                        className="pl-7"
+                        className="pl-10"
                         {...field}
-                        onChange={e => field.onChange(Number(e.target.value))}
                       />
                     </div>
-                  </FormControl>
+                    {form.formState.errors.amount && (
+                      <p className="text-sm text-destructive">{form.formState.errors.amount.message}</p>
+                    )}
+                  </div>
                   <FormMessage />
                 </FormItem>
               )}

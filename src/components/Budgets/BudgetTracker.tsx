@@ -19,6 +19,7 @@ import { Plus, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatCurrency } from '@/lib/utils';
 import BudgetForm from '@/components/Budgets/BudgetForm';
+import { Badge } from '@/components/UI/badge';
 
 const BudgetTracker = () => {
   const [selectedPeriod, setSelectedPeriod] = useState<Period>(Period.Monthly);

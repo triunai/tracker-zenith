@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { 
   DollarSign, 
@@ -37,7 +36,7 @@ const DashboardSummary = () => {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <StatCard
           title="Total Balance"
-          value={formatCurrency(balance)}
+          value={`${formatCurrency(balance).replace('$', '')}`}
           icon={<Wallet className="h-5 w-5" />}
           valueClassName={cn(
             balance >= 0 ? "text-finance-income" : "text-finance-expense"
@@ -47,7 +46,7 @@ const DashboardSummary = () => {
         
         <StatCard
           title="Total Income"
-          value={formatCurrency(income)}
+          value={`${formatCurrency(income).replace('$', '')}`}
           icon={<TrendingUp className="h-5 w-5" />}
           trend={{ value: 12, isPositive: true }}
           valueClassName="text-finance-income"
@@ -56,7 +55,7 @@ const DashboardSummary = () => {
         
         <StatCard
           title="Total Expenses"
-          value={formatCurrency(expenses)}
+          value={`${formatCurrency(expenses).replace('$', '')}`}
           icon={<TrendingDown className="h-5 w-5" />}
           trend={{ value: 8, isPositive: false }}
           valueClassName="text-finance-expense"
