@@ -12,7 +12,7 @@ import { ThemeProvider } from '@/components/theme-provider';
 
 // Pages
 import Index from './pages/Index';
-import Transactions from './pages/Transactions';
+import TransactionsPage from './pages/transactions';
 import NotFound from './pages/NotFound';
 import BudgetPage from './pages/budgets';
 
@@ -28,7 +28,7 @@ function App() {
             <Router>
               <Routes>
                 <Route path="/" element={<Index />} />
-                <Route path="/transactions" element={<Transactions />} />
+                <Route path="/transactions" element={<TransactionsPage />} />
                 <Route path="/budgets" element={<BudgetPage />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>

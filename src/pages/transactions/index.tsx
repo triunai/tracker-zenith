@@ -1,9 +1,8 @@
-
 import React from 'react';
 import Layout from '@/components/Layout/Layout';
 import TransactionList from '@/components/Transactions/TransactionList';
 
-const Transactions = () => {
+const TransactionsPage = () => {
   return (
     <Layout>
       <div className="space-y-8">
@@ -22,4 +21,4 @@ const Transactions = () => {
   );
 };
 
-export default Transactions;
+export default TransactionsPage;
