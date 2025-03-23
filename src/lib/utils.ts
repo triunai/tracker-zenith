@@ -1,4 +1,3 @@
-
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
 import { PaymentMethod, categories, expenses } from '@/lib/mockData';
@@ -9,9 +8,9 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('en-US', {
+  return new Intl.NumberFormat('en-MY', {
     style: 'currency',
-    currency: 'USD',
+    currency: 'MYR',
     minimumFractionDigits: 2,
     maximumFractionDigits: 2
   }).format(amount);
