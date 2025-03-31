@@ -28,6 +28,9 @@ export const budgetApi = {
   
   // Get budgets by period
   getByPeriod: async (userId: string, period: string): Promise<Budget[]> => {
+    // Convert period to lowercase to match database values
+    const periodLowercase = period.toLowerCase();
+    
     const { data, error } = await supabase
       .from('budget')
       .select(`
@@ -38,7 +41,7 @@ export const budgetApi = {
         )
       `)
       .eq('user_id', userId)
-      .eq('period', period)
+      .eq('period', periodLowercase)
       .eq('isdeleted', false)
       .order('created_at', { ascending: false });
     

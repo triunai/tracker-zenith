@@ -1,5 +1,5 @@
 // src/pages/budgets/index-api.tsx
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import Layout from '@/components/Layout/Layout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/UI/card';
@@ -10,7 +10,7 @@ import { PeriodEnum } from '@/interfaces/enums/PeriodEnum';
 import { cn } from '@/lib/utils';
 import { formatCurrency } from '@/lib/utils';
 import { budgetApi } from '@/lib/api/budgetApi';
-import { Budget, CreateBudgetRequest } from '@/interfaces/budget-interface';
+import { CreateBudgetRequest } from '@/interfaces/budget-interface';
 import { useToast } from '@/components/UI/use-toast';
 
 const BudgetPage = () => {
@@ -18,14 +18,24 @@ const BudgetPage = () => {
   const queryClient = useQueryClient();
   const [selectedPeriod, setSelectedPeriod] = useState<PeriodEnum>(PeriodEnum.MONTHLY);
   const [isNewBudgetOpen, setIsNewBudgetOpen] = useState(false);
-  
+  const [debug, setDebug] = useState<string>("");
+
   // Mock user ID - you'd get this from auth context in a real app
-  const userId = "123e4567-e89b-12d3-a456-426614174000";
+  const userId = "11111111-1111-1111-1111-111111111111";
   
   // Fetch budgets for the selected period
-  const { data: budgets = [], isLoading } = useQuery({
+  const { data: budgets = [], isLoading, error } = useQuery({
     queryKey: ['budgets', selectedPeriod],
-    queryFn: () => budgetApi.getByPeriod(userId, selectedPeriod),
+    queryFn: async () => {
+      try {
+        const result = await budgetApi.getByPeriod(userId, selectedPeriod);
+        setDebug(`Successfully fetched ${result.length} budgets`);
+        return result;
+      } catch (err) {
+        setDebug(`Error: ${err.message}`);
+        throw err;
+      }
+    },
   });
   
   // Fetch categories
@@ -250,6 +260,12 @@ const BudgetPage = () => {
         {/* Budget Form */}
         {/* You'll need to adapt your BudgetForm component to work with the API */}
         {/* <BudgetForm open={isNewBudgetOpen} onOpenChange={setIsNewBudgetOpen} onSubmit={handleBudgetSubmit} /> */}
+        
+        {/* Debug Information */}
+        <div>
+          <h2>Debug Information</h2>
+          <p>{debug}</p>
+        </div>
       </div>
     </Layout>
   );
