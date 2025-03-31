@@ -14,8 +14,7 @@ import { ThemeProvider } from '@/components/theme-provider';
 import Index from './pages/Index';
 import TransactionsPage from './pages/transactions';
 import NotFound from './pages/NotFound';
-import BudgetApiPage from './pages/budgets/index-api';
-
+import BudgetPage from './pages/budgets/index';
 import PaymentMethodsPage from './pages/payment-methods';
 
 
@@ -32,10 +31,9 @@ function App() {
               <Routes>
                 <Route path="/" element={<Index />} />
                 <Route path="/transactions" element={<TransactionsPage />} />
-                <Route path="/budgets-api" element={<BudgetApiPage />} />
-                <Route path="*" element={<NotFound />} />
+                <Route path="/budgets" element={<BudgetPage />} />
                 <Route path="/payment-methods" element={<PaymentMethodsPage />} />
-
+                <Route path="*" element={<NotFound />} />
               </Routes>
             </Router>
             <Toaster />
