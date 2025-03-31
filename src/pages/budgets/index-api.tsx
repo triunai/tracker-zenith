@@ -1,10 +1,10 @@
 // src/pages/budgets/index-api.tsx
 import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, useQueries } from '@tanstack/react-query';
 import Layout from '@/components/Layout/Layout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/UI/card';
 import { Button } from '@/components/UI/button';
-import { Plus, AlertTriangle } from 'lucide-react';
+import { Plus, AlertTriangle, Trash } from 'lucide-react';
 import { Progress } from '@/components/UI/progress';
 import { PeriodEnum } from '@/interfaces/enums/PeriodEnum';
 import { cn } from '@/lib/utils';
@@ -12,6 +12,7 @@ import { formatCurrency } from '@/lib/utils';
 import { budgetApi } from '@/lib/api/budgetApi';
 import { CreateBudgetRequest } from '@/interfaces/budget-interface';
 import { useToast } from '@/components/UI/use-toast';
+import BudgetForm from '@/components/Budgets/BudgetForm';
 
 const BudgetPage = () => {
   const { toast } = useToast();
@@ -44,6 +45,22 @@ const BudgetPage = () => {
     queryFn: budgetApi.getCategories,
   });
   
+  // Fetch spending data for each budget
+  const spendingQueries = useQueries({
+    queries: budgets.map(budget => ({
+      queryKey: ['budgetSpending', budget.id],
+      queryFn: () => budgetApi.getBudgetSpending(budget.id),
+    }))
+  });
+
+  // Fetch category spending data for each budget
+  const categorySpendingQueries = useQueries({
+    queries: budgets.map(budget => ({
+      queryKey: ['budgetCategorySpending', budget.id],
+      queryFn: () => budgetApi.getBudgetCategorySpending(budget.id),
+    }))
+  });
+  
   // Create budget mutation
   const createBudget = useMutation({
     mutationFn: (newBudget: CreateBudgetRequest) => budgetApi.create(newBudget),
@@ -61,6 +78,7 @@ const BudgetPage = () => {
         description: `Failed to create budget: ${error.message}`,
         variant: "destructive",
       });
+      setDebug(`Error creating budget: ${error.message}`);
     }
   });
   
@@ -80,16 +98,24 @@ const BudgetPage = () => {
         description: `Failed to delete budget: ${error.message}`,
         variant: "destructive",
       });
+      setDebug(`Error deleting budget: ${error.message}`);
     }
   });
+  
+  // Add a function to handle deletion:
+  const handleDeleteBudget = (budgetId: number) => {
+    if (confirm("Are you sure you want to delete this budget?")) {
+      deleteBudget.mutate(budgetId);
+    }
+  };
   
   // Handle budget form submit
   const handleBudgetSubmit = (formData: any) => {
     const newBudget: CreateBudgetRequest = {
       user_id: userId,
-      name: `${formData.categoryName} Budget`,
+      name: `${formData.categoryName || 'New'} Budget`,
       amount: formData.amount,
-      period: formData.period,
+      period: formData.period.toLowerCase(), // Convert to lowercase to match DB
       start_date: new Date().toISOString(),
       categories: [
         {
@@ -99,14 +125,8 @@ const BudgetPage = () => {
       ]
     };
     
+    setDebug(`Submitting budget: ${JSON.stringify(newBudget)}`);
     createBudget.mutate(newBudget);
-  };
-  
-  // Handle budget delete
-  const handleDeleteBudget = (budgetId: number) => {
-    if (confirm("Are you sure you want to delete this budget?")) {
-      deleteBudget.mutate(budgetId);
-    }
   };
   
   const periods = Object.values(PeriodEnum);
@@ -167,16 +187,20 @@ const BudgetPage = () => {
               </div>
             ) : (
               <div className="space-y-4">
-                {budgets.map((budget) => {
+                {budgets.map((budget, index) => {
                   // Get first category for simplicity (in a real app, handle multiple categories)
                   const budgetCategory = budget.budget_categories?.[0];
                   const category = budgetCategory?.category;
                   
-                  // Calculate spending - in a real app, you'd fetch this from an API
-                  // For now, we'll use a random value between 0 and budget amount
-                  const spent = Math.random() * budget.amount;
+                  // Get actual spending from the API
+                  const spendingQuery = spendingQueries[index];
+                  const spent = spendingQuery.data || 0;
                   const percentage = Math.round((spent / budget.amount) * 100);
                   const remaining = budget.amount - spent;
+                  
+                  // Get category-specific spending
+                  const categorySpendingQuery = categorySpendingQueries[index];
+                  const categorySpending = categorySpendingQuery.data || [];
                   
                   // Determine status-based styling
                   const getProgressColor = () => {
@@ -210,14 +234,21 @@ const BudgetPage = () => {
                           <span className="text-sm font-medium">
                             {budget.name}
                           </span>
+                          {/* Show warning icon if budget is near limit */}
+                          {percentage >= 90 && (
+                            <div className="text-finance-expense" title="Budget almost exceeded">
+                              <AlertTriangle className="h-4 w-4" />
+                            </div>
+                          )}
+                          {/* Delete button is placed here */}
                           <Button 
                             variant="ghost" 
                             size="sm" 
-                            className="h-8 w-8 p-0"
+                            className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
                             onClick={() => handleDeleteBudget(budget.id)}
                           >
                             <span className="sr-only">Delete</span>
-                            <AlertTriangle className="h-4 w-4" />
+                            <Trash className="h-4 w-4" />
                           </Button>
                         </div>
                       </div>
@@ -234,20 +265,36 @@ const BudgetPage = () => {
                         
                         <Progress 
                           value={percentage} 
-                          className="h-2" 
-                          indicatorClassName={getProgressColor()}
+                          className={cn("h-2", getProgressColor())}
                         />
                         
-                        <div className="flex justify-between text-sm">
-                          <span>
-                            {percentage}% used
-                          </span>
-                          <span>
-                            {remaining > 0 
-                              ? `${formatCurrency(remaining)} remaining` 
-                              : `${formatCurrency(Math.abs(remaining))} over budget`}
-                          </span>
+                        <div className="text-right text-sm text-muted-foreground">
+                          Remaining: <span className="font-medium">{formatCurrency(remaining)}</span>
                         </div>
+                        
+                        {/* Show category breakdown if available */}
+                        {categorySpending.length > 0 && (
+                          <div className="mt-4">
+                            <p className="text-sm font-medium mb-2">Category Breakdown:</p>
+                            <div className="space-y-2">
+                              {categorySpending.map(item => {
+                                const catPercentage = Math.round((item.total_spent / budget.amount) * 100);
+                                return (
+                                  <div key={item.category_id} className="text-xs">
+                                    <div className="flex justify-between mb-1">
+                                      <span>{item.category_name}</span>
+                                      <span>{formatCurrency(item.total_spent)} ({catPercentage}%)</span>
+                                    </div>
+                                    <Progress 
+                                      value={catPercentage} 
+                                      className="h-1" 
+                                    />
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </div>
                   );
@@ -258,8 +305,11 @@ const BudgetPage = () => {
         </Card>
 
         {/* Budget Form */}
-        {/* You'll need to adapt your BudgetForm component to work with the API */}
-        {/* <BudgetForm open={isNewBudgetOpen} onOpenChange={setIsNewBudgetOpen} onSubmit={handleBudgetSubmit} /> */}
+        <BudgetForm 
+          open={isNewBudgetOpen} 
+          onOpenChange={setIsNewBudgetOpen} 
+          onSubmit={handleBudgetSubmit} 
+        />
         
         {/* Debug Information */}
         <div>

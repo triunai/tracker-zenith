@@ -70,22 +70,42 @@ export const budgetApi = {
   
   // Create new budget with categories
   create: async (budget: CreateBudgetRequest): Promise<Budget> => {
-    // Start a transaction using RPC (Remote Procedure Call)
-    // This ensures both the budget and its categories are created atomically
-    const { data, error } = await supabase.rpc('create_budget_with_categories', {
-      budget_data: {
-        user_id: budget.user_id,
-        name: budget.name,
-        amount: budget.amount,
-        period: budget.period,
-        start_date: budget.start_date,
-        end_date: budget.end_date
-      },
-      categories_data: budget.categories
-    });
-
-    if (error) throw error;
-    return data;
+    try {
+      // First create the budget
+      const { data: budgetData, error: budgetError } = await supabase
+        .from('budget')
+        .insert([{
+          user_id: budget.user_id,
+          name: budget.name,
+          amount: budget.amount,
+          period: budget.period.toLowerCase(), // Ensure lowercase
+          start_date: budget.start_date,
+          end_date: budget.end_date
+        }])
+        .select()
+        .single();
+      
+      if (budgetError) throw budgetError;
+      
+      // Then create the budget categories
+      const budgetCategories = budget.categories.map(cat => ({
+        budget_id: budgetData.id,
+        category_id: cat.category_id,
+        alert_threshold: cat.alert_threshold
+      }));
+      
+      const { error: categoriesError } = await supabase
+        .from('budget_category')
+        .insert(budgetCategories);
+      
+      if (categoriesError) throw categoriesError;
+      
+      // Return the created budget with categories
+      return await budgetApi.getById(budgetData.id) as Budget;
+    } catch (error) {
+      console.error("Error creating budget:", error);
+      throw error;
+    }
   },
   
   // If you don't have an RPC function, here's an alternative way to create a budget
@@ -204,5 +224,15 @@ export const budgetApi = {
     
     if (error) throw error;
     return data || 0;
+  },
+  
+  // Get budget spending breakdown by category
+  getBudgetCategorySpending: async (budgetId: number): Promise<{category_name: string, category_id: number, total_spent: number}[]> => {
+    const { data, error } = await supabase.rpc('get_budget_category_spending', {
+      budget_id: budgetId
+    });
+    
+    if (error) throw error;
+    return data || [];
   }
 };
