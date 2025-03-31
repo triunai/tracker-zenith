@@ -1,7 +1,11 @@
+// Updated BudgetForm.tsx
 import React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
+import { useQuery } from '@tanstack/react-query';
+import { budgetApi } from '@/lib/api/budgetApi';
+import { PeriodEnum } from '@/interfaces/enums/PeriodEnum';
 import { 
   Dialog,
   DialogContent,
@@ -27,20 +31,18 @@ import {
 } from '@/components/UI/select';
 import { Input } from '@/components/UI/input';
 import { Button } from '@/components/UI/button';
-import { Period, categories } from '@/lib/mockData';
 import { Loader2 } from 'lucide-react';
-import { useToast } from '@/components/UI/use-toast';
-import { Label } from '@/components/UI/label';
 
 // Form validation schema
 const budgetFormSchema = z.object({
   categoryId: z.number({
     required_error: "Please select a category",
   }),
+  categoryName: z.string().optional(),
   amount: z.number({
     required_error: "Please enter an amount",
   }).positive("Amount must be greater than 0"),
-  period: z.nativeEnum(Period, {
+  period: z.nativeEnum(PeriodEnum, {
     required_error: "Please select a period",
   }),
 });
@@ -50,39 +52,32 @@ type BudgetFormValues = z.infer<typeof budgetFormSchema>;
 interface BudgetFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onSubmit: (data: BudgetFormValues) => void;
 }
 
-const BudgetForm = ({ open, onOpenChange }: BudgetFormProps) => {
-  const { toast } = useToast();
+const BudgetForm = ({ open, onOpenChange, onSubmit }: BudgetFormProps) => {
+  // Fetch categories
+  const { data: categories = [], isLoading: isLoadingCategories } = useQuery({
+    queryKey: ['expenseCategories'],
+    queryFn: budgetApi.getCategories,
+  });
+  
   const form = useForm<BudgetFormValues>({
     resolver: zodResolver(budgetFormSchema),
     defaultValues: {
-      period: Period.Monthly,
+      period: PeriodEnum.MONTHLY,
     },
   });
 
-  const onSubmit = async (data: BudgetFormValues) => {
-    try {
-      // Here you would typically make an API call to save the budget
-      console.log('Submitting budget:', data);
-      
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      toast({
-        title: "Success!",
-        description: "Budget has been created successfully.",
-      });
-      
-      form.reset();
-      onOpenChange(false);
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to create budget. Please try again.",
-        variant: "destructive",
-      });
+  const handleSubmit = async (data: BudgetFormValues) => {
+    // Find selected category to get the name
+    const selectedCategory = categories.find(c => c.id === data.categoryId);
+    if (selectedCategory) {
+      data.categoryName = selectedCategory.name;
     }
+    
+    onSubmit(data);
+    form.reset();
   };
 
   return (
@@ -96,7 +91,7 @@ const BudgetForm = ({ open, onOpenChange }: BudgetFormProps) => {
         </DialogHeader>
         
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
             <FormField
               control={form.control}
               name="categoryId"
@@ -106,6 +101,7 @@ const BudgetForm = ({ open, onOpenChange }: BudgetFormProps) => {
                   <Select 
                     onValueChange={value => field.onChange(Number(value))}
                     defaultValue={field.value?.toString()}
+                    disabled={isLoadingCategories}
                   >
                     <FormControl>
                       <SelectTrigger>
@@ -113,20 +109,24 @@ const BudgetForm = ({ open, onOpenChange }: BudgetFormProps) => {
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {categories.map(category => (
-                        <SelectItem 
-                          key={category.id} 
-                          value={category.id.toString()}
-                        >
-                          <div className="flex items-center gap-2">
-                            <div 
-                              className="w-3 h-3 rounded-full"
-                              style={{ backgroundColor: category.color }}
-                            />
-                            {category.name}
-                          </div>
-                        </SelectItem>
-                      ))}
+                      {isLoadingCategories ? (
+                        <SelectItem value="loading" disabled>Loading categories...</SelectItem>
+                      ) : (
+                        categories.map(category => (
+                          <SelectItem 
+                            key={category.id} 
+                            value={category.id.toString()}
+                          >
+                            <div className="flex items-center gap-2">
+                              <div 
+                                className="w-3 h-3 rounded-full"
+                                style={{ backgroundColor: '#' + Math.floor(Math.random()*16777215).toString(16) }}
+                              />
+                              {category.name}
+                            </div>
+                          </SelectItem>
+                        ))
+                      )}
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -153,6 +153,7 @@ const BudgetForm = ({ open, onOpenChange }: BudgetFormProps) => {
                         placeholder="0.00"
                         className="pl-10"
                         {...field}
+                        onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
                       />
                     </div>
                     {form.formState.errors.amount && (
@@ -171,7 +172,7 @@ const BudgetForm = ({ open, onOpenChange }: BudgetFormProps) => {
                 <FormItem>
                   <FormLabel>Budget Period</FormLabel>
                   <div className="flex flex-wrap gap-2">
-                    {Object.values(Period).map((period) => (
+                    {Object.values(PeriodEnum).map((period) => (
                       <Button
                         key={period}
                         type="button"
@@ -180,7 +181,7 @@ const BudgetForm = ({ open, onOpenChange }: BudgetFormProps) => {
                         onClick={() => field.onChange(period)}
                         className="capitalize"
                       >
-                        {period}
+                        {period.toLowerCase()}
                       </Button>
                     ))}
                   </div>
@@ -218,4 +219,4 @@ const BudgetForm = ({ open, onOpenChange }: BudgetFormProps) => {
   );
 };
 
-export default BudgetForm; 
+export default BudgetForm;
