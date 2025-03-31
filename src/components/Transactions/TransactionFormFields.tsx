@@ -4,7 +4,7 @@ import { format } from "date-fns";
 import { Calendar as CalendarIcon } from "lucide-react";
 import { categories, PaymentMethod, getPaymentMethodName } from '@/lib/utils';
 import FormField from './FormField';
-import { FormErrors } from '@/types/transaction';
+import { FormErrors } from '@/interfaces/types/transaction';
 
 import { Button } from "@/components/UI/button";
 import { Input } from "@/components/UI/input";

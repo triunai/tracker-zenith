@@ -1,5 +1,5 @@
 
-import { TransactionData } from "@/types/transaction";
+import { TransactionData } from "@/interfaces/types/transaction";
 
 /**
  * Simulates saving a transaction to a backend

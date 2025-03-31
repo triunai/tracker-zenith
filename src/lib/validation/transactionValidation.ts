@@ -1,5 +1,5 @@
 
-import { FormErrors, TransactionData } from "@/types/transaction";
+import { FormErrors, TransactionData } from "@/interfaces/types/transaction";
 
 /**
  * Validates transaction form data

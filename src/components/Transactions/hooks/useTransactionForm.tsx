@@ -1,6 +1,6 @@
 
 import { useState } from 'react';
-import { FormErrors, TransactionData } from '@/types/transaction';
+import { FormErrors, TransactionData } from '@/interfaces/types/transaction';
 import { validateTransaction, isFormValid } from '@/lib/validation/transactionValidation';
 import { saveTransaction } from '@/lib/api/transactionApi';
 import { useToast } from "@/hooks/use-toast";
