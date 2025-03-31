@@ -13,6 +13,24 @@ import { budgetApi } from '@/lib/api/budgetApi';
 import { CreateBudgetRequest } from '@/interfaces/budget-interface';
 import { useToast } from '@/components/UI/use-toast';
 import BudgetForm from '@/components/Budgets/BudgetForm';
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogHeader, 
+  DialogTitle, 
+  DialogDescription,
+  DialogFooter
+} from '@/components/UI/dialog';
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/UI/alert-dialog';
 
 const BudgetPage = () => {
   const { toast } = useToast();
@@ -103,10 +121,17 @@ const BudgetPage = () => {
   });
   
   // Add a function to handle deletion:
-  const handleDeleteBudget = (budgetId: number) => {
-    if (confirm("Are you sure you want to delete this budget?")) {
-      deleteBudget.mutate(budgetId);
+  const [budgetToDelete, setBudgetToDelete] = useState<number | null>(null);
+  
+  const confirmDelete = () => {
+    if (budgetToDelete) {
+      deleteBudget.mutate(budgetToDelete);
+      setBudgetToDelete(null);
     }
+  };
+  
+  const cancelDelete = () => {
+    setBudgetToDelete(null);
   };
   
   // Handle budget form submit
@@ -127,6 +152,10 @@ const BudgetPage = () => {
     
     setDebug(`Submitting budget: ${JSON.stringify(newBudget)}`);
     createBudget.mutate(newBudget);
+  };
+  
+  const handleDeleteBudget = (budgetId: number) => {
+    setBudgetToDelete(budgetId);
   };
   
   const periods = Object.values(PeriodEnum);
@@ -310,6 +339,24 @@ const BudgetPage = () => {
           onOpenChange={setIsNewBudgetOpen} 
           onSubmit={handleBudgetSubmit} 
         />
+        
+        {/* Alert Dialog for Delete Confirmation */}
+        <AlertDialog open={budgetToDelete !== null} onOpenChange={(open) => {
+          if (!open) setBudgetToDelete(null);
+        }}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This will permanently delete this budget. This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={cancelDelete}>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={confirmDelete} className="bg-red-500 hover:bg-red-600">Delete</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
         
         {/* Debug Information */}
         <div>
