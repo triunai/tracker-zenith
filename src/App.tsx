@@ -15,6 +15,7 @@ import Index from './pages/Index';
 import TransactionsPage from './pages/transactions';
 import NotFound from './pages/NotFound';
 import BudgetPage from './pages/budgets';
+import PaymentMethodsPage from './pages/payment-methods';
 
 // Create a client
 const queryClient = new QueryClient();
@@ -31,6 +32,8 @@ function App() {
                 <Route path="/transactions" element={<TransactionsPage />} />
                 <Route path="/budgets" element={<BudgetPage />} />
                 <Route path="*" element={<NotFound />} />
+                <Route path="/payment-methods" element={<PaymentMethodsPage />} />
+
               </Routes>
             </Router>
             <Toaster />
