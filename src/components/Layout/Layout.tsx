@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/UI/button';
 import { 
@@ -17,6 +17,8 @@ import {
 } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { ThemeToggle } from '@/components/UI/theme-toggle';
+import { useAuth } from '@/context/AuthContext';
+import { useToast } from '@/components/UI/use-toast';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -53,8 +55,11 @@ const navItems: NavItem[] = [
 
 const Layout = ({ children }: LayoutProps) => {
   const location = useLocation();
+  const navigate = useNavigate();
   const isMobile = useIsMobile();
   const [sidebarOpen, setSidebarOpen] = React.useState(true);
+  const { user, profile, signOut } = useAuth();
+  const { toast } = useToast();
   
   const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
 
@@ -73,6 +78,24 @@ const Layout = ({ children }: LayoutProps) => {
       localStorage.setItem('sidebar-collapsed', (!sidebarOpen).toString());
     }
   }, [sidebarOpen, isMobile]);
+  
+  const handleLogout = async () => {
+    try {
+      await signOut();
+      toast({
+        title: "Logged out",
+        description: "You have been successfully logged out.",
+        variant: "default",
+      });
+      navigate('/login');
+    } catch (error: any) {
+      toast({
+        title: "Logout failed",
+        description: error.message || "An error occurred during logout.",
+        variant: "destructive",
+      });
+    }
+  };
   
   return (
     <div className="flex min-h-screen bg-background">
@@ -167,21 +190,21 @@ const Layout = ({ children }: LayoutProps) => {
             
             {/* User profile */}
             {(sidebarOpen || isMobile) ? (
-              <div className="flex items-center mb-4 px-2 py-3 rounded-md hover:bg-secondary transition-colors cursor-pointer">
+              <Link to="/profile" className="flex items-center mb-4 px-2 py-3 rounded-md hover:bg-secondary transition-colors cursor-pointer">
                 <div className="w-8 h-8 bg-primary/20 rounded-full flex items-center justify-center text-primary mr-3">
                   <UserCircle size={20} />
                 </div>
                 <div>
-                  <p className="text-sm font-medium">Alex Johnson</p>
-                  <p className="text-xs text-muted-foreground">alex@example.com</p>
+                  <p className="text-sm font-medium">{profile?.display_name || 'User'}</p>
+                  <p className="text-xs text-muted-foreground">{user?.email || 'user@example.com'}</p>
                 </div>
-              </div>
+              </Link>
             ) : (
-              <div className="flex justify-center mb-4">
+              <Link to="/profile" className="flex justify-center mb-4">
                 <div className="w-10 h-10 bg-primary/20 rounded-full flex items-center justify-center text-primary">
                   <UserCircle size={24} />
                 </div>
-              </div>
+              </Link>
             )}
             
             {/* Action buttons */}
@@ -198,9 +221,9 @@ const Layout = ({ children }: LayoutProps) => {
                 )} 
                 asChild
               >
-                <Link to="/settings">
+                <Link to="/profile">
                   <Settings size={14} />
-                  {(sidebarOpen || isMobile) && <span>Settings</span>}
+                  {(sidebarOpen || isMobile) && <span>Profile</span>}
                 </Link>
               </Button>
               <Button 
@@ -210,6 +233,7 @@ const Layout = ({ children }: LayoutProps) => {
                   "gap-1",
                   sidebarOpen || isMobile ? "w-full" : "w-full justify-center px-0"
                 )}
+                onClick={handleLogout}
               >
                 <LogOut size={14} />
                 {(sidebarOpen || isMobile) && <span>Logout</span>}

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   Card, 
   CardContent, 
@@ -24,6 +24,7 @@ import {
 } from 'recharts';
 import { expenseApi } from '@/lib/api/expenseApi';
 import { LoaderCircle } from 'lucide-react';
+import { useDashboard } from '@/context/DashboardContext';
 
 // Placeholder until we implement proper auth
 const MOCK_USER_ID = "11111111-1111-1111-1111-111111111111";
@@ -53,25 +54,67 @@ const SpendingChart = () => {
   const [chartData, setChartData] = useState<{ name: string; value: number; color: string }[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { dateFilter, dateRangeText } = useDashboard();
   
-  // Calculate date range for current month
-  const getCurrentMonthDateRange = () => {
-    const now = new Date();
-    const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
-    const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+  // Get date range based on filter
+  const getDateRangeForFilter = useCallback(() => {
+    let startDate, endDate;
+    
+    switch (dateFilter.type) {
+      case 'month': {
+        const year = dateFilter.year;
+        const month = dateFilter.month || 0;
+        startDate = new Date(year, month, 1);
+        endDate = new Date(year, month + 1, 0);
+        break;
+      }
+      case 'quarter': {
+        const year = dateFilter.year;
+        const quarter = dateFilter.quarter || 1;
+        const startMonth = (quarter - 1) * 3;
+        startDate = new Date(year, startMonth, 1);
+        endDate = new Date(year, startMonth + 3, 0);
+        break;
+      }
+      case 'year': {
+        const year = dateFilter.year;
+        startDate = new Date(year, 0, 1);
+        endDate = new Date(year, 11, 31);
+        break;
+      }
+      case 'custom': {
+        if (dateFilter.customRange) {
+          startDate = dateFilter.customRange.startDate;
+          endDate = dateFilter.customRange.endDate;
+        } else {
+          // Default to current month if no custom range
+          const now = new Date();
+          startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+          endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        }
+        break;
+      }
+      default: {
+        // Default to current month
+        const now = new Date();
+        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+        endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+      }
+    }
+    
     return {
-      startDate: firstDay.toISOString(),
-      endDate: lastDay.toISOString()
+      startDate: startDate.toISOString(),
+      endDate: endDate.toISOString()
     };
-  };
+  }, [dateFilter]);
   
-  // Load data whenever the data type changes
+  // Load data whenever the data type or date filter changes
   useEffect(() => {
     const loadChartData = async () => {
       try {
         setIsLoading(true);
         setError(null);
-        const { startDate, endDate } = getCurrentMonthDateRange();
+        const { startDate, endDate } = getDateRangeForFilter();
         
         // Get expenses data
         const expenses = await expenseApi.getAllByUser(MOCK_USER_ID, {
@@ -164,7 +207,7 @@ const SpendingChart = () => {
     };
     
     loadChartData();
-  }, [dataType]);
+  }, [dataType, getDateRangeForFilter, dateFilter]);
   
   return (
     <Card className="animate-fade-up animate-delay-300">
@@ -172,7 +215,7 @@ const SpendingChart = () => {
         <div className="flex flex-col sm:flex-row justify-between gap-4">
           <div>
             <CardTitle>Spending Analysis</CardTitle>
-            <CardDescription>Your expense breakdown</CardDescription>
+            <CardDescription>Your expense breakdown for {dateRangeText}</CardDescription>
           </div>
           <div className="flex flex-col sm:flex-row gap-2">
             <Tabs 
@@ -213,7 +256,7 @@ const SpendingChart = () => {
           </div>
         ) : chartData.length === 0 ? (
           <div className="h-[300px] w-full flex items-center justify-center text-muted-foreground">
-            <p>No expense data available for the current month</p>
+            <p>No expense data available for {dateRangeText}</p>
           </div>
         ) : (
           <div className="h-[300px] w-full">

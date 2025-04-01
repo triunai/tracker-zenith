@@ -16,6 +16,7 @@ import { cn } from '@/lib/utils';
 import { useToast } from '@/components/UI/use-toast';
 import TransactionForm from '@/components/Transactions/TransactionForm';
 import { useDashboard } from '@/context/DashboardContext';
+import DateFilter from './DateFilter';
 
 // Placeholder until we implement proper auth
 const MOCK_USER_ID = "11111111-1111-1111-1111-111111111111";
@@ -43,13 +44,11 @@ const DashboardSummary = () => {
     expenses, 
     incomeTrend, 
     expenseTrend, 
-    refreshData 
+    refreshData,
+    dateRangeText
   } = useDashboard();
   
   const { toast } = useToast();
-  
-  // Get current month for display
-  const currentMonth = new Date().toLocaleString('default', { month: 'long', year: 'numeric' });
   
   return (
     <div className="space-y-6">
@@ -57,7 +56,7 @@ const DashboardSummary = () => {
         <div>
           <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
           <p className="text-muted-foreground mt-1">
-            Your financial overview for {currentMonth}
+            Your financial overview for {dateRangeText}
           </p>
         </div>
         <div className="flex gap-2">
@@ -73,6 +72,8 @@ const DashboardSummary = () => {
           />
         </div>
       </div>
+      
+      <DateFilter />
       
       {isLoading ? (
         <div className="flex justify-center items-center py-8">

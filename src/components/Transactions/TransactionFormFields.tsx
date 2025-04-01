@@ -34,9 +34,8 @@ interface TransactionFormFieldsProps {
   setDescription: (desc: string) => void;
   amount: string;
   setAmount: (amount: string) => void;
-  quantity: string;
-  setQuantity: (quantity: string) => void;
   errors: FormErrors;
+  isEditMode?: boolean;
 }
 
 const TransactionFormFields = ({
@@ -54,9 +53,8 @@ const TransactionFormFields = ({
   setDescription,
   amount,
   setAmount,
-  quantity,
-  setQuantity,
-  errors
+  errors,
+  isEditMode
 }: TransactionFormFieldsProps) => {
   const [incomeCategories, setIncomeCategories] = useState<Array<{id: number, name: string}>>([]);
 
@@ -215,17 +213,6 @@ const TransactionFormFields = ({
             onChange={(e) => setAmount(e.target.value)}
           />
         </div>
-      </FormField>
-      
-      <FormField id="quantity" label="Quantity" error={errors.quantity}>
-        <Input
-          id="quantity"
-          type="number"
-          min="1"
-          defaultValue="1"
-          value={quantity}
-          onChange={(e) => setQuantity(e.target.value)}
-        />
       </FormField>
     </div>
   );

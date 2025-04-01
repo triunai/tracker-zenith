@@ -1,11 +1,9 @@
-
 export type FormErrors = {
   date?: string;
   category?: string;
   paymentMethod?: string;
   description?: string;
   amount?: string;
-  quantity?: string;
 };
 
 export interface TransactionData {
@@ -14,5 +12,4 @@ export interface TransactionData {
   paymentMethod: string;
   description: string;
   amount: number;
-  quantity: number;
 }

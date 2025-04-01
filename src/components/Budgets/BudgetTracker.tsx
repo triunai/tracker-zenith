@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useQuery, useQueries } from '@tanstack/react-query';
 import { 
   Card, 
@@ -15,6 +15,8 @@ import { formatCurrency } from '@/lib/utils';
 import BudgetForm from '@/components/Budgets/BudgetForm';
 import { PeriodEnum } from '@/interfaces/enums/PeriodEnum';
 import { budgetApi } from '@/lib/api/budgetApi';
+import { useDashboard } from '@/context/DashboardContext';
+import { supabase } from '@/lib/supabase/supabase';
 
 interface BudgetTrackerProps {
   onDelete?: (budgetId: number) => void;
@@ -24,9 +26,62 @@ interface BudgetTrackerProps {
 const BudgetTracker = ({ onDelete, onSubmit }: BudgetTrackerProps) => {
   const [selectedPeriod, setSelectedPeriod] = useState<PeriodEnum>(PeriodEnum.MONTHLY);
   const [isNewBudgetOpen, setIsNewBudgetOpen] = useState(false);
+  const { dateFilter } = useDashboard();
 
   // Mock user ID - you'd get this from auth context in a real app
   const userId = "11111111-1111-1111-1111-111111111111";
+  
+  // Get date range based on the filter
+  const getDateRangeForFilter = useCallback(() => {
+    let startDate, endDate;
+    
+    switch (dateFilter.type) {
+      case 'month': {
+        const year = dateFilter.year;
+        const month = dateFilter.month || 0;
+        startDate = new Date(year, month, 1);
+        endDate = new Date(year, month + 1, 0);
+        break;
+      }
+      case 'quarter': {
+        const year = dateFilter.year;
+        const quarter = dateFilter.quarter || 1;
+        const startMonth = (quarter - 1) * 3;
+        startDate = new Date(year, startMonth, 1);
+        endDate = new Date(year, startMonth + 3, 0);
+        break;
+      }
+      case 'year': {
+        const year = dateFilter.year;
+        startDate = new Date(year, 0, 1);
+        endDate = new Date(year, 11, 31);
+        break;
+      }
+      case 'custom': {
+        if (dateFilter.customRange) {
+          startDate = dateFilter.customRange.startDate;
+          endDate = dateFilter.customRange.endDate;
+        } else {
+          // Default to current month if no custom range
+          const now = new Date();
+          startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+          endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        }
+        break;
+      }
+      default: {
+        // Default to current month
+        const now = new Date();
+        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+        endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+      }
+    }
+    
+    return {
+      startDate: startDate.toISOString(),
+      endDate: endDate.toISOString()
+    };
+  }, [dateFilter]);
   
   // Fetch budgets for the selected period
   const { data: budgets = [], isLoading, error } = useQuery({
@@ -34,20 +89,44 @@ const BudgetTracker = ({ onDelete, onSubmit }: BudgetTrackerProps) => {
     queryFn: () => budgetApi.getByPeriod(userId, selectedPeriod),
   });
   
-  // Fetch spending data for each budget
+  // Fetch spending data for each budget with date filter
   const spendingQueries = useQueries({
-    queries: budgets.map(budget => ({
-      queryKey: ['budgetSpending', budget.id],
-      queryFn: () => budgetApi.getBudgetSpending(budget.id),
-    }))
+    queries: budgets.map(budget => {
+      const { startDate, endDate } = getDateRangeForFilter();
+      return {
+        queryKey: ['budgetSpending', budget.id, startDate, endDate],
+        queryFn: async () => {
+          const { data, error } = await supabase.rpc('calculate_budget_spending_by_date', {
+            budget_id: budget.id,
+            p_start_date: startDate,
+            p_end_date: endDate
+          });
+          
+          if (error) throw error;
+          return data;
+        }
+      };
+    })
   });
 
-  // Fetch category spending data for each budget
+  // Fetch category spending data for each budget with date filter
   const categorySpendingQueries = useQueries({
-    queries: budgets.map(budget => ({
-      queryKey: ['budgetCategorySpending', budget.id],
-      queryFn: () => budgetApi.getBudgetCategorySpending(budget.id),
-    }))
+    queries: budgets.map(budget => {
+      const { startDate, endDate } = getDateRangeForFilter();
+      return {
+        queryKey: ['budgetCategorySpending', budget.id, startDate, endDate],
+        queryFn: async () => {
+          const { data, error } = await supabase.rpc('get_budget_category_spending_by_date', {
+            budget_id: budget.id,
+            p_start_date: startDate,
+            p_end_date: endDate
+          });
+          
+          if (error) throw error;
+          return data;
+        }
+      };
+    })
   });
 
   // Period selection buttons

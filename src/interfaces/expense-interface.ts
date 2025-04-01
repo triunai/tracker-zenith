@@ -32,6 +32,7 @@ export interface Expense {
   updated_by?: string; // UUID
   updated_at?: string;
   isdeleted: boolean;
+  transaction_type?: 'expense' | 'income';
   
   // For joined queries (optional)
   payment_method?: PaymentMethod;
@@ -45,6 +46,7 @@ export interface ExpenseItem {
   id: number;
   expense_id: number;
   category_id: number;
+  income_category_id?: number; // Added for income transactions
   amount: number;
   description?: string;
   created_by?: string; // UUID
