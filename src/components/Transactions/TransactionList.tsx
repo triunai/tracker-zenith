@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { formatCurrency } from '@/lib/utils';
 import TransactionForm from './TransactionForm';
 import { 
@@ -10,26 +10,23 @@ import {
   ChevronRight,
   Search,
   SlidersHorizontal,
-  Home,
-  Utensils,
-  Car,
-  Tv,
-  ShoppingBag,
-  Zap,
-  Activity,
-  Book,
-  Package,
-  Plus,
-  Wallet,
-  ChevronsUpDown
+  LoaderCircle
 } from 'lucide-react';
 
-// Import UI components with lowercase 'ui' path for consistency
+// Import UI components
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/UI/card";
 import { Button } from "@/components/UI/button";
 import { Input } from "@/components/UI/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/UI/select";
-import { categories, expenses, PaymentMethod, getPaymentMethodName } from '@/lib/mockData';
+import { Expense, ExpenseCategory } from '@/interfaces/expense-interface';
+import { PaymentMethod } from '@/interfaces/payment-method-interface';
+import { expenseApi } from '@/lib/api/expenseApi';
+import { useToast } from '@/components/UI/use-toast';
+import { Badge } from '@/components/UI/badge';
+import { format } from 'date-fns';
+
+// Placeholder until we implement proper auth
+const MOCK_USER_ID = "11111111-1111-1111-1111-111111111111";
 
 // Custom MYR currency formatter with error handling
 const formatMYR = (amount: number): string => {
@@ -47,301 +44,344 @@ const formatMYR = (amount: number): string => {
 };
 
 const TransactionList = () => {
-  try {
-    // Debug logs
-    console.log('TransactionList rendering');
-    console.log('Expenses available:', expenses ? expenses.length : 'none');
-    
-    // State management
-    const [currentPage, setCurrentPage] = useState(1);
-    const [pageSize, setPageSize] = useState(5);
-    const [searchTerm, setSearchTerm] = useState('');
-    const [selectedCategory, setSelectedCategory] = useState<string>('all');
-    const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string>('all');
-    
-    // Get data from mockData (with error handling)
-    const allTransactions = expenses || [];
-    
-    // Filter and paginate transactions
-    const filteredTransactions = useMemo(() => {
+  // State management
+  const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [categories, setCategories] = useState<ExpenseCategory[]>([]);
+  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(5);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string>('all');
+  
+  const { toast } = useToast();
+  
+  // Fetch data from API
+  useEffect(() => {
+    const fetchData = async () => {
       try {
-        return allTransactions
-          .filter(transaction => {
-            // Search filter
-            const matchesSearch = searchTerm === '' || transaction.expenseItems.some(item => 
-              item?.description?.toLowerCase().includes(searchTerm.toLowerCase())
-            );
-            
-            // Category filter
-            const matchesCategory = selectedCategory === 'all' ? true : 
-              transaction.expenseItems.some(item => 
-                item?.categoryId?.toString() === selectedCategory
-              );
-              
-            // Payment method filter
-            const matchesPaymentMethod = selectedPaymentMethod === 'all' ? true :
-              transaction.expenseItems.some(item => 
-                item?.paymentMethod?.toString() === selectedPaymentMethod
-              );
-              
-            return matchesSearch && matchesCategory && matchesPaymentMethod;
-          })
-          .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-          .slice((currentPage - 1) * pageSize, currentPage * pageSize);
-      } catch (error) {
-        console.error('Error filtering transactions:', error);
-        return [];
-      }
-    }, [allTransactions, searchTerm, selectedCategory, selectedPaymentMethod, currentPage, pageSize]);
-    
-    const totalTransactions = useMemo(() => {
-      try {
-        return allTransactions.filter(transaction => {
-          // Apply the same filters for counting total
-          const matchesSearch = searchTerm === '' || transaction.expenseItems.some(item => 
-            item?.description?.toLowerCase().includes(searchTerm.toLowerCase())
-          );
-          
-          const matchesCategory = selectedCategory === 'all' ? true : 
-            transaction.expenseItems.some(item => 
-              item?.categoryId?.toString() === selectedCategory
-            );
-            
-          const matchesPaymentMethod = selectedPaymentMethod === 'all' ? true :
-            transaction.expenseItems.some(item => 
-              item?.paymentMethod?.toString() === selectedPaymentMethod
-            );
-            
-          return matchesSearch && matchesCategory && matchesPaymentMethod;
-        }).length;
-      } catch (error) {
-        console.error('Error counting transactions:', error);
-        return 0;
-      }
-    }, [allTransactions, searchTerm, selectedCategory, selectedPaymentMethod]);
-    
-    const totalPages = Math.max(1, Math.ceil(totalTransactions / pageSize));
-
-    // Get appropriate icon for each category
-    const getCategoryIcon = (categoryId: number) => {
-      try {
-        const category = categories.find(c => c.id === categoryId);
-        if (!category) return <Package className="h-4 w-4" />;
+        setIsLoading(true);
+        setError(null);
         
-        switch (category.icon) {
-          case 'home': return <Home className="h-4 w-4" />;
-          case 'utensils': return <Utensils className="h-4 w-4" />;
-          case 'car': return <Car className="h-4 w-4" />;
-          case 'tv': return <Tv className="h-4 w-4" />;
-          case 'shopping-bag': return <ShoppingBag className="h-4 w-4" />;
-          case 'zap': return <Zap className="h-4 w-4" />;
-          case 'activity': return <Activity className="h-4 w-4" />;
-          case 'book': return <Book className="h-4 w-4" />;
-          case 'package':
-          default: return <Package className="h-4 w-4" />;
-        }
-      } catch (error) {
-        console.error('Error rendering category icon:', error);
-        return <CreditCard className="h-4 w-4" />;
+        // Fetch expenses with pagination
+        const expenseData = await expenseApi.getAllByUser(MOCK_USER_ID, {
+          limit: 50 // fetch a larger batch initially for client-side filtering
+        });
+        setExpenses(expenseData);
+        
+        // Fetch categories and payment methods for filters
+        const categoryData = await expenseApi.getCategories();
+        setCategories(categoryData);
+        
+        // For now, we'll use a mock array for payment methods
+        // TODO: Replace with actual API call once implemented
+        setPaymentMethods([
+          { id: 1, method_name: 'Cash', isdeleted: false, created_at: '' },
+          { id: 2, method_name: 'Credit Card', isdeleted: false, created_at: '' },
+          { id: 3, method_name: 'Debit Card', isdeleted: false, created_at: '' },
+          { id: 4, method_name: 'E-Wallet', isdeleted: false, created_at: '' }
+        ]);
+      } catch (err) {
+        console.error('Error fetching expense data:', err);
+        setError('Failed to fetch transaction data. Please try again.');
+        toast({
+          title: 'Error',
+          description: 'Failed to load transactions',
+          variant: 'destructive',
+        });
+      } finally {
+        setIsLoading(false);
       }
     };
+    
+    fetchData();
+    
+    // Set up subscription to real-time updates
+    const subscription = expenseApi.subscribeToExpenses(MOCK_USER_ID, (payload) => {
+      // Refetch data when changes occur
+      fetchData();
+    });
+    
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [toast]);
+  
+  // Delete a transaction
+  const handleDelete = async (expenseId: number) => {
+    if (confirm('Are you sure you want to delete this transaction?')) {
+      try {
+        await expenseApi.delete(expenseId);
+        setExpenses(expenses.filter(expense => expense.id !== expenseId));
+        toast({
+          title: 'Transaction deleted',
+          variant: 'default',
+        });
+      } catch (err) {
+        console.error('Error deleting expense:', err);
+        toast({
+          title: 'Error',
+          description: 'Failed to delete transaction',
+          variant: 'destructive',
+        });
+      }
+    }
+  };
+  
+  // Filter and paginate expenses
+  const filteredExpenses = useMemo(() => {
+    try {
+      return expenses
+        .filter(expense => {
+          // Search filter - check if any expense item description matches
+          const matchesSearch = searchTerm === '' || 
+            expense.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            expense.expense_items?.some(item => 
+              item.description?.toLowerCase().includes(searchTerm.toLowerCase())
+            );
+          
+          // Category filter
+          const matchesCategory = selectedCategory === 'all' ? true : 
+            expense.expense_items?.some(item => 
+              item.category_id.toString() === selectedCategory
+            );
+            
+          // Payment method filter
+          const matchesPaymentMethod = selectedPaymentMethod === 'all' ? true :
+            expense.payment_method_id?.toString() === selectedPaymentMethod;
+            
+          return matchesSearch && matchesCategory && matchesPaymentMethod;
+        })
+        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    } catch (error) {
+      console.error('Error filtering expenses:', error);
+      return [];
+    }
+  }, [expenses, searchTerm, selectedCategory, selectedPaymentMethod]);
+  
+  // Paginate transactions
+  const paginatedExpenses = useMemo(() => {
+    const startIndex = (currentPage - 1) * pageSize;
+    return filteredExpenses.slice(startIndex, startIndex + pageSize);
+  }, [filteredExpenses, currentPage, pageSize]);
+  
+  // Calculate total pages
+  const totalPages = Math.ceil(filteredExpenses.length / pageSize);
+  
+  // Reset to first page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, selectedCategory, selectedPaymentMethod]);
 
-    return (
-      <Card className="col-span-3">
-        <CardHeader>
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="space-y-1.5">
-              <CardTitle className="text-2xl font-bold">Recent Transactions</CardTitle>
-              <CardDescription className="text-sm text-muted-foreground">
-                Recent expense transactions
-              </CardDescription>
-            </div>
+  // Handle reload after adding a new transaction
+  const handleTransactionAdded = () => {
+    // Refetch the expenses data
+    expenseApi.getAllByUser(MOCK_USER_ID, { limit: 50 })
+      .then(data => setExpenses(data))
+      .catch(err => console.error('Error refreshing expenses:', err));
+  };
+
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <div>
+          <CardTitle className="text-xl font-bold">Transactions</CardTitle>
+          <CardDescription>View and manage your transaction history</CardDescription>
+        </div>
+        <TransactionForm />
+      </CardHeader>
+      
+      <CardContent>
+        {/* Filters */}
+        <div className="space-y-4 mb-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <TransactionForm />
-            </div>
-          </div>
-        </CardHeader>
-
-        <CardContent>
-          <div className="space-y-4">
-            {/* Search and Filter Bar */}
-            <div className="flex gap-4">
-              <div className="relative flex-1">
-                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" size={16} />
                 <Input
+                  className="pl-9"
                   placeholder="Search transactions..."
-                  className="pl-8"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
               </div>
-              
-              {/* Category Filter */}
+            </div>
+            
+            <div>
               <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                <SelectTrigger className="w-[180px]">
-                  <div className="flex items-center gap-2">
-                    <Package className="h-4 w-4" />
-                    <SelectValue placeholder="All Categories" />
-                  </div>
+                <SelectTrigger>
+                  <SelectValue placeholder="Filter by category" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Categories</SelectItem>
                   {categories.map((category) => (
                     <SelectItem key={category.id} value={category.id.toString()}>
-                      <div className="flex items-center gap-2">
-                        <div
-                          className="w-3 h-3 rounded-full"
-                          style={{ backgroundColor: category.color }}
-                        ></div>
-                        {category.name}
-                      </div>
+                      {category.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-              
-              {/* Payment Method Filter */}
+            </div>
+            
+            <div>
               <Select value={selectedPaymentMethod} onValueChange={setSelectedPaymentMethod}>
-                <SelectTrigger className="w-[180px]">
-                  <div className="flex items-center gap-2">
-                    <Wallet className="h-4 w-4" />
-                    <SelectValue placeholder="All Payment Methods" />
-                  </div>
+                <SelectTrigger>
+                  <SelectValue placeholder="Filter by payment" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Payment Methods</SelectItem>
-                  {Object.values(PaymentMethod)
-                    .filter(value => typeof value === 'number')
-                    .map((method) => (
-                      <SelectItem key={method} value={method.toString()}>
-                        {getPaymentMethodName(method as PaymentMethod)}
-                      </SelectItem>
-                    ))}
+                  {paymentMethods.map((method) => (
+                    <SelectItem key={method.id} value={method.id.toString()}>
+                      {method.method_name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
-
-            {/* Transactions List */}
-            {filteredTransactions.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                No transactions found matching your criteria
-              </div>
+          </div>
+        </div>
+        
+        {/* Loading state */}
+        {isLoading && (
+          <div className="flex justify-center items-center py-8">
+            <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
+            <span>Loading transactions...</span>
+          </div>
+        )}
+        
+        {/* Error state */}
+        {error && (
+          <div className="text-center py-8 text-destructive">
+            <p>{error}</p>
+            <Button 
+              variant="outline" 
+              className="mt-2"
+              onClick={() => expenseApi.getAllByUser(MOCK_USER_ID).then(setExpenses).catch(console.error)}
+            >
+              Try Again
+            </Button>
+          </div>
+        )}
+        
+        {/* Empty state */}
+        {!isLoading && !error && filteredExpenses.length === 0 && (
+          <div className="text-center py-8 text-muted-foreground">
+            <p className="mb-2">No transactions found.</p>
+            {searchTerm || selectedCategory !== 'all' || selectedPaymentMethod !== 'all' ? (
+              <p>Try adjusting your filters.</p>
             ) : (
-              filteredTransactions.map(transaction => {
-                try {
-                  const firstItem = transaction.expenseItems[0];
-                  if (!firstItem) {
-                    return null;
-                  }
-                  
-                  const isExpense = transaction.totalAmount > 0;
-                  
-                  return (
-                    <div 
-                      key={transaction.id} 
-                      className="flex items-center p-2 rounded-lg hover:bg-muted/50 transition-colors"
-                    >
-                      <div className="mr-4 rounded-full p-2" 
-                          style={{ 
-                            backgroundColor: firstItem?.category?.color 
-                              ? `${firstItem.category.color}30` 
-                              : '#e5e5e530'
-                          }}>
-                        {getCategoryIcon(firstItem?.categoryId)}
-                      </div>
-                      
-                      <div className="flex-1 space-y-1">
-                        <p className="text-sm font-medium leading-none">
-                          {firstItem?.description || 'Unnamed transaction'}
-                        </p>
-                        <div className="flex items-center text-xs text-muted-foreground">
-                          <CalendarIcon className="mr-1 h-3 w-3" />
-                          <span>{transaction.date}</span>
-                        </div>
-                      </div>
-                      
-                      <div className={`font-medium mr-4 ${isExpense ? 'text-red-500' : 'text-green-500'}`}>
-                        {isExpense 
-                          ? `-${formatMYR(transaction.totalAmount)}` 
-                          : `+${formatMYR(transaction.totalAmount)}`}
-                      </div>
-                      
-                      {/* Action Buttons */}
-                      <div className="flex gap-2">
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive">
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  );
-                } catch (error) {
-                  console.error('Error rendering transaction:', error);
-                  return null;
-                }
-              }).filter(Boolean)
-            )}
-
-            {/* Pagination Controls */}
-            {filteredTransactions.length > 0 && (
-              <div className="flex items-center justify-between pt-4">
-                <div className="flex items-center gap-2">
-                  <Select
-                    value={pageSize.toString()}
-                    onValueChange={(value) => {
-                      setPageSize(Number(value));
-                      setCurrentPage(1); // Reset to first page when changing page size
-                    }}
-                  >
-                    <SelectTrigger className="w-[120px]">
-                      <SelectValue placeholder="5 per page" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="5">5 per page</SelectItem>
-                      <SelectItem value="10">10 per page</SelectItem>
-                      <SelectItem value="20">20 per page</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <span className="text-sm text-muted-foreground">
-                    Showing {((currentPage - 1) * pageSize) + 1} to {Math.min(currentPage * pageSize, totalTransactions)} of {totalTransactions}
-                  </span>
-                </div>
-                
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                    disabled={currentPage === 1}
-                  >
-                    <ChevronLeft className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                    disabled={currentPage === totalPages}
-                  >
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
+              <p>Add a new transaction to get started.</p>
             )}
           </div>
-        </CardContent>
-      </Card>
-    );
-  } catch (error) {
-    console.error('TransactionList error:', error);
-    return (
-      <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-        <p className="font-bold">Error rendering TransactionList</p>
-        <p>{error instanceof Error ? error.message : 'Unknown error'}</p>
-      </div>
-    );
-  }
+        )}
+        
+        {/* Transactions list */}
+        {!isLoading && !error && paginatedExpenses.length > 0 && (
+          <div className="space-y-4">
+            {paginatedExpenses.map((expense) => {
+              // Get the total amount
+              const totalAmount = expense.expense_items?.reduce((sum, item) => sum + Number(item.amount), 0) || 0;
+              
+              // Get the first item for display purposes
+              const firstItem = expense.expense_items?.[0];
+              const category = firstItem?.category;
+              
+              return (
+                <div key={expense.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 border rounded-md hover:bg-muted/50 transition-colors">
+                  <div className="flex items-start gap-3 mb-2 sm:mb-0">
+                    <div className="hidden sm:flex h-10 w-10 rounded-full items-center justify-center bg-primary/10">
+                      <CreditCard className="h-5 w-5 text-primary" />
+                    </div>
+                    
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-medium">
+                          {firstItem?.description || expense.description || 'Unnamed Transaction'}
+                        </h3>
+                        {category && (
+                          <Badge variant="outline" className="text-xs">
+                            {category.name}
+                          </Badge>
+                        )}
+                      </div>
+                      
+                      <div className="flex items-center text-sm text-muted-foreground gap-3 mt-1">
+                        <div className="flex items-center gap-1">
+                          <CalendarIcon className="h-3 w-3" />
+                          <span>{format(new Date(expense.date), 'MMM d, yyyy')}</span>
+                        </div>
+                        
+                        {expense.payment_method && (
+                          <div>
+                            <span>{expense.payment_method.method_name}</span>
+                          </div>
+                        )}
+                        
+                        {expense.expense_items && expense.expense_items.length > 1 && (
+                          <div>
+                            <span>{expense.expense_items.length} items</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
+                    <div className="text-right">
+                      <div className="font-medium text-destructive">
+                        {formatMYR(totalAmount)}
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center gap-1">
+                      <Button variant="ghost" size="icon" onClick={() => console.log('Edit transaction', expense.id)}>
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" onClick={() => handleDelete(expense.id)}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+        
+        {/* Pagination */}
+        {!isLoading && !error && totalPages > 1 && (
+          <div className="flex items-center justify-between mt-4">
+            <div className="text-sm text-muted-foreground">
+              Showing {(currentPage - 1) * pageSize + 1} to {Math.min(currentPage * pageSize, filteredExpenses.length)} of {filteredExpenses.length} transactions
+            </div>
+            
+            <div className="flex items-center gap-1">
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                disabled={currentPage === 1}
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                disabled={currentPage === totalPages}
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
 };
 
 export default TransactionList;

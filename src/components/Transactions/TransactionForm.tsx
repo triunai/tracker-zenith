@@ -1,6 +1,6 @@
 import React from 'react';
 import { Plus } from "lucide-react";
-import { useTransactionForm } from './hooks/useTransactionForm';
+import { useExpenseForm } from './hooks/useExpenseForm';
 import TransactionFormFields from './TransactionFormFields';
 
 import { Button } from "@/components/UI/button";
@@ -27,7 +27,7 @@ const TransactionForm = () => {
     isSubmitting,
     handleSubmit,
     formIsValid
-  } = useTransactionForm();
+  } = useExpenseForm();
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -36,12 +36,13 @@ const TransactionForm = () => {
           variant="default"
           size="default" 
           className="font-medium shadow-sm hover:shadow-md transition-all"
+          data-transaction-form-trigger
         >
           <Plus className="h-4 w-4" />
           Add Transaction
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent>
         <DialogHeader>
           <DialogTitle className="text-xl font-medium">Add Transaction</DialogTitle>
         </DialogHeader>
