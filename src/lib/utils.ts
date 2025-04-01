@@ -1,7 +1,7 @@
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
-import { PaymentMethod, categories, expenses } from '@/lib/mockData';
-import { Expense } from '@/lib/mockData';
+import { PaymentMethod } from "@/interfaces/payment-method-interface"
+import { Expense } from "@/interfaces/expense-interface"
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -16,13 +16,21 @@ export function formatCurrency(amount: number): string {
   }).format(amount);
 }
 
-// Get the most recent expenses, limited by count
-export function getRecentExpenses(count: number): Expense[] {
-  // Sort expenses by date (most recent first) and limit by count
-  return [...expenses]
-    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-    .slice(0, count);
+// Helper function to get payment method name
+export function getPaymentMethodName(method: PaymentMethod | number): string {
+  if (typeof method === 'number') {
+    // These should ideally come from the database
+    switch (method) {
+      case 1: return 'Cash';
+      case 2: return 'Credit Card';
+      case 3: return 'QR Code Payment';
+      case 4: return 'eWallet';
+      case 5: return 'Bank Transfer';
+      case 6: return 'DuitNow';
+      default: return 'Unknown';
+    }
+  }
+  
+  // If method is a PaymentMethod object
+  return method.method_name || 'Unknown';
 }
-
-// Re-export items from mockData that are needed in components
-export { PaymentMethod, categories, getPaymentMethodName } from '@/lib/mockData';

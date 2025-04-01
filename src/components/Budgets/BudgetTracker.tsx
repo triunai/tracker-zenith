@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useQuery, useQueries } from '@tanstack/react-query';
 import { 
   Card, 
   CardContent, 
@@ -7,26 +8,69 @@ import {
   CardTitle 
 } from "@/components/UI/card";
 import { Progress } from "@/components/UI/progress";
-import { 
-  budgets, 
-  categories, 
-  getBudgetStatus, 
-  Period,
-  getBudgetsByPeriod
-} from '@/lib/mockData';
 import { Button } from '@/components/UI/button';
-import { Plus, AlertTriangle } from 'lucide-react';
+import { Plus, AlertTriangle, Trash } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatCurrency } from '@/lib/utils';
 import BudgetForm from '@/components/Budgets/BudgetForm';
-import { Badge } from '@/components/UI/badge';
+import { PeriodEnum } from '@/interfaces/enums/PeriodEnum';
+import { budgetApi } from '@/lib/api/budgetApi';
 
-const BudgetTracker = () => {
-  const [selectedPeriod, setSelectedPeriod] = useState<Period>(Period.Monthly);
+interface BudgetTrackerProps {
+  onDelete?: (budgetId: number) => void;
+  onSubmit?: (formData: any) => void;
+}
+
+const BudgetTracker = ({ onDelete, onSubmit }: BudgetTrackerProps) => {
+  const [selectedPeriod, setSelectedPeriod] = useState<PeriodEnum>(PeriodEnum.MONTHLY);
   const [isNewBudgetOpen, setIsNewBudgetOpen] = useState(false);
 
+  // Mock user ID - you'd get this from auth context in a real app
+  const userId = "11111111-1111-1111-1111-111111111111";
+  
+  // Fetch budgets for the selected period
+  const { data: budgets = [], isLoading, error } = useQuery({
+    queryKey: ['budgets', selectedPeriod],
+    queryFn: () => budgetApi.getByPeriod(userId, selectedPeriod),
+  });
+  
+  // Fetch spending data for each budget
+  const spendingQueries = useQueries({
+    queries: budgets.map(budget => ({
+      queryKey: ['budgetSpending', budget.id],
+      queryFn: () => budgetApi.getBudgetSpending(budget.id),
+    }))
+  });
+
+  // Fetch category spending data for each budget
+  const categorySpendingQueries = useQueries({
+    queries: budgets.map(budget => ({
+      queryKey: ['budgetCategorySpending', budget.id],
+      queryFn: () => budgetApi.getBudgetCategorySpending(budget.id),
+    }))
+  });
+
   // Period selection buttons
-  const periods: Period[] = [Period.Daily, Period.Weekly, Period.Monthly, Period.Yearly];
+  const periods = Object.values(PeriodEnum);
+
+  // Handle form submission if onSubmit is not provided
+  const handleFormSubmit = (formData: any) => {
+    if (onSubmit) {
+      onSubmit(formData);
+    } else {
+      console.log('New budget created:', formData);
+      setIsNewBudgetOpen(false);
+    }
+  };
+
+  // Handle budget deletion if onDelete is not provided
+  const handleDeleteBudget = (budgetId: number) => {
+    if (onDelete) {
+      onDelete(budgetId);
+    } else {
+      console.log('Delete budget:', budgetId);
+    }
+  };
 
   return (
     <Card className="animate-fade-up animate-delay-200">
@@ -45,7 +89,7 @@ const BudgetTracker = () => {
                 onClick={() => setSelectedPeriod(period)}
                 className="capitalize"
               >
-                {period}
+                {period.toLowerCase()}
               </Button>
             ))}
             <Button 
@@ -59,120 +103,151 @@ const BudgetTracker = () => {
         </div>
       </CardHeader>
       <CardContent>
-        <div className="space-y-4">
-          {getBudgetsByPeriod(selectedPeriod).map((budget) => {
-            const category = categories.find(c => c.id === budget.categoryId);
-            const percentage = Math.round((budget.spent / budget.amount) * 100);
-            const status = getBudgetStatus(budget);
-            const remaining = budget.amount - budget.spent;
-            
-            // Determine status-based styling
-            const getProgressColor = () => {
-              switch (status) {
-                case 'danger': return 'bg-finance-expense';
-                case 'warning': return 'bg-orange-400';
-                case 'caution': return 'bg-yellow-400';
-                default: return 'bg-finance-income';
-              }
-            };
-            
-            const getBgColor = () => {
-              switch (status) {
-                case 'danger': return 'bg-finance-budget-danger';
-                case 'warning': return 'bg-finance-budget-warning';
-                case 'caution': return 'bg-finance-budget-warning';
-                default: return 'bg-finance-budget-safe';
-              }
-            };
-            
-            return (
-              <div 
-                key={budget.id} 
-                className={cn(
-                  "p-4 rounded-lg border",
-                  percentage >= 90 ? "animate-pulse" : ""
-                )}
+        {isLoading ? (
+          <div className="flex justify-center py-8">Loading budgets...</div>
+        ) : error ? (
+          <div className="text-center py-6 text-destructive">
+            Error loading budgets. Please try again.
+          </div>
+        ) : budgets.length === 0 ? (
+          <div className="text-center py-6 text-muted-foreground">
+            No budgets found for {selectedPeriod.toLowerCase()} period.
+            <div className="mt-2">
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => setIsNewBudgetOpen(true)}
               >
-                <div className="flex justify-between items-start mb-2">
-                  <div className="flex items-center gap-2">
-                    <div 
-                      className="w-3 h-3 rounded-full"
-                      style={{ backgroundColor: category?.color }}
-                    ></div>
-                    <h4 className="font-medium">{budget.category?.name}</h4>
+                <Plus className="h-4 w-4 mr-2" />
+                Create your first budget
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {budgets.map((budget, index) => {
+              // Get first category for simplicity
+              const budgetCategory = budget.budget_categories?.[0];
+              const category = budgetCategory?.category;
+              
+              // Get actual spending from the API
+              const spendingQuery = spendingQueries[index];
+              const spent = Number(spendingQuery.data || 0);
+              const percentage = Math.round((spent / Number(budget.amount)) * 100);
+              const remaining = Number(budget.amount) - spent;
+              
+              // Get category-specific spending
+              const categorySpendingQuery = categorySpendingQueries[index];
+              const categorySpending = categorySpendingQuery.data || [];
+              
+              // Determine status-based styling
+              const getProgressColor = () => {
+                if (percentage >= 100) return 'bg-finance-expense';
+                if (percentage >= 80) return 'bg-orange-400';
+                if (percentage >= 60) return 'bg-yellow-400';
+                return 'bg-finance-income';
+              };
+              
+              return (
+                <div 
+                  key={budget.id} 
+                  className={cn(
+                    "p-4 rounded-lg border",
+                    percentage >= 90 ? "animate-pulse" : ""
+                  )}
+                >
+                  <div className="flex justify-between items-start mb-2">
+                    <div className="flex items-center gap-2">
+                      {category && (
+                        <>
+                          <div 
+                            className="w-3 h-3 rounded-full"
+                            style={{ backgroundColor: '#' + Math.floor(Math.random()*16777215).toString(16) }}
+                          ></div>
+                          <span className="font-medium">{category.name}</span>
+                        </>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium">
+                        {budget.name}
+                      </span>
+                      {/* Show warning icon if budget is near limit */}
+                      {percentage >= 90 && (
+                        <div className="text-finance-expense" title="Budget almost exceeded">
+                          <AlertTriangle className="h-4 w-4" />
+                        </div>
+                      )}
+                      {/* Delete button */}
+                      {onDelete && (
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+                          onClick={() => handleDeleteBudget(budget.id)}
+                        >
+                          <span className="sr-only">Delete</span>
+                          <Trash className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
                   </div>
                   
-                  {percentage >= 90 && (
-                    <div className={cn(
-                      "px-2 py-1 text-xs rounded-full flex items-center gap-1",
-                      percentage >= 100 ? "bg-finance-budget-danger text-finance-expense" : "bg-finance-budget-warning text-orange-600"
-                    )}>
-                      <AlertTriangle size={12} />
-                      {percentage >= 100 ? 'Exceeded' : 'Almost'}
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span>
+                        Spent: <span className="font-medium">{formatCurrency(spent)}</span>
+                      </span>
+                      <span>
+                        Budget: <span className="font-medium">{formatCurrency(Number(budget.amount))}</span>
+                      </span>
                     </div>
-                  )}
-                </div>
-                
-                <div className="mb-2 grid grid-cols-3">
-                  <div>
-                    <p className="text-xs text-muted-foreground">Spent</p>
-                    <p className="font-medium">{formatCurrency(budget.spent)}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Budget</p>
-                    <p className="font-medium">{formatCurrency(budget.amount)}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Remaining</p>
-                    <p className={cn(
-                      "font-medium",
-                      remaining >= 0 ? "text-finance-income" : "text-finance-expense"
-                    )}>
-                      {formatCurrency(Math.abs(remaining))}
-                    </p>
-                  </div>
-                </div>
-                
-                <div className="w-full">
-                  <div className="flex justify-between items-center mb-1">
-                    <div className={cn(
-                      "text-xs font-medium",
-                      percentage >= 100 ? "text-finance-expense" : "text-muted-foreground"
-                    )}>
-                      {percentage}%
+                    
+                    <Progress 
+                      value={percentage} 
+                      className={cn("h-2", getProgressColor())}
+                    />
+                    
+                    <div className="text-right text-sm text-muted-foreground">
+                      Remaining: <span className="font-medium">{formatCurrency(remaining)}</span>
                     </div>
+                    
+                    {/* Show category breakdown if available */}
+                    {categorySpending.length > 0 && (
+                      <div className="mt-4">
+                        <p className="text-sm font-medium mb-2">Category Breakdown:</p>
+                        <div className="space-y-2">
+                          {categorySpending.map(item => {
+                            const catPercentage = Math.round((Number(item.total_spent) / Number(budget.amount)) * 100);
+                            return (
+                              <div key={item.category_id} className="text-xs">
+                                <div className="flex justify-between mb-1">
+                                  <span>{item.category_name}</span>
+                                  <span>{formatCurrency(Number(item.total_spent))} ({catPercentage}%)</span>
+                                </div>
+                                <Progress 
+                                  value={catPercentage} 
+                                  className="h-1" 
+                                />
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
                   </div>
-                  <Progress 
-                    value={percentage > 100 ? 100 : percentage} 
-                    className={cn("h-2", getBgColor())}
-                  />
                 </div>
-              </div>
-            );
-          })}
-
-          {getBudgetsByPeriod(selectedPeriod).length === 0 && (
-            <div className="text-center py-6 text-muted-foreground">
-              No budgets found for {selectedPeriod.toLowerCase()} period.
-              <div className="mt-2">
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => setIsNewBudgetOpen(true)}
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Create your first budget
-                </Button>
-              </div>
-            </div>
-          )}
-        </div>
+              );
+            })}
+          </div>
+        )}
       </CardContent>
 
       {/* Budget Form Modal */}
       <BudgetForm 
         open={isNewBudgetOpen} 
         onOpenChange={setIsNewBudgetOpen}
+        onSubmit={handleFormSubmit}
       />
     </Card>
   );

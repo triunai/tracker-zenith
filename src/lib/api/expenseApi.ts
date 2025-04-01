@@ -110,7 +110,8 @@ export const expenseApi = {
           user_id: expense.user_id,
           date: expense.date,
           description: expense.description,
-          payment_method_id: expense.payment_method_id
+          payment_method_id: expense.payment_method_id,
+          transaction_type: expense.transaction_type || 'expense'
         }])
         .select()
         .single();
