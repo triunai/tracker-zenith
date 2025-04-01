@@ -1,5 +1,7 @@
 // src/types/expense.ts
 
+import { PaymentMethod } from "./payment-method-interface";
+
 /**
  * Interface for expense category data
  */
@@ -14,13 +16,7 @@ export interface ExpenseCategory {
   isdeleted: boolean;
 }
 
-/**
- * Interface for payment methods referenced by expense
- */
-export interface PaymentMethod {
-  id: number;
-  method_name: string; // Assuming this field exists in payment_methods table
-}
+
 
 /**
  * Interface for expense data (main transaction)
@@ -71,6 +67,7 @@ export interface CreateExpenseRequest {
   description?: string;
   payment_method_id?: number;
   expense_items: CreateExpenseItemRequest[];
+  transaction_type?: 'expense' | 'income';
 }
 
 /**

@@ -9,6 +9,7 @@ import { Toaster } from '@/components/UI/toaster';
 import { ToastProvider } from '@/components/UI/use-toast';
 import { TooltipProvider } from '@/components/UI/tooltip';
 import { ThemeProvider } from '@/components/theme-provider';
+import { DashboardProvider } from '@/context/DashboardContext';
 
 // Pages
 import Index from './pages/Index';
@@ -27,16 +28,18 @@ function App() {
       <ThemeProvider defaultTheme="light" storageKey="zenith-theme">
         <ToastProvider>
           <TooltipProvider>
-            <Router>
-              <Routes>
-                <Route path="/" element={<Index />} />
-                <Route path="/transactions" element={<TransactionsPage />} />
-                <Route path="/budgets" element={<BudgetPage />} />
-                <Route path="/payment-methods" element={<PaymentMethodsPage />} />
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </Router>
-            <Toaster />
+            <DashboardProvider>
+              <Router>
+                <Routes>
+                  <Route path="/" element={<Index />} />
+                  <Route path="/transactions" element={<TransactionsPage />} />
+                  <Route path="/budgets" element={<BudgetPage />} />
+                  <Route path="/payment-methods" element={<PaymentMethodsPage />} />
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </Router>
+              <Toaster />
+            </DashboardProvider>
           </TooltipProvider>
         </ToastProvider>
       </ThemeProvider>

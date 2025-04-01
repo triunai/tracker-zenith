@@ -17,4 +17,16 @@ export interface PaymentMethod {
  */
 export interface CreatePaymentMethodRequest {
   method_name: string;
+}
+
+/**
+ * Enum for payment methods
+ */
+export enum PaymentMethodEnum {
+  Cash = 1,
+  CreditCard = 2,
+  QRCodePayment = 3,
+  EWallet = 4,
+  BankTransfer = 5,
+  DuitNow = 6
 } 
