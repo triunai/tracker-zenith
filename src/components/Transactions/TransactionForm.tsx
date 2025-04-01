@@ -1,20 +1,34 @@
 import React from 'react';
 import { Plus } from "lucide-react";
-import { useExpenseForm } from './hooks/useExpenseForm';
+import { useTransactionForm, TransactionType } from './hooks/useTransactionForm';
 import TransactionFormFields from './TransactionFormFields';
 
 import { Button } from "@/components/UI/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from "@/components/UI/dialog";
 import { CardFooter } from "@/components/UI/card";
 
-const TransactionForm = () => {
+interface TransactionFormProps {
+  initialType?: TransactionType;
+  buttonText?: string;
+  buttonIcon?: React.ReactNode;
+}
+
+const TransactionForm = ({ 
+  initialType = 'expense',
+  buttonText = 'Add Transaction',
+  buttonIcon = <Plus className="h-4 w-4" />
+}: TransactionFormProps) => {
   const {
     open,
     setOpen,
+    transactionType,
+    setTransactionType,
     date,
     setDate,
     category,
     setCategory,
+    incomeCategory,
+    setIncomeCategory,
     paymentMethod,
     setPaymentMethod,
     description,
@@ -27,7 +41,12 @@ const TransactionForm = () => {
     isSubmitting,
     handleSubmit,
     formIsValid
-  } = useExpenseForm();
+  } = useTransactionForm();
+
+  // Set initial transaction type when component mounts or when initialType changes
+  React.useEffect(() => {
+    setTransactionType(initialType);
+  }, [initialType, setTransactionType]);
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -38,20 +57,26 @@ const TransactionForm = () => {
           className="font-medium shadow-sm hover:shadow-md transition-all"
           data-transaction-form-trigger
         >
-          <Plus className="h-4 w-4" />
-          Add Transaction
+          {buttonIcon}
+          {buttonText}
         </Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle className="text-xl font-medium">Add Transaction</DialogTitle>
+          <DialogTitle className="text-xl font-medium">
+            Add {transactionType === 'expense' ? 'Expense' : 'Income'}
+          </DialogTitle>
         </DialogHeader>
         
         <TransactionFormFields
           date={date}
           setDate={setDate}
+          transactionType={transactionType}
+          setTransactionType={setTransactionType}
           category={category}
           setCategory={setCategory}
+          incomeCategory={incomeCategory}
+          setIncomeCategory={setIncomeCategory}
           paymentMethod={paymentMethod}
           setPaymentMethod={setPaymentMethod}
           description={description}
@@ -72,7 +97,7 @@ const TransactionForm = () => {
             onClick={handleSubmit}
             disabled={!formIsValid || isSubmitting}
           >
-            {isSubmitting ? "Submitting..." : "Save Transaction"}
+            {isSubmitting ? "Submitting..." : `Save ${transactionType === 'expense' ? 'Expense' : 'Income'}`}
           </Button>
         </CardFooter>
       </DialogContent>

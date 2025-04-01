@@ -1,94 +1,55 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { 
   TrendingDown, 
   TrendingUp, 
   Wallet, 
   CreditCard, 
   ArrowUpRight, 
-  LoaderCircle
+  LoaderCircle,
+  PlusCircle,
+  MinusCircle
 } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import StatCard from '@/components/UI/StatCard';
 import { Button } from '@/components/UI/button';
 import { cn } from '@/lib/utils';
-import { expenseApi } from '@/lib/api/expenseApi';
 import { useToast } from '@/components/UI/use-toast';
 import TransactionForm from '@/components/Transactions/TransactionForm';
+import { useDashboard } from '@/context/DashboardContext';
 
 // Placeholder until we implement proper auth
 const MOCK_USER_ID = "11111111-1111-1111-1111-111111111111";
 
+// Helper function to format trend values
+const formatTrendValue = (value: number | null): { value: number, isPositive: boolean } => {
+  // Handle null, NaN, or undefined
+  if (value === null || isNaN(value) || value === undefined) {
+    // Return a default of "0% change" (i.e., same as previous period)
+    return { value: 0, isPositive: true };
+  }
+  
+  const absValue = Math.abs(Math.round(value));
+  // For expenses, a negative percentage is positive (spending less)
+  // For income, a positive percentage is positive (earning more)
+  return { value: absValue, isPositive: value >= 0 };
+};
+
 const DashboardSummary = () => {
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [balance, setBalance] = useState(0);
-  const [income, setIncome] = useState(0);
-  const [expenses, setExpenses] = useState(0);
+  const { 
+    isLoading, 
+    error, 
+    balance, 
+    income, 
+    expenses, 
+    incomeTrend, 
+    expenseTrend, 
+    refreshData 
+  } = useDashboard();
+  
   const { toast } = useToast();
   
   // Get current month for display
   const currentMonth = new Date().toLocaleString('default', { month: 'long', year: 'numeric' });
-  
-  // Calculate date range for current month
-  const getCurrentMonthDateRange = () => {
-    const now = new Date();
-    const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
-    const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-    return {
-      startDate: firstDay.toISOString(),
-      endDate: lastDay.toISOString()
-    };
-  };
-  
-  useEffect(() => {
-    const fetchSummaryData = async () => {
-      try {
-        setIsLoading(true);
-        setError(null);
-        const { startDate, endDate } = getCurrentMonthDateRange();
-        
-        // TODO: Replace this with actual income API once available
-        // For now, we'll use a fixed income value
-        const incomeValue = 3500;
-        setIncome(incomeValue);
-        
-        // Instead of using RPC function, fetch expenses and calculate the total
-        const options = {
-          startDate: startDate,
-          endDate: endDate,
-        };
-        
-        // Fetch all expenses for the current month
-        const expenseData = await expenseApi.getAllByUser(MOCK_USER_ID, options);
-        
-        // Calculate the total expense amount manually
-        const totalExpenseAmount = expenseData.reduce((total, expense) => {
-          const expenseItemsTotal = expense.expense_items?.reduce((itemTotal, item) => {
-            return itemTotal + Number(item.amount);
-          }, 0) || 0;
-          
-          return total + expenseItemsTotal;
-        }, 0);
-        
-        setExpenses(totalExpenseAmount);
-        
-        // Calculate balance
-        setBalance(incomeValue - totalExpenseAmount);
-      } catch (err) {
-        console.error('Error fetching summary data:', err);
-        setError('Failed to load financial summary data');
-        toast({
-          title: 'Error',
-          description: 'Failed to load dashboard summary',
-          variant: 'destructive'
-        });
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    
-    fetchSummaryData();
-  }, [toast]);
   
   return (
     <div className="space-y-6">
@@ -99,7 +60,18 @@ const DashboardSummary = () => {
             Your financial overview for {currentMonth}
           </p>
         </div>
-        <TransactionForm />
+        <div className="flex gap-2">
+          <TransactionForm 
+            initialType="income" 
+            buttonText="Add Income" 
+            buttonIcon={<PlusCircle className="h-4 w-4 mr-1" />}
+          />
+          <TransactionForm 
+            initialType="expense" 
+            buttonText="Add Expense" 
+            buttonIcon={<MinusCircle className="h-4 w-4 mr-1" />}
+          />
+        </div>
       </div>
       
       {isLoading ? (
@@ -113,7 +85,7 @@ const DashboardSummary = () => {
           <Button 
             variant="outline" 
             className="mt-2"
-            onClick={() => window.location.reload()}
+            onClick={refreshData}
           >
             Try Again
           </Button>
@@ -134,7 +106,7 @@ const DashboardSummary = () => {
             title="Total Income"
             value={formatCurrency(income)}
             icon={<TrendingUp className="h-5 w-5" />}
-            trend={{ value: 12, isPositive: true }}
+            trend={formatTrendValue(incomeTrend)}
             valueClassName="text-finance-income"
             className="animate-delay-200"
           />
@@ -143,7 +115,7 @@ const DashboardSummary = () => {
             title="Total Expenses"
             value={formatCurrency(expenses)}
             icon={<TrendingDown className="h-5 w-5" />}
-            trend={{ value: 8, isPositive: false }}
+            trend={formatTrendValue(expenseTrend)}
             valueClassName="text-finance-expense"
             className="animate-delay-300"
           />
