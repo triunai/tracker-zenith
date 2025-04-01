@@ -30,6 +30,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/UI/alert-dialog';
+import BudgetTracker from '@/components/Budgets/BudgetTracker';
 
 const BudgetPage = () => {
   const { toast } = useToast();
@@ -217,136 +218,11 @@ const BudgetPage = () => {
           </CardContent>
         </Card>
 
-        {/* Budget Tracker - Copied from index-api.tsx */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Budget Tracker</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <div className="flex justify-center py-8">Loading budgets...</div>
-            ) : budgets.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                No budgets found for this period. Create a new budget to get started.
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {budgets.map((budget, index) => {
-                  // Get first category for simplicity (in a real app, handle multiple categories)
-                  const budgetCategory = budget.budget_categories?.[0];
-                  const category = budgetCategory?.category;
-                  
-                  // Get actual spending from the API
-                  const spendingQuery = spendingQueries[index];
-                  const spent = Number(spendingQuery.data || 0);
-                  const percentage = Math.round((spent / Number(budget.amount)) * 100);
-                  const remaining = Number(budget.amount) - spent;
-                  
-                  // Get category-specific spending
-                  const categorySpendingQuery = categorySpendingQueries[index];
-                  const categorySpending = categorySpendingQuery.data || [];
-                  
-                  // Determine status-based styling
-                  const getProgressColor = () => {
-                    if (percentage >= 100) return 'bg-finance-expense';
-                    if (percentage >= 80) return 'bg-orange-400';
-                    if (percentage >= 60) return 'bg-yellow-400';
-                    return 'bg-finance-income';
-                  };
-                  
-                  return (
-                    <div 
-                      key={budget.id} 
-                      className={cn(
-                        "p-4 rounded-lg border",
-                        percentage >= 90 ? "animate-pulse" : ""
-                      )}
-                    >
-                      <div className="flex justify-between items-start mb-2">
-                        <div className="flex items-center gap-2">
-                          {category && (
-                            <>
-                              <div 
-                                className="w-3 h-3 rounded-full"
-                                style={{ backgroundColor: '#' + Math.floor(Math.random()*16777215).toString(16) }}
-                              ></div>
-                              <span className="font-medium">{category.name}</span>
-                            </>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-medium">
-                            {budget.name}
-                          </span>
-                          {/* Show warning icon if budget is near limit */}
-                          {percentage >= 90 && (
-                            <div className="text-finance-expense" title="Budget almost exceeded">
-                              <AlertTriangle className="h-4 w-4" />
-                            </div>
-                          )}
-                          {/* Delete button is placed here */}
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
-                            onClick={() => handleDeleteBudget(budget.id)}
-                          >
-                            <span className="sr-only">Delete</span>
-                            <Trash className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <div className="flex justify-between text-sm">
-                          <span>
-                            Spent: <span className="font-medium">{formatCurrency(spent)}</span>
-                          </span>
-                          <span>
-                            Budget: <span className="font-medium">{formatCurrency(Number(budget.amount))}</span>
-                          </span>
-                        </div>
-                        
-                        <Progress 
-                          value={percentage} 
-                          className={cn("h-2", getProgressColor())}
-                        />
-                        
-                        <div className="text-right text-sm text-muted-foreground">
-                          Remaining: <span className="font-medium">{formatCurrency(remaining)}</span>
-                        </div>
-                        
-                        {/* Show category breakdown if available */}
-                        {categorySpending.length > 0 && (
-                          <div className="mt-4">
-                            <p className="text-sm font-medium mb-2">Category Breakdown:</p>
-                            <div className="space-y-2">
-                              {categorySpending.map(item => {
-                                const catPercentage = Math.round((Number(item.total_spent) / Number(budget.amount)) * 100);
-                                return (
-                                  <div key={item.category_id} className="text-xs">
-                                    <div className="flex justify-between mb-1">
-                                      <span>{item.category_name}</span>
-                                      <span>{formatCurrency(Number(item.total_spent))} ({catPercentage}%)</span>
-                                    </div>
-                                    <Progress 
-                                      value={catPercentage} 
-                                      className="h-1" 
-                                    />
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+        {/* Budget Tracker Component */}
+        <BudgetTracker 
+          onDelete={handleDeleteBudget}
+          onSubmit={handleBudgetSubmit}
+        />
 
         {/* Detailed Budget Grid - Using index.tsx structure with API data */}
         <Card>
