@@ -1,15 +1,22 @@
 import { createClient } from '@supabase/supabase-js';
 
-// Replace with your Supabase URL and anon key
+// Use Vite's method for environment variables
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+
+// Basic check if variables are missing
+if (!supabaseUrl || !supabaseAnonKey) {
+  console.error('Supabase URL or Anon Key is missing. Check environment variables (VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY).');
+  // Optionally throw an error or handle appropriately
+}
 
 // Create Supabase client with persistent sessions and automatic token refresh
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
-    persistSession: true, // Enable persistent sessions by default
-    autoRefreshToken: true, // Enable automatic token refresh
-    detectSessionInUrl: true, // Detect session from URL query params
+    // Explicitly set persistence options (defaults are usually true)
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true, // Important for handling magic links, OAuth redirects
     storage: {
       // Use localStorage by default but provide fallback
       getItem: (key) => {

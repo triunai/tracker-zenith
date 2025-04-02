@@ -724,13 +724,11 @@ const TransactionList = () => {
                     
                     <div className="flex items-center gap-1">
                       <TransactionForm 
-                        expenseToEdit={expense} 
+                        key={expenseToEdit ? `edit-${expenseToEdit.id}` : 'add'}
+                        userId={userId}
                         onSuccess={handleTransactionAdded}
-                        buttonVariant="ghost"
-                        buttonSize="icon"
-                        asChild={false}
-                        buttonText=""
-                        buttonIcon={<Edit className="h-4 w-4" />}
+                        expenseToEdit={expense}
+                        onClose={() => setExpenseToEdit(null)}
                       />
                       <Button variant="ghost" size="icon" onClick={() => confirmDelete(expense.id)}>
                         <Trash2 className="h-4 w-4" />

@@ -105,117 +105,113 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Initialize auth state
   useEffect(() => {
-    // Initialize token cleaner
     initTokenCleaner().catch(err => 
       console.error('[AuthContext] Error initializing token cleaner:', err)
     );
 
-    const initAuth = async () => {
-      logWithTimestamp('[AuthContext:initAuth] Starting...');
+    let isMounted = true; // Flag to prevent state updates on unmounted component
+
+    const checkInitialSession = async () => {
+      logWithTimestamp('[AuthContext:checkInitialSession] Starting...');
       try {
-        setState(prev => ({ ...prev, isLoading: true }));
-        logWithTimestamp('[AuthContext:initAuth] Checking session...');
+        setState(prev => ({ ...prev, isLoading: true, error: null }));
+
+        // Directly check for a session - authApi.getCurrentSession returns Session | null
         const session = await authApi.getCurrentSession();
-        logWithTimestamp('[AuthContext:initAuth] Session:', session ? 'Exists' : 'None');
+
+        // No sessionError object here, check if session is null
+        if (!session) { 
+          // No session found
+          logWithTimestamp('[AuthContext:checkInitialSession] No session found.');
+          if (isMounted) {
+            setState({
+              user: null,
+              profile: null,
+              isLoading: false,
+              isAuthenticated: false,
+              error: null,
+            });
+          }
+          return; // Stop here if no session
+        }
         
-        if (session) {
-          logWithTimestamp('[AuthContext:initAuth] Getting current user...');
-          try {
-            const { user: supabaseUser, profile } = await authApi.getCurrentUser();
-            const user = convertUser(supabaseUser, profile);
-            logWithTimestamp('[AuthContext:initAuth] User fetched:', user?.email);
+        // Session exists
+        logWithTimestamp('[AuthContext:checkInitialSession] Session found. Fetching user details...');
+        try {
+          const { user: supabaseUser, profile } = await authApi.getCurrentUser();
+          const user = convertUser(supabaseUser, profile);
+          if (isMounted) {
+            logWithTimestamp('[AuthContext:checkInitialSession] User details fetched. Setting state.');
             setState({
               user,
               profile,
               isLoading: false,
-              isAuthenticated: !!user,
+              isAuthenticated: true,
               error: null,
             });
-            logWithTimestamp('[AuthContext:initAuth] State set (authenticated)');
-          } catch (userError: any) {
-            // If getting user fails even with a valid session, log the error but don't clear tokens yet.
-            // The session might still be valid, and onAuthStateChange might recover.
-            console.error('[AuthContext:initAuth] Error fetching user with existing session:', userError);
-            logWithTimestamp('[AuthContext:initAuth] Failed to fetch user details, session might be stale or network issue.');
-            // Keep isAuthenticated true for now if a session existed, but flag the error.
-            setState(prev => ({
-              ...prev, // Keep existing user/profile data if any
-              isLoading: false,
-              // isAuthenticated: true, // Keep previous auth state if session was found
-              error: 'Failed to load user profile. Please try refreshing or sign in again if issues persist.',
-            }));
-            logWithTimestamp('[AuthContext:initAuth] State set (user fetch error, session potentially valid)');
           }
-        } else {
-          logWithTimestamp('[AuthContext:initAuth] No active session.');
+        } catch (userError) {
+          console.error('[AuthContext:checkInitialSession] Error fetching user details:', userError);
+          if (isMounted) {
+             setState(prev => ({
+               ...prev, 
+               isLoading: false,
+               isAuthenticated: true, 
+               error: 'Failed to load profile. Session might be valid.'
+             }));
+          }
+        }
+        
+      } catch (error: any) {
+        console.error('[AuthContext:checkInitialSession] Unexpected error:', error);
+        if (isMounted) {
           setState({
             user: null,
             profile: null,
             isLoading: false,
             isAuthenticated: false,
-            error: null,
+            error: 'An unexpected error occurred during authentication check.',
           });
-          logWithTimestamp('[AuthContext:initAuth] State set (unauthenticated)');
         }
-      } catch (error: any) {
-        console.error('[AuthContext:initAuth] Error:', error);
-        // Clear tokens if we get an auth error during initialization
-        if (isAuthError(error)) {
-          logWithTimestamp('[AuthContext:initAuth] Auth error detected, clearing tokens');
-          clearAuthTokens();
-        }
-        setState({
-          user: null,
-          profile: null,
-          isLoading: false,
-          isAuthenticated: false,
-          error: error.message,
-        });
-        logWithTimestamp('[AuthContext:initAuth] State set (error)');
       }
     };
 
-    initAuth();
+    checkInitialSession();
 
     // Set up auth state change subscription
     logWithTimestamp('[AuthContext] Setting up onAuthStateChange listener');
     const { data: { subscription } } = authApi.onAuthStateChange(async (event, session) => {
+       if (!isMounted) return;
+
       logWithTimestamp(`[AuthContext:onAuthStateChange] Event: ${event}`);
       if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'INITIAL_SESSION') {
-        // User signed in or token refreshed
-        logWithTimestamp('[AuthContext:onAuthStateChange] Fetching user due to SIGNED_IN/TOKEN_REFRESHED/INITIAL_SESSION...');
+        logWithTimestamp('[AuthContext:onAuthStateChange] Fetching user due to auth event...');
         try {
-          const { user: supabaseUser, profile } = await authApi.getCurrentUser();
+           // Use session from event if available, otherwise fetch fresh user
+           const { user: supabaseUser, profile } = session?.user 
+            ? await authApi.getCurrentUser() // Fetch profile based on session user
+            : { user: null, profile: null }; // Or assume null if no session in event
+          
           const user = convertUser(supabaseUser, profile);
-           logWithTimestamp('[AuthContext:onAuthStateChange] User fetched:', user?.email);
+          logWithTimestamp('[AuthContext:onAuthStateChange] User fetched/determined:', user?.email);
           setState({
             user,
             profile,
             isLoading: false,
-            isAuthenticated: true,
-            error: null, // Clear previous errors on successful fetch
+            isAuthenticated: !!user,
+            error: null,
           });
-           logWithTimestamp('[AuthContext:onAuthStateChange] State updated (authenticated)');
+          logWithTimestamp('[AuthContext:onAuthStateChange] State updated (authenticated/refreshed)');
         } catch (error: any) {
           console.error('[AuthContext:onAuthStateChange] Error fetching user:', error);
-          // Don't clear tokens immediately on user fetch error. Set error state instead.
-          // Only clear tokens on explicit SIGNED_OUT or specific auth errors indicating invalid session.
-          // The isAuthError check here might be too broad for simple fetch failures.
-          logWithTimestamp('[AuthContext:onAuthStateChange] Failed to fetch user after auth event. Setting error state.');
-          // if (isAuthError(error)) {
-          //   logWithTimestamp('[AuthContext:onAuthStateChange] Auth error detected, clearing tokens');
-          //   clearAuthTokens(); // Avoid clearing tokens here unless error is explicitly invalid_token
-          // }
           setState(prev => ({
-            ...prev, // Keep potentially existing user/profile data
-            error: 'Failed to update user details. Please try refreshing.',
+            ...prev, 
+            error: 'Failed to update user details.',
             isLoading: false,
-            isAuthenticated: prev.isAuthenticated, // Keep previous auth status unless explicitly signed out
           }));
           logWithTimestamp('[AuthContext:onAuthStateChange] State updated (user fetch error)');
         }
       } else if (event === 'SIGNED_OUT' || event === 'USER_DELETED') {
-        // User signed out or deleted - THIS is where we clear everything.
         logWithTimestamp('[AuthContext:onAuthStateChange] SIGNED_OUT / USER_DELETED');
         setState({
           user: null,
@@ -228,60 +224,37 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     });
 
-    // Clean up subscription
     return () => {
+      isMounted = false;
       logWithTimestamp('[AuthContext] Unsubscribing from onAuthStateChange');
       subscription.unsubscribe();
     };
   }, []);
 
-  // Sign in handler
+  // Sign in handler - Define isMounted OUTSIDE useEffect if needed here, 
+  // but relying on onAuthStateChange is usually better than timeouts.
+  // For simplicity, let's remove the isMounted check from the timeout as it's complex scope-wise.
+  // The listener should handle the final state.
   const signIn = async (credentials: SignInCredentials) => {
     logWithTimestamp('[AuthContext:signIn] Attempting sign in for:', credentials.email);
     try {
       setState(prev => ({ ...prev, isLoading: true, error: null }));
-      
-      // First clear any existing tokens to ensure a clean state
-      logWithTimestamp('[AuthContext:signIn] Clearing existing tokens before sign in');
       clearAuthTokens();
-      
-      logWithTimestamp('[AuthContext:signIn] Calling authApi.signIn...');
-      const { user: supabaseUser } = await authApi.signIn(credentials);
-      logWithTimestamp('[AuthContext:signIn] authApi.signIn successful, user:', supabaseUser?.email);
-      
-      if (!supabaseUser) {
-        console.error('[AuthContext:signIn] No user returned from sign in API call');
-        throw new Error('Sign in failed: No user data received.');
-      }
-      
-      // Note: onAuthStateChange *should* handle the state update, 
-      // but setting isLoading: false here might provide quicker feedback if needed.
-      logWithTimestamp('[AuthContext:signIn] Sign in successful, waiting for onAuthStateChange.');
-      // Force update loading state to ensure UI responsiveness
+      await authApi.signIn(credentials);
+      logWithTimestamp('[AuthContext:signIn] Sign in API call successful, waiting for onAuthStateChange.');
+      // Timeout to ensure loading doesn't hang indefinitely if listener fails
       setTimeout(() => {
-        logWithTimestamp('[AuthContext:signIn] Checking if loading state was updated by onAuthStateChange');
-        setState(prev => {
-          if (prev.isLoading) {
-            logWithTimestamp('[AuthContext:signIn] Loading state still true after timeout, forcing update');
-            return { ...prev, isLoading: false };
-          }
-          return prev;
-        });
+        // If still loading after timeout, force loading false. 
+        // This doesn't need isMounted check if we just modify state based on previous state.
+         setState(prev => prev.isLoading ? { ...prev, isLoading: false } : prev);
       }, STATE_UPDATE_TIMEOUT);
-
     } catch (error: any) {
       console.error('[AuthContext:signIn] Error:', error);
-      // Clear tokens if sign-in fails with an auth error
       if (isAuthError(error)) {
-        logWithTimestamp('[AuthContext:signIn] Auth error detected, clearing tokens');
         clearAuthTokens();
       }
-      setState(prev => ({
-        ...prev,
-        isLoading: false,
-        error: error.message,
-      }));
-      logWithTimestamp('[AuthContext:signIn] State updated (error)');
+      // Update state directly without isMounted check - safe if just setting based on prev state
+      setState(prev => ({ ...prev, isLoading: false, error: error.message }));
       throw error;
     }
   };
