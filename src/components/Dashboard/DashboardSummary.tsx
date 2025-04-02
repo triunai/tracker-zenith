@@ -153,28 +153,44 @@ const DashboardSummary = () => {
           <h3 className="text-lg font-medium">Quick Actions</h3>
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <Button variant="outline" className="h-auto py-4 flex flex-col items-center justify-center gap-2" onClick={() => document.querySelector<HTMLButtonElement>('[data-transaction-form-trigger]')?.click()}>
+          <Button 
+            variant="outline" 
+            className="h-auto py-4 flex flex-col items-center justify-center gap-2 shadow-purple-sm hover:shadow-purple" 
+            onClick={() => document.querySelector<HTMLButtonElement>('[data-transaction-form-trigger]')?.click()}
+          >
             <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
               <CreditCard size={20} />
             </div>
             <span className="text-sm">New Transaction</span>
           </Button>
           
-          <Button variant="outline" className="h-auto py-4 flex flex-col items-center justify-center gap-2" onClick={() => window.location.href = '/budgets'}>
+          <Button 
+            variant="outline" 
+            className="h-auto py-4 flex flex-col items-center justify-center gap-2 shadow-purple-sm hover:shadow-purple" 
+            onClick={() => window.location.href = '/budgets'}
+          >
             <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
               <Wallet size={20} />
             </div>
             <span className="text-sm">Set Budget</span>
           </Button>
           
-          <Button variant="outline" className="h-auto py-4 flex flex-col items-center justify-center gap-2" onClick={() => window.location.href = '/reports'}>
+          <Button 
+            variant="outline" 
+            className="h-auto py-4 flex flex-col items-center justify-center gap-2 shadow-purple-sm hover:shadow-purple" 
+            onClick={() => window.location.href = '/reports'}
+          >
             <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
               <TrendingUp size={20} />
             </div>
             <span className="text-sm">View Reports</span>
           </Button>
           
-          <Button variant="outline" className="h-auto py-4 flex flex-col items-center justify-center gap-2" onClick={() => console.log('Export data clicked')}>
+          <Button 
+            variant="outline" 
+            className="h-auto py-4 flex flex-col items-center justify-center gap-2 shadow-purple-sm hover:shadow-purple" 
+            onClick={() => console.log('Export data clicked')}
+          >
             <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
               <ArrowUpRight size={20} />
             </div>

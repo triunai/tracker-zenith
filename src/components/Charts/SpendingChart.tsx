@@ -282,12 +282,12 @@ const SpendingChart = () => {
   }
   
   return (
-    <Card className="animate-fade-up animate-delay-300">
-      <CardHeader>
-        <div className="flex flex-col sm:flex-row justify-between gap-4">
+    <Card className="shadow-purple">
+      <CardHeader className="pb-2">
+        <div className="flex items-center justify-between">
           <div>
             <CardTitle>Spending Analysis</CardTitle>
-            <CardDescription>Your expense breakdown for {dateRangeText}</CardDescription>
+            <CardDescription>Breakdown of your expenses for {dateRangeText}</CardDescription>
           </div>
           <div className="flex flex-col sm:flex-row gap-2">
             <Tabs 

@@ -196,7 +196,7 @@ const BudgetTracker = ({ onDelete, onSubmit }: BudgetTrackerProps) => {
   };
 
   return (
-    <Card className="animate-fade-up animate-delay-200">
+    <Card className="animate-fade-up animate-delay-200 shadow-purple">
       <CardHeader>
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>

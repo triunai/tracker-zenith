@@ -570,7 +570,7 @@ const TransactionList = () => {
 
   return (
     <>
-    <Card>
+    <Card className="shadow-purple">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <div>
           <CardTitle className="text-xl font-bold">Transactions</CardTitle>
@@ -696,7 +696,7 @@ const TransactionList = () => {
               const category = firstItem?.category;
               
               return (
-                <div key={expense.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 border rounded-md hover:bg-muted/50 transition-colors">
+                <div key={expense.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 border rounded-md hover:bg-muted/50 transition-colors hover:shadow-purple-sm">
                   <div className="flex items-start gap-3 mb-2 sm:mb-0">
                     <div className="hidden sm:flex h-10 w-10 rounded-full items-center justify-center bg-primary/10">
                       {expense.transaction_type === 'income' ? (

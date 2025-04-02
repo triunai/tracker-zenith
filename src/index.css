@@ -1,11 +1,10 @@
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   :root {
-    --background: 0 0% 98%;
+    --background: 220 10% 96%;
     --foreground: 0 0% 25%;
 
     --card: 0 0% 100%;
@@ -94,6 +93,29 @@
     @apply bg-background text-foreground antialiased;
     font-feature-settings: "rlig" 1, "calt" 1;
   }
+}
+
+/* Standard component styling with purple shadow */
+.component-card {
+  @apply bg-card rounded-lg shadow-md transition-all duration-200;
+  box-shadow: 0 4px 12px rgba(108, 113, 176, 0.08), 0 2px 4px rgba(108, 113, 176, 0.12);
+}
+
+.component-card:hover {
+  box-shadow: 0 6px 16px rgba(108, 113, 176, 0.12), 0 3px 6px rgba(108, 113, 176, 0.18);
+}
+
+/* Purple shadow utilities */
+.shadow-purple-sm {
+  box-shadow: 0 2px 8px rgba(108, 113, 176, 0.08);
+}
+
+.shadow-purple {
+  box-shadow: 0 4px 12px rgba(108, 113, 176, 0.12), 0 2px 4px rgba(108, 113, 176, 0.08);
+}
+
+.shadow-purple-lg {
+  box-shadow: 0 8px 24px rgba(108, 113, 176, 0.16), 0 4px 8px rgba(108, 113, 176, 0.1);
 }
 
 /* Glass morphism */
