@@ -348,6 +348,25 @@ export const budgetApi = {
     return data || 0;
   },
   
+  // Calculate budget spending with date filter
+  getBudgetSpendingByDate: async (budgetId: number, startDate: string, endDate: string): Promise<number> => {
+    console.log(`Calling calculate_budget_spending_by_date for budget ${budgetId} from ${startDate} to ${endDate}`);
+    
+    const { data, error } = await supabase.rpc('calculate_budget_spending_by_date', {
+      budget_id: budgetId,
+      p_start_date: startDate,
+      p_end_date: endDate
+    });
+    
+    if (error) {
+      console.error(`Error in getBudgetSpendingByDate:`, error);
+      throw error;
+    }
+    
+    console.log(`Budget spending by date result: ${data}`);
+    return data || 0;
+  },
+  
   // Get budget spending breakdown by category
   getBudgetCategorySpending: async (budgetId: number): Promise<{category_name: string, category_id: number, total_spent: number}[]> => {
     const { data, error } = await supabase.rpc('get_budget_category_spending', {
@@ -355,6 +374,25 @@ export const budgetApi = {
     });
     
     if (error) throw error;
+    return data || [];
+  },
+  
+  // Get budget spending breakdown by category with date filter
+  getBudgetCategorySpendingByDate: async (budgetId: number, startDate: string, endDate: string): Promise<{category_name: string, category_id: number, total_spent: number, budget_amount: number, percentage: number}[]> => {
+    console.log(`Calling get_budget_category_spending_by_date for budget ${budgetId} from ${startDate} to ${endDate}`);
+    
+    const { data, error } = await supabase.rpc('get_budget_category_spending_by_date', {
+      budget_id: budgetId,
+      p_start_date: startDate,
+      p_end_date: endDate
+    });
+    
+    if (error) {
+      console.error(`Error in getBudgetCategorySpendingByDate:`, error);
+      throw error;
+    }
+    
+    console.log(`Category spending by date result:`, data);
     return data || [];
   },
   

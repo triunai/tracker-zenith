@@ -83,8 +83,8 @@ export const countTotalItems = (expenses: Expense[]): number => {
 export const buildBaseExpenseQuery = (
   userId: string,
   options?: {
-    startDate?: string;
-    endDate?: string;
+    startDate?: string | Date;
+    endDate?: string | Date;
     limit?: number;
     offset?: number;
   }
@@ -96,17 +96,34 @@ export const buildBaseExpenseQuery = (
     .eq('isdeleted', false)
     .order('date', { ascending: false });
   
-  // Apply date filters if provided
+  // Apply date filters if provided, with improved date handling
   if (options?.startDate) {
-    console.log(`Using start date filter: ${options.startDate}`);
-    // Since we're already formatting dates properly in the components,
-    // we can use direct comparison without date_trunc
-    query = query.gte('date', options.startDate);
+    console.log(`Using start date filter: ${typeof options.startDate === 'string' ? options.startDate : options.startDate.toISOString()}`);
+    
+    // Ensure we always use the date string and compare the exact date part
+    const startDateStr = typeof options.startDate === 'string' 
+      ? options.startDate
+      : options.startDate.toISOString();
+    
+    // Use .gte with the formatted date
+    query = query.gte('date', startDateStr);
+    console.log(`Date filter applied: date >= ${startDateStr} (${new Date(startDateStr).toLocaleString()})`);
+    
+    // Log for debugging date-related issues
+    console.log(`Current system time for comparison: ${new Date().toISOString()} (${new Date().toLocaleString()})`);
   }
   
   if (options?.endDate) {
-    console.log(`Using end date filter: ${options.endDate}`);
-    query = query.lte('date', options.endDate);
+    console.log(`Using end date filter: ${typeof options.endDate === 'string' ? options.endDate : options.endDate.toISOString()}`);
+    
+    // Ensure we always use the date string and compare the exact date part
+    const endDateStr = typeof options.endDate === 'string'
+      ? options.endDate
+      : options.endDate.toISOString();
+    
+    // Use .lte with the formatted date
+    query = query.lte('date', endDateStr);
+    console.log(`Date filter applied: date <= ${endDateStr} (${new Date(endDateStr).toLocaleString()})`);
   }
   
   // Apply pagination if provided

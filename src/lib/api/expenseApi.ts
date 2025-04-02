@@ -21,17 +21,25 @@ import {
   createExpenseItemFromRequest,
   updateExpenseItems
 } from '../utils/expense-helpers';
+import { PostgrestResponse, PostgrestError } from '@supabase/supabase-js';
 
 // Constants for timeouts
 const TIMEOUT_DEFAULT = 8000; // Default timeout of 8 seconds
 const TIMEOUT_LONG = 12000;   // Longer timeout for complex operations
 
+// Type to help with the Supabase query responses
+interface SupabaseResponse<T> {
+  data: T | null;
+  error: PostgrestError | null;
+  [key: string]: any; // For any other properties that might be in the response
+}
+
 // Helper function to add timeouts to promises
 const withTimeout = async <T>(
-  promise: Promise<T> | any, 
+  promise: Promise<PostgrestResponse<T>> | any, 
   timeoutMs = TIMEOUT_DEFAULT, 
   errorMessage = 'Operation timed out'
-): Promise<T> => {
+): Promise<SupabaseResponse<T>> => {
   // Handle PostgrestBuilder objects by wrapping them in Promise.resolve
   const actualPromise = typeof promise.then === 'function' 
     ? promise
@@ -44,7 +52,15 @@ const withTimeout = async <T>(
     }, timeoutMs);
   });
 
-  return Promise.race([actualPromise, timeoutPromise]);
+  try {
+    // Return the first promise to settle (either the operation or the timeout)
+    const result = await Promise.race([actualPromise, timeoutPromise]);
+    // For Supabase responses, ensure we return the original object structure
+    return result as SupabaseResponse<T>;
+  } catch (error) {
+    console.error(`Timeout error in withTimeout: ${errorMessage}`, error);
+    throw error;
+  }
 };
 
 // Helper function for consistent timestamp logging
@@ -70,38 +86,140 @@ export const expenseApi = {
       paymentMethodId?: number;
     }
   ): Promise<Expense[]> => {
-    logWithTimestamp(`[expenseApi:getAllByUser] Fetching expenses for user: ${userId}`);
+    console.log(`💡 DIAGNOSTIC API: expenseApi.getAllByUser start - user ${userId} with options:`, {
+      ...options,
+      startDate: options?.startDate,
+      endDate: options?.endDate,
+      current_time: new Date().toISOString()
+    });
     
     try {
       // Use the helper function to build our base query
+      console.log(`💡 DIAGNOSTIC API: About to call buildBaseExpenseQuery with:`, {
+        userId,
+        options,
+        startDateType: options?.startDate ? typeof options.startDate : 'undefined',
+        endDateType: options?.endDate ? typeof options.endDate : 'undefined'
+      });
+      
+      // SPECIAL DEBUG: Try to directly fetch expense ID 52 to see if it exists
+      console.log("🔍 TARGETED DEBUG: Directly checking if expense ID 52 exists...");
+      const { data: targetExpense, error: targetError } = await supabase
+        .from('expense')
+        .select('*, expense_items(*)')
+        .eq('id', 52)
+        .single();
+        
+      if (targetError) {
+        console.warn("🔍 TARGETED DEBUG: Error fetching expense ID 52:", targetError.message);
+      } else if (targetExpense) {
+        console.log("🔍 TARGETED DEBUG: Found expense ID 52 directly:", {
+          id: targetExpense.id,
+          user_id: targetExpense.user_id,
+          date: targetExpense.date,
+          formattedDate: new Date(targetExpense.date).toLocaleString(),
+          payment_method_id: targetExpense.payment_method_id,
+          itemCount: targetExpense.expense_items?.length || 0,
+          wouldMatchCurrentUser: targetExpense.user_id === userId,
+          dateCheck: options?.startDate && options?.endDate ? {
+            startDate: options.startDate,
+            endDate: options.endDate,
+            expenseDate: targetExpense.date,
+            isInRange: new Date(targetExpense.date) >= new Date(options.startDate) && 
+                       new Date(targetExpense.date) <= new Date(options.endDate)
+          } : 'No date filters provided'
+        });
+      } else {
+        console.warn("🔍 TARGETED DEBUG: Expense ID 52 NOT FOUND in database!");
+      }
+      
       const expenseQuery = buildBaseExpenseQuery(userId, options);
       
+      console.log(`💡 DIAGNOSTIC API: Query built, about to execute it`);
+      
       // Get the expense records with timeout protection
-      const { data: expenses, error: expenseError } = await withTimeout(
+      const { data: expenses, error: expenseError } = await withTimeout<Expense[]>(
         expenseQuery,
         TIMEOUT_DEFAULT,
         'Fetching expenses timed out'
       );
       
+      console.log(`💡 DIAGNOSTIC API: Query executed, result status:`, {
+        success: !expenseError,
+        errorMessage: expenseError?.message,
+        resultCount: expenses?.length || 0
+      });
+      
       if (expenseError) {
+        console.error('💡 DIAGNOSTIC API: Error fetching expenses:', expenseError);
         return handleSupabaseError(expenseError, "fetching expenses");
       }
       
       if (!expenses || expenses.length === 0) {
-        logWithTimestamp(`[expenseApi:getAllByUser] No expenses found for user: ${userId}`);
+        console.log(`💡 DIAGNOSTIC API: No expenses found for user: ${userId} with filters:`, {
+          startDate: options?.startDate,
+          endDate: options?.endDate
+        });
         return [];
       }
       
+      // TARGETED DEBUG: Check if expense ID 52 is in the results from the normal query
+      const hasTarget = expenses.some(e => e.id === 52);
+      console.log(`🔍 TARGETED DEBUG: Expense ID 52 ${hasTarget ? 'IS' : 'IS NOT'} in the query results`);
+      if (!hasTarget && targetExpense) {
+        console.warn("🔍 TARGETED DEBUG: Expense ID 52 exists but was filtered out by the query. Likely reasons:", {
+          differentUserId: targetExpense.user_id !== userId,
+          outsideDateRange: options?.startDate && options?.endDate ? 
+            !(new Date(targetExpense.date) >= new Date(options.startDate) && 
+              new Date(targetExpense.date) <= new Date(options.endDate)) : 
+            false,
+          isDeleted: targetExpense.isdeleted === true
+        });
+      }
+      
+      console.log(`💡 DIAGNOSTIC API: Found ${expenses.length} raw expenses before loading relations`);
+      if (expenses.length > 0) {
+        // Log the date range of the first few expenses
+        expenses.slice(0, 3).forEach((expense, i) => {
+          console.log(`💡 DIAGNOSTIC API: Expense[${i}] ID=${expense.id}, date=${expense.date}, formatted=${new Date(expense.date).toLocaleString()}`);
+        });
+      }
+      
       // Load expenses with their related items and payment methods
+      console.time('💡 DIAGNOSTIC API: loadExpensesWithRelations duration');
       const result = await loadExpensesWithRelations(expenses);
+      console.timeEnd('💡 DIAGNOSTIC API: loadExpensesWithRelations duration');
       
       // Log how many expense items we found
       const itemCount = countTotalItems(result);
-      logWithTimestamp(`[expenseApi:getAllByUser] Found ${result.length} expenses with ${itemCount} total expense items`);
+      console.log(`💡 DIAGNOSTIC API: Found ${result.length} expenses with ${itemCount} total expense items`);
+      
+      // Check if any expenses have no items
+      const expensesWithNoItems = result.filter(e => !e.expense_items || e.expense_items.length === 0);
+      if (expensesWithNoItems.length > 0) {
+        console.warn(`💡 DIAGNOSTIC API: Found ${expensesWithNoItems.length} expenses with no items!`);
+        expensesWithNoItems.forEach((e, i) => {
+          if (i < 3) { // Just log the first 3 to avoid console spam
+            console.warn(`💡 DIAGNOSTIC API: Expense with no items: ID=${e.id}, date=${e.date}, type=${e.transaction_type}`);
+          }
+        });
+      }
+      
+      // Log transaction types distribution
+      const expenseCount = result.filter(e => e.transaction_type === 'expense').length;
+      const incomeCount = result.filter(e => e.transaction_type === 'income').length;
+      const unknownCount = result.filter(e => !e.transaction_type).length;
+      
+      console.log(`💡 DIAGNOSTIC API: Transaction type distribution:`, {
+        expense: expenseCount,
+        income: incomeCount,
+        unknown: unknownCount,
+        total: result.length
+      });
       
       return result;
     } catch (error) {
-      console.error(`[expenseApi:getAllByUser] Error fetching expenses:`, error);
+      console.error(`💡 DIAGNOSTIC API: Error in getAllByUser:`, error);
       throw error;
     }
   },
@@ -115,7 +233,7 @@ export const expenseApi = {
       const expenseQuery = buildBaseExpenseQuery(userId, { limit });
       
       // Get expense records with timeout protection
-      const { data: expenses, error: expenseError } = await withTimeout(
+      const { data: expenses, error: expenseError } = await withTimeout<Expense[]>(
         expenseQuery,
         TIMEOUT_DEFAULT,
         'Fetching recent expenses timed out'
@@ -124,6 +242,8 @@ export const expenseApi = {
       if (expenseError) {
         return handleSupabaseError(expenseError, "fetching recent expenses");
       }
+      
+      if (!expenses) return [];
       
       // Load related data
       const result = await loadExpensesWithRelations(expenses);
@@ -148,7 +268,7 @@ export const expenseApi = {
         .eq('isdeleted', false)
         .single();
       
-      const { data: expense, error: expenseError } = await withTimeout(
+      const { data: expense, error: expenseError } = await withTimeout<Expense>(
         expensePromise,
         TIMEOUT_DEFAULT,
         `Fetching expense ID ${id} timed out`
@@ -191,7 +311,7 @@ export const expenseApi = {
         .select()
         .single();
       
-      const { data: expenseData, error: expenseError } = await withTimeout(
+      const { data: expenseData, error: expenseError } = await withTimeout<Expense>(
         expensePromise,
         TIMEOUT_DEFAULT,
         'Creating expense record timed out'
@@ -199,6 +319,10 @@ export const expenseApi = {
       
       if (expenseError) {
         return handleSupabaseError(expenseError, "creating expense");
+      }
+      
+      if (!expenseData) {
+        throw new Error("Failed to create expense - no data returned");
       }
       
       // Then create the expense items with timeout protection
@@ -213,7 +337,7 @@ export const expenseApi = {
         .from('expense_item')
         .insert(expenseItems);
       
-      const { error: itemsError } = await withTimeout(
+      const { error: itemsError } = await withTimeout<ExpenseItem[]>(
         itemsPromise,
         TIMEOUT_DEFAULT,
         'Creating expense items timed out'
@@ -247,7 +371,7 @@ export const expenseApi = {
         .update(expenseData)
         .eq('id', id);
       
-      const { error: expenseError } = await withTimeout(
+      const { error: expenseError } = await withTimeout<Expense>(
         updatePromise,
         TIMEOUT_DEFAULT,
         `Updating expense ID ${id} timed out`
@@ -286,7 +410,7 @@ export const expenseApi = {
         .update({ isdeleted: true })
         .eq('id', id);
       
-      const { error } = await withTimeout(
+      const { error } = await withTimeout<{ isdeleted: boolean }>(
         deletePromise,
         TIMEOUT_DEFAULT,
         `Deleting expense ID ${id} timed out`
@@ -314,7 +438,7 @@ export const expenseApi = {
         .from('expense_item')
         .insert([expenseItem]);
       
-      const { error } = await withTimeout(
+      const { error } = await withTimeout<ExpenseItem>(
         addItemPromise,
         TIMEOUT_DEFAULT,
         `Adding item to expense ID ${expenseId} timed out`
@@ -341,7 +465,7 @@ export const expenseApi = {
         .update(item)
         .eq('id', id);
       
-      const { error } = await withTimeout(
+      const { error } = await withTimeout<ExpenseItem>(
         updateItemPromise,
         TIMEOUT_DEFAULT,
         `Updating expense item ID ${id} timed out`
@@ -368,7 +492,7 @@ export const expenseApi = {
         .update({ isdeleted: true })
         .eq('id', id);
       
-      const { error } = await withTimeout(
+      const { error } = await withTimeout<{ isdeleted: boolean }>(
         deleteItemPromise,
         TIMEOUT_DEFAULT,
         `Deleting expense item ID ${id} timed out`
@@ -396,7 +520,7 @@ export const expenseApi = {
         .eq('isdeleted', false)
         .order('name');
       
-      const { data, error } = await withTimeout(
+      const { data, error } = await withTimeout<ExpenseCategory[]>(
         categoriesPromise,
         TIMEOUT_DEFAULT,
         'Fetching expense categories timed out'
@@ -429,7 +553,9 @@ export const expenseApi = {
         p_end_date: endDate
       });
       
-      const { data, error } = await withTimeout(
+      type CategorySummary = {category_id: number, category_name: string, total: number};
+      
+      const { data, error } = await withTimeout<CategorySummary[]>(
         summaryPromise,
         TIMEOUT_LONG, // Use longer timeout for aggregate RPC functions
         'Fetching expense summary by category timed out'
@@ -462,7 +588,9 @@ export const expenseApi = {
         p_end_date: endDate
       });
       
-      const { data, error } = await withTimeout(
+      type PaymentMethodSummary = {payment_method_id: number, method_name: string, total: number};
+      
+      const { data, error } = await withTimeout<PaymentMethodSummary[]>(
         summaryPromise,
         TIMEOUT_LONG, // Use longer timeout for aggregate RPC functions
         'Fetching expense summary by payment method timed out'
@@ -495,7 +623,7 @@ export const expenseApi = {
         p_end_date: endDate
       });
       
-      const { data, error } = await withTimeout(
+      const { data, error } = await withTimeout<number>(
         totalPromise,
         TIMEOUT_DEFAULT,
         'Calculating total expenses timed out'
@@ -542,7 +670,7 @@ export const expenseApi = {
         .eq('isdeleted', false)
         .order('method_name');
       
-      const { data, error } = await withTimeout(
+      const { data, error } = await withTimeout<PaymentMethod[]>(
         methodsPromise,
         TIMEOUT_DEFAULT,
         'Fetching payment methods timed out'

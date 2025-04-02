@@ -109,27 +109,64 @@ const BudgetPage = () => {
     queryFn: budgetApi.getCategories,
   });
   
-  // Fetch spending data for each budget
+  // Get date range for the current period
+  const getDateRangeForBudgets = () => {
+    const now = new Date();
+    const startDate = new Date(now.getFullYear(), now.getMonth(), 1); // First day of current month
+    const endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0); // Last day of current month
+    
+    // Format for API
+    const formatDate = (date: Date) => {
+      return date.toISOString();
+    };
+    
+    return {
+      startDate: formatDate(startDate),
+      endDate: formatDate(endDate)
+    };
+  };
+  
+  // Get date range once for all queries
+  const { startDate, endDate } = getDateRangeForBudgets();
+  
+  // Fetch spending data for each budget with date filter
   const spendingQueries = useQueries({
     queries: budgetsData.map(budget => ({
-      queryKey: ['budgetSpending', budget.id],
-      queryFn: () => budgetApi.getBudgetSpending(budget.id),
+      queryKey: ['budgetSpending', budget.id, startDate, endDate],
+      queryFn: () => budgetApi.getBudgetSpendingByDate ? 
+        budgetApi.getBudgetSpendingByDate(budget.id, startDate, endDate) :
+        budgetApi.getBudgetSpending(budget.id) // Fallback to old method if new one not available
     }))
   });
 
-  // Fetch category spending data for each budget
+  // Fetch category spending data for each budget with date filter
   const categorySpendingQueries = useQueries({
     queries: budgetsData.map(budget => ({
-      queryKey: ['budgetCategorySpending', budget.id],
-      queryFn: () => budgetApi.getBudgetCategorySpending(budget.id),
+      queryKey: ['budgetCategorySpending', budget.id, startDate, endDate],
+      queryFn: () => budgetApi.getBudgetCategorySpendingByDate ? 
+        budgetApi.getBudgetCategorySpendingByDate(budget.id, startDate, endDate) :
+        budgetApi.getBudgetCategorySpending(budget.id) // Fallback to old method if new one not available
     }))
   });
   
   // Create budget mutation
   const createBudget = useMutation({
     mutationFn: (newBudget: CreateBudgetRequest) => budgetApi.create(newBudget),
-    onSuccess: () => {
+    onSuccess: (data) => {
+      // Clear all relevant query caches
+      console.log('Budget created successfully, invalidating queries:', data);
+      
+      // Invalidate budget lists
       queryClient.invalidateQueries({ queryKey: ['budgets'] });
+      
+      // Invalidate spending data for all budgets (in case categories overlap)
+      queryClient.invalidateQueries({ 
+        predicate: (query) => query.queryKey[0] === 'budgetSpending' || query.queryKey[0] === 'budgetCategorySpending'
+      });
+      
+      // Force a fresh fetch of all budget data
+      queryClient.resetQueries({ queryKey: ['budgets'] });
+      
       setIsNewBudgetOpen(false);
       toast({
         title: "Success!",
@@ -137,6 +174,7 @@ const BudgetPage = () => {
       });
     },
     onError: (error) => {
+      console.error('Failed to create budget:', error);
       toast({
         title: "Error",
         description: `Failed to create budget: ${error.message}`,
@@ -149,14 +187,34 @@ const BudgetPage = () => {
   // Delete budget mutation
   const deleteBudget = useMutation({
     mutationFn: (budgetId: number) => budgetApi.delete(budgetId),
-    onSuccess: () => {
+    onSuccess: (_, deletedBudgetId) => {
+      console.log(`Budget ${deletedBudgetId} deleted successfully, invalidating queries`);
+      
+      // Immediately update local state to remove the deleted budget
+      setBudgets(prevBudgets => prevBudgets.filter(budget => budget.id !== deletedBudgetId));
+      
+      // Invalidate budget lists
       queryClient.invalidateQueries({ queryKey: ['budgets'] });
+      
+      // Invalidate specific budget data
+      queryClient.invalidateQueries({ 
+        predicate: (query) => 
+          (query.queryKey[0] === 'budgetSpending' && query.queryKey[1] === deletedBudgetId) || 
+          (query.queryKey[0] === 'budgetCategorySpending' && query.queryKey[1] === deletedBudgetId)
+      });
+      
+      // Also invalidate all spending data to be safe
+      queryClient.invalidateQueries({ 
+        predicate: (query) => query.queryKey[0] === 'budgetSpending' || query.queryKey[0] === 'budgetCategorySpending'
+      });
+      
       toast({
         title: "Success!",
         description: "Budget has been deleted successfully.",
       });
     },
     onError: (error) => {
+      console.error('Failed to delete budget:', error);
       toast({
         title: "Error",
         description: `Failed to delete budget: ${error.message}`,
@@ -388,8 +446,9 @@ const BudgetPage = () => {
                             const budgetCategory = budget.budget_categories?.[0];
                             const category = budgetCategory?.category;
                             
-                            // Get actual spending from the API
-                            const spent = Number(spendingQueries[index].data || 0);
+                            // Get actual spending from the API - safely check if query exists first
+                            const spendingQuery = spendingQueries[index];
+                            const spent = spendingQuery && spendingQuery.data ? Number(spendingQuery.data) : 0;
                             const percentage = Math.round((spent / Number(budget.amount)) * 100);
                             const remaining = Number(budget.amount) - spent;
                             
@@ -450,8 +509,9 @@ const BudgetPage = () => {
                       const budgetCategory = budget.budget_categories?.[0];
                       const category = budgetCategory?.category;
                       
-                      // Get actual spending
-                      const spent = Number(spendingQueries[index].data || 0);
+                      // Get actual spending - safely check if query exists first
+                      const spendingQuery = spendingQueries[index];
+                      const spent = spendingQuery && spendingQuery.data ? Number(spendingQuery.data) : 0;
                       const percentage = Math.round((spent / Number(budget.amount)) * 100);
                       const remaining = Number(budget.amount) - spent;
                       

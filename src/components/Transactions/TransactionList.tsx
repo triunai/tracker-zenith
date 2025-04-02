@@ -122,23 +122,30 @@ const TransactionList = () => {
       }
     }
     
-    // Format dates to ensure consistent timezone handling
-    // Start date should be at 00:00:00 and end date at 23:59:59 of the respective days
-    const formattedStartDate = new Date(
-      startDate.getFullYear(), 
-      startDate.getMonth(), 
-      startDate.getDate(), 
-      0, 0, 0
-    ).toISOString();
+    // Fix timezone issues by using a timezone-safe approach
+    // Method 1: Create a timezone-safe range by directly formatting dates
+    // to avoid the implicit timezone conversion of toISOString()
     
-    const formattedEndDate = new Date(
-      endDate.getFullYear(), 
-      endDate.getMonth(), 
-      endDate.getDate(), 
-      23, 59, 59
-    ).toISOString();
+    // Format start date as YYYY-MM-DDT00:00:00Z to ensure correct day
+    const formatDate = (date: Date, isEndDate = false) => {
+      const year = date.getFullYear();
+      // Month is 0-based in JS, but we want 1-based for formatting
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      
+      // Set to beginning of day for start date, end of day for end date
+      const time = isEndDate ? 'T23:59:59.999Z' : 'T00:00:00.000Z';
+      
+      return `${year}-${month}-${day}${time}`;
+    };
+    
+    // Use our safer date formatting method
+    const formattedStartDate = formatDate(startDate, false);
+    const formattedEndDate = formatDate(endDate, true);
     
     console.log(`Transaction List: Using date range ${formattedStartDate} to ${formattedEndDate}`);
+    console.log(`Debug - Original dates: start=${startDate.toDateString()}, end=${endDate.toDateString()}`);
+    console.log(`Debug - Formatted without timezone shift: start=${formattedStartDate}, end=${formattedEndDate}`);
     
     return {
       startDate: formattedStartDate,
@@ -150,6 +157,7 @@ const TransactionList = () => {
   const fetchTransactions = useCallback(async () => {
     // Only fetch if we have a user ID
     if (!userId) {
+      console.warn("💡 DIAGNOSTIC: fetchTransactions called with no userId");
       setIsLoading(false);
       return;
     }
@@ -161,11 +169,102 @@ const TransactionList = () => {
       // Get date range from filter
       const { startDate, endDate } = getDateRangeForFilter();
       
-      // Fetch expenses with pagination and date range
-      const expenseData = await expenseApi.getAllByUser(userId, {
-        limit: 50, // fetch a larger batch initially for client-side filtering
+      // Add enhanced debugging information
+      console.log(`💡 DIAGNOSTIC: TransactionList fetchTransactions STARTING with filters:`, {
+        userId,
+        dateFilter: {
+          type: dateFilter.type,
+          year: dateFilter.year,
+          month: dateFilter.month,
+          quarter: dateFilter.quarter,
+          hasCustomRange: !!dateFilter.customRange
+        },
         startDate,
-        endDate
+        endDate,
+        startDateObj: new Date(startDate),
+        endDateObj: new Date(endDate),
+        startDateFormatted: new Date(startDate).toLocaleString(),
+        endDateFormatted: new Date(endDate).toLocaleString(),
+        current_time: new Date().toISOString(),
+        current_component_state: {
+          transactionTypeFilter,
+          selectedCategory,
+          selectedPaymentMethod
+        }
+      });
+      
+      // Log for diagnostics
+      console.time("💡 DIAGNOSTIC: expenseApi.getAllByUser call duration");
+      console.log(`💡 DIAGNOSTIC: Calling expenseApi.getAllByUser with:`, {
+        userId, 
+        options: {
+          limit: 100, // Increased from 50 to ensure we capture all transactions
+          startDate: startDate,
+          startDateType: typeof startDate,
+          endDate: endDate,
+          endDateType: typeof endDate
+        }
+      });
+      
+      // Convert dates to ISO strings to match expected types in expenseApi
+      const startDateIso = typeof startDate === 'string' ? startDate : new Date(startDate).toISOString();
+      const endDateIso = typeof endDate === 'string' ? endDate : new Date(endDate).toISOString();
+      
+      // Fetch expenses with pagination and date range - increased limit to ensure all transactions are captured
+      const expenseData = await expenseApi.getAllByUser(userId, {
+        limit: 100, // Increased from 50 to ensure we capture all transactions
+        startDate: startDateIso, 
+        endDate: endDateIso
+      });
+      
+      console.timeEnd("💡 DIAGNOSTIC: expenseApi.getAllByUser call duration");
+      
+      // TARGETED DEBUG: Look specifically for expense ID 52
+      const targetExpense = expenseData.find(e => e.id === 52);
+      if (targetExpense) {
+        console.log("🎯 TARGET FOUND: Expense ID 52 was returned from the API:", {
+          id: targetExpense.id,
+          date: targetExpense.date,
+          dateObj: new Date(targetExpense.date),
+          inDateRange: isDateInRange(targetExpense.date, startDateIso, endDateIso),
+          payment_method_id: targetExpense.payment_method_id,
+          description: targetExpense.description,
+          transaction_type: targetExpense.transaction_type,
+          items: targetExpense.expense_items?.map(item => ({
+            id: item.id,
+            amount: item.amount,
+            category_id: item.category_id,
+            description: item.description
+          })) || 'No items'
+        });
+      } else {
+        console.warn("🎯 TARGET MISSING: Expense ID 52 was NOT returned from the API");
+        console.log("Current date filter:", { startDateIso, endDateIso });
+        console.log("Try temporarily removing date filters to see if it appears");
+      }
+      
+      // Add more detailed logging about results
+      console.log(`💡 DIAGNOSTIC: TransactionList: Got ${expenseData.length} expenses from API`, {
+        hasSomeData: expenseData.length > 0,
+        newest_expense: expenseData.length > 0 ? {
+          id: expenseData[0]?.id,
+          date: expenseData[0]?.date,
+          dateFormatted: new Date(expenseData[0]?.date).toLocaleString(),
+          dateInRange: isDateInRange(expenseData[0]?.date, startDateIso, endDateIso),
+          description: expenseData[0]?.description,
+          first_item: expenseData[0]?.expense_items?.[0]?.description || 'No items',
+          transaction_type: expenseData[0]?.transaction_type,
+          expense_items: expenseData[0]?.expense_items?.map(item => ({
+            id: item.id,
+            category_id: item.category_id,
+            amount: item.amount,
+            description: item.description
+          }))
+        } : 'No expenses',
+        originalDateRange: {
+          startDate: startDateIso,
+          endDate: endDateIso
+        }
       });
       
       // Check for expenses with no valid expense_items
@@ -174,7 +273,24 @@ const TransactionList = () => {
       );
       
       if (validExpenses.length !== expenseData.length) {
-        console.warn(`Found ${expenseData.length - validExpenses.length} expenses with no valid expense items`);
+        console.warn(`💡 DIAGNOSTIC: Found ${expenseData.length - validExpenses.length} expenses with no valid expense items`);
+        
+        // Log the expenses with no items for debugging
+        const invalidExpenses = expenseData.filter(expense => 
+          !expense.expense_items || expense.expense_items.length === 0
+        );
+        
+        invalidExpenses.forEach((expense, index) => {
+          if (index < 3) { // Just log the first 3 to avoid console spam
+            console.warn(`💡 DIAGNOSTIC: Expense with no items: ID=${expense.id}, Date=${expense.date}, Type=${expense.transaction_type}`);
+          }
+        });
+      }
+      
+      // TARGETED DEBUG: Check if expense ID 52 was filtered out due to no items
+      if (targetExpense && !validExpenses.some(e => e.id === 52)) {
+        console.warn("🎯 TARGET FILTERED: Expense ID 52 was filtered out because it has no valid expense_items");
+        console.log("Original expense:", targetExpense);
       }
       
       // Sort expenses by date (newest first)
@@ -182,8 +298,20 @@ const TransactionList = () => {
         new Date(b.date).getTime() - new Date(a.date).getTime()
       );
       
-      console.log(`Setting ${validExpenses.length} valid expenses in state for date range: ${startDate} to ${endDate}`);
-      console.log(validExpenses);
+      console.log(`💡 DIAGNOSTIC: Setting ${validExpenses.length} valid expenses in state for date range: ${startDateIso} to ${endDateIso}`);
+      
+      // Log each expense date for debugging
+      if (validExpenses.length > 0) {
+        console.log("💡 DIAGNOSTIC: Transaction dates in result set:");
+        validExpenses.forEach((expense, index) => {
+          if (index < 10) { // Log more, but still limit to avoid spam
+            console.log(`  ${index}: ID=${expense.id}, Date=${expense.date} (${new Date(expense.date).toLocaleString()}), Type=${expense.transaction_type}, Description=${expense.description || 'No description'}, Items: ${expense.expense_items?.length || 0}`);
+          }
+        });
+      } else {
+        console.warn("💡 DIAGNOSTIC: No valid transactions found in the specified date range");
+        console.log("💡 DIAGNOSTIC: Checking dateFilter state:", dateFilter);
+      }
       
       setExpenses(validExpenses);
       
@@ -195,7 +323,7 @@ const TransactionList = () => {
       const paymentMethodsData = await expenseApi.getPaymentMethods();
       setPaymentMethods(paymentMethodsData);
     } catch (err) {
-      console.error('Error fetching expense data:', err);
+      console.error('💡 DIAGNOSTIC: Error fetching expense data:', err);
       setError('Failed to fetch transaction data. Please try again.');
       toast({
         title: 'Error',
@@ -205,7 +333,29 @@ const TransactionList = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [toast, getDateRangeForFilter, userId]);
+  }, [toast, getDateRangeForFilter, userId, dateFilter, transactionTypeFilter, selectedCategory, selectedPaymentMethod]);
+  
+  // Helper function to check if a date is within a range - improved with better error handling
+  const isDateInRange = (dateStr, startDate, endDate) => {
+    if (!dateStr) return false;
+    
+    try {
+      const date = new Date(dateStr).getTime();
+      const start = new Date(startDate).getTime();
+      const end = new Date(endDate).getTime();
+      
+      const isInRange = date >= start && date <= end;
+      
+      if (!isInRange) {
+        console.log(`Date ${dateStr} (${new Date(dateStr).toLocaleString()}) is outside range: ${startDate} - ${endDate}`);
+      }
+      
+      return isInRange;
+    } catch (error) {
+      console.error(`Error checking if date ${dateStr} is in range:`, error);
+      return false; // Default to false on error
+    }
+  };
   
   useEffect(() => {
     fetchTransactions();
@@ -263,11 +413,40 @@ const TransactionList = () => {
   // Filter and paginate expenses
   const filteredExpenses = useMemo(() => {
     try {
-      return expenses
+      console.log(`💡 DIAGNOSTIC: Filtering ${expenses.length} expenses with:`, {
+        searchTerm,
+        selectedCategory,
+        selectedPaymentMethod,
+        transactionTypeFilter
+      });
+      
+      // TARGETED DEBUG: Check if expense ID 52 is in the expenses array
+      const targetExpense = expenses.find(e => e.id === 52);
+      if (targetExpense) {
+        console.log("🎯 TARGET PRESENT: Expense ID 52 is in the expenses array before filtering");
+      } else {
+        console.warn("🎯 TARGET ABSENT: Expense ID 52 is NOT in the expenses array before filtering");
+      }
+      
+      const result = expenses
         .filter(expense => {
+          // TARGETED DEBUG: Log filtering process for expense ID 52
+          const isTarget = expense.id === 52;
+          
           // Transaction type filter
           if (transactionTypeFilter !== 'all') {
-            if (expense.transaction_type !== transactionTypeFilter) {
+            // Add detailed logging for transaction type filtering
+            const transactionType = expense.transaction_type || 
+              (expense.expense_items?.some(item => item.income_category_id) ? 'income' : 'expense');
+            
+            if (isTarget) {
+              console.log(`🎯 TARGET FILTER: Transaction type check for expense ID 52: has type=${transactionType}, filter requires=${transactionTypeFilter}`);
+            }
+            
+            if (transactionType !== transactionTypeFilter) {
+              if (isTarget) {
+                console.warn(`🎯 TARGET EXCLUDED: Expense ID 52 filtered out due to transaction type mismatch: ${transactionType} vs ${transactionTypeFilter}`);
+              }
               return false;
             }
           }
@@ -288,15 +467,70 @@ const TransactionList = () => {
           // Payment method filter
           const matchesPaymentMethod = selectedPaymentMethod === 'all' ? true :
             expense.payment_method_id?.toString() === selectedPaymentMethod;
+          
+          if (isTarget) {
+            console.log(`🎯 TARGET FILTER DETAILS for expense ID 52:`, {
+              matchesSearch,
+              matchesCategory,
+              selectedCategory,
+              actualCategories: expense.expense_items?.map(item => item.category_id),
+              matchesPaymentMethod,
+              selectedPaymentMethod,
+              actualPaymentMethod: expense.payment_method_id
+            });
+          }
+          
+          // For debugging non-matching items
+          if (!matchesSearch || !matchesCategory || !matchesPaymentMethod) {
+            if (isTarget) {
+              console.warn(`🎯 TARGET EXCLUDED: Expense ID 52 filtered out due to:`, {
+                matchesSearch,
+                matchesCategory,
+                matchesPaymentMethod
+              });
+            }
+          }
             
           return matchesSearch && matchesCategory && matchesPaymentMethod;
         });
-        // Note: We already sort in fetchTransactions, and by default the API returns sorted data
+      
+      // TARGETED DEBUG: Check if expense ID 52 is in the filtered results
+      if (targetExpense) {
+        const stillPresent = result.some(e => e.id === 52);
+        if (stillPresent) {
+          console.log("🎯 TARGET INCLUDED: Expense ID 52 passed all filters and is in the final result set");
+        } else {
+          console.warn("🎯 TARGET FILTERED OUT: Expense ID 52 was removed by filters");
+        }
+      }
+      
+      console.log(`💡 DIAGNOSTIC: Filtered to ${result.length} expenses after applying all filters`);
+      return result;
     } catch (error) {
       console.error('Error filtering expenses:', error);
       return [];
     }
   }, [expenses, searchTerm, selectedCategory, selectedPaymentMethod, transactionTypeFilter]);
+  
+  // Function to handle transaction type filter change
+  const handleTransactionTypeChange = (value: string) => {
+    console.log(`Changing transaction type filter to: ${value}`);
+    setTransactionTypeFilter(value as 'all' | 'expense' | 'income');
+    
+    // Reset to first page when changing filters
+    setCurrentPage(1);
+  };
+  
+  // Reset page when any filter changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, selectedCategory, selectedPaymentMethod, transactionTypeFilter]);
+  
+  // Handle transaction added event
+  const handleTransactionAdded = useCallback(() => {
+    console.log('Transaction added, refreshing data...');
+    fetchTransactions();
+  }, [fetchTransactions]);
   
   // Paginate transactions
   const paginatedExpenses = useMemo(() => {
@@ -304,33 +538,10 @@ const TransactionList = () => {
     return filteredExpenses.slice(startIndex, startIndex + pageSize);
   }, [filteredExpenses, currentPage, pageSize]);
   
-  // Calculate total pages
-  const totalPages = Math.ceil(filteredExpenses.length / pageSize);
-  
-  // Reset to first page when filters change
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchTerm, selectedCategory, selectedPaymentMethod, transactionTypeFilter, dateFilter]);
-
-  // Handle initiating editing of a transaction
-  const handleEditTransaction = (expense: Expense) => {
-    setExpenseToEdit(expense);
-  };
-
-  // Handle reload after adding or editing a transaction
-  const handleTransactionAdded = () => {
-    console.log("Transaction added/edited, triggering complete refresh");
-    // Clear any editing state first
-    setExpenseToEdit(null);
-    
-    // Wait a short delay to ensure database writes have completed
-    setTimeout(() => {
-      // Refetch the expenses data
-      fetchTransactions();
-      // Also refresh dashboard data
-      refreshData();
-    }, 500);
-  };
+  // Calculate total pages - ensure it has a default value
+  const totalPages = useMemo(() => {
+    return Math.max(1, Math.ceil(filteredExpenses.length / pageSize));
+  }, [filteredExpenses, pageSize]);
 
   return (
     <>
@@ -349,7 +560,7 @@ const TransactionList = () => {
           <Tabs 
             defaultValue="all" 
             value={transactionTypeFilter} 
-            onValueChange={(value) => setTransactionTypeFilter(value as 'all' | 'expense' | 'income')}
+            onValueChange={handleTransactionTypeChange}
             className="w-full"
           >
             <TabsList className="grid w-full grid-cols-3">

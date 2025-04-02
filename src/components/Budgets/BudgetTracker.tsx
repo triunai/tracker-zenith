@@ -98,7 +98,18 @@ const BudgetTracker = ({ onDelete, onSubmit }: BudgetTrackerProps) => {
   // Fetch budgets for the selected period
   const { data: budgets = [], isLoading, error } = useQuery({
     queryKey: ['budgets', selectedPeriod],
-    queryFn: () => budgetApi.getByPeriod(userId, selectedPeriod),
+    queryFn: async () => {
+      console.log(`Fetching budgets for period: ${selectedPeriod} and user: ${userId}`);
+      const result = await budgetApi.getByPeriod(userId, selectedPeriod);
+      console.log(`Retrieved ${result.length} budgets for ${selectedPeriod}`);
+      // Log budget details 
+      result.forEach(budget => {
+        console.log(`Budget ${budget.id}: ${budget.name} - ${formatCurrency(Number(budget.amount))} - Categories: ${
+          budget.budget_categories?.map(bc => bc.category?.name || `Cat ID ${bc.category_id}`).join(', ') || 'None'
+        }`);
+      });
+      return result;
+    },
   });
   
   // Fetch spending data for each budget with date filter
@@ -140,18 +151,8 @@ const BudgetTracker = ({ onDelete, onSubmit }: BudgetTrackerProps) => {
         queryFn: async () => {
           try {
             console.log(`Fetching category spending for budget ${budget.id} from ${startDate} to ${endDate}`);
-            const { data, error } = await supabase.rpc('get_budget_category_spending_by_date', {
-              budget_id: budget.id,
-              p_start_date: startDate,
-              p_end_date: endDate
-            });
-            
-            if (error) {
-              console.error(`Error fetching category spending for budget ${budget.id}:`, error);
-              throw error;
-            }
-            console.log(`Category spending data for budget ${budget.id}:`, data);
-            return data;
+            // Use the API method instead of direct RPC call for consistency
+            return await budgetApi.getBudgetCategorySpendingByDate(budget.id, startDate, endDate);
           } catch (e) {
             console.error(`Exception in category spending query for budget ${budget.id}:`, e);
             return []; // Return empty array as fallback
@@ -262,6 +263,16 @@ const BudgetTracker = ({ onDelete, onSubmit }: BudgetTrackerProps) => {
               const categorySpendingQuery = categorySpendingQueries[index];
               const categorySpending = categorySpendingQuery.data || [];
               
+              // Debug - log spending values
+              console.log(`Budget ${budget.id} (${budget.name}) spending data:`, {
+                overall_api_spending: spent,
+                calculated_percentage: percentage,
+                remaining: remaining,
+                category_spending_count: categorySpending.length,
+                category_spending_total: categorySpending.reduce((total, item) => total + Number(item.total_spent || 0), 0),
+                spent_progressive_bar_value: percentage
+              });
+
               // Determine status-based styling
               const getProgressColor = () => {
                 if (percentage >= 100) return 'bg-finance-expense';
@@ -269,6 +280,20 @@ const BudgetTracker = ({ onDelete, onSubmit }: BudgetTrackerProps) => {
                 if (percentage >= 60) return 'bg-yellow-400';
                 return 'bg-finance-income';
               };
+              
+              // Debug inconsistencies between total spending and category spending
+              const totalCategorySpending = categorySpending.reduce((total, item) => total + Number(item.total_spent || 0), 0);
+              if (Math.abs(totalCategorySpending - spent) > 0.01) { // Check for difference greater than 1 cent
+                console.warn(`Budget ${budget.id} (${budget.name}) has inconsistent spending data:`, {
+                  overall_spending: spent,
+                  total_from_categories: totalCategorySpending,
+                  difference: totalCategorySpending - spent,
+                  category_breakdown: categorySpending.map(item => ({
+                    category: item.category_name,
+                    amount: Number(item.total_spent || 0)
+                  }))
+                });
+              }
               
               return (
                 <div 
