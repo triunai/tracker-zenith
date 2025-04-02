@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient, useQueries } from '@tanstack/react-query';
 import Layout from '@/components/Layout/Layout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/UI/card';
@@ -48,31 +48,50 @@ const BudgetPage = () => {
   
   const { userId } = useDashboard();
   
-  // Fetch budgets for the selected period
-  const { data: budgetsData = [], isLoading: budgetsLoading, error: budgetsError } = useQuery({
-    queryKey: ['budgets', selectedPeriod, userId],
+  // Fetch ALL budgets for the user, remove dependency on selectedPeriod
+  const { data: budgetsData = [], isLoading: budgetsLoading, error: budgetsError } = useQuery<Budget[]>({ // Explicit type
+    queryKey: ['budgets', userId], // Remove selectedPeriod from the key
     queryFn: async () => {
       try {
-        // Ensure we have a valid userId
         if (!userId) {
           console.warn('No userId available, cannot fetch budgets');
           setDebug(`Warning: No userId available, cannot fetch budgets`);
           return [];
         }
         
-        console.log(`Fetching budgets for period ${selectedPeriod} and user ${userId}`);
-        const result = await budgetApi.getByPeriod(userId, selectedPeriod);
+        console.log(`Fetching ALL budgets for user ${userId}`);
+        // Call a function that gets ALL budgets, e.g., budgetApi.getAllByUser(userId)
+        // Assuming budgetApi.getByPeriod was specific, we need a general fetch function
+        // If budgetApi.getByPeriod(userId, null) works, use that, otherwise adapt budgetApi
+        const result = await budgetApi.getAllByUser(userId); // *** ASSUMPTION: budgetApi.getAllByUser exists ***
         console.log(`Fetch result:`, result);
-        setDebug(`Successfully fetched ${result.length} budgets for period ${selectedPeriod}`);
+        setDebug(`Successfully fetched ${result.length} total budgets`);
         return result;
       } catch (err) {
-        console.error(`Error fetching budgets:`, err);
+        console.error(`Error fetching all budgets:`, err);
         setDebug(`Error: ${err.message}`);
         throw err;
       }
     },
-    enabled: !!userId, // Only enable the query if userId is available
+    enabled: !!userId,
   });
+
+  // Sort/Group budgets after fetching
+  const sortedBudgets = useMemo(() => {
+    if (!budgetsData) return [];
+    // Define the desired order
+    const periodOrder = [PeriodEnum.DAILY, PeriodEnum.WEEKLY, PeriodEnum.MONTHLY, PeriodEnum.QUARTERLY, PeriodEnum.YEARLY];
+    return [...budgetsData].sort((a, b) => {
+      const periodAIndex = periodOrder.indexOf(a.period);
+      const periodBIndex = periodOrder.indexOf(b.period);
+      // Sort primarily by period order
+      if (periodAIndex !== periodBIndex) {
+        return periodAIndex - periodBIndex;
+      }
+      // Optionally, sort by amount or name within the same period
+      return a.name.localeCompare(b.name);
+    });
+  }, [budgetsData]);
   
   // Sync isLoading state with budgetsLoading from useQuery
   useEffect(() => {
@@ -87,16 +106,13 @@ const BudgetPage = () => {
     }
   }, [budgetsLoading, budgetsError]);
   
-  // Sync budgets state with budgetsData
+  // Use the sorted budgets instead of raw budgetsData for rendering
   useEffect(() => {
-    if (budgetsData) {
-      console.log(`Budget data updated: ${budgetsData.length} budgets available`);
-      if (!budgetsLoading) {
-        console.log('Setting budgets state with data from query');
-        setBudgets(budgetsData);
-      }
+    if (!budgetsLoading && sortedBudgets) {
+      console.log('Setting budgets state with sorted data...');
+      setBudgets(sortedBudgets);
     }
-  }, [budgetsData, budgetsLoading]);
+  }, [sortedBudgets, budgetsLoading]);
   
   // Debug state changes
   useEffect(() => {
@@ -131,9 +147,10 @@ const BudgetPage = () => {
   
   // Fetch spending data for each budget with date filter
   const spendingQueries = useQueries({
-    queries: budgetsData.map(budget => ({
+    // Use sortedBudgets here so queries match the displayed order
+    queries: sortedBudgets.map(budget => ({
       queryKey: ['budgetSpending', budget.id, startDate, endDate],
-      queryFn: () => budgetApi.getBudgetSpendingByDate ? 
+      queryFn: () => budgetApi.getBudgetSpendingByDate ?
         budgetApi.getBudgetSpendingByDate(budget.id, startDate, endDate) :
         budgetApi.getBudgetSpending(budget.id) // Fallback to old method if new one not available
     }))
@@ -141,9 +158,10 @@ const BudgetPage = () => {
 
   // Fetch category spending data for each budget with date filter
   const categorySpendingQueries = useQueries({
-    queries: budgetsData.map(budget => ({
+    // Use sortedBudgets here so queries match the displayed order
+    queries: sortedBudgets.map(budget => ({
       queryKey: ['budgetCategorySpending', budget.id, startDate, endDate],
-      queryFn: () => budgetApi.getBudgetCategorySpendingByDate ? 
+      queryFn: () => budgetApi.getBudgetCategorySpendingByDate ?
         budgetApi.getBudgetCategorySpendingByDate(budget.id, startDate, endDate) :
         budgetApi.getBudgetCategorySpending(budget.id) // Fallback to old method if new one not available
     }))
@@ -153,19 +171,18 @@ const BudgetPage = () => {
   const createBudget = useMutation({
     mutationFn: (newBudget: CreateBudgetRequest) => budgetApi.create(newBudget),
     onSuccess: (data) => {
-      // Clear all relevant query caches
       console.log('Budget created successfully, invalidating queries:', data);
       
-      // Invalidate budget lists
-      queryClient.invalidateQueries({ queryKey: ['budgets'] });
+      // --- Invalidate relevant queries ---
+      queryClient.invalidateQueries({ queryKey: ['budgets'] }); // Invalidate the main budget list
+      // Invalidate spending data as new budget might affect category spending overall
+      queryClient.invalidateQueries({ queryKey: ['budgetSpending'] });
+      queryClient.invalidateQueries({ queryKey: ['budgetCategorySpending'] });
+       // Invalidate dashboard summary if it includes budget info
+      queryClient.invalidateQueries({ queryKey: ['dashboardSummary'] });
       
-      // Invalidate spending data for all budgets (in case categories overlap)
-      queryClient.invalidateQueries({ 
-        predicate: (query) => query.queryKey[0] === 'budgetSpending' || query.queryKey[0] === 'budgetCategorySpending'
-      });
-      
-      // Force a fresh fetch of all budget data
-      queryClient.resetQueries({ queryKey: ['budgets'] });
+      // Force a fresh fetch of all budget data might be too aggressive, let invalidate handle it
+      // queryClient.resetQueries({ queryKey: ['budgets'] });
       
       setIsNewBudgetOpen(false);
       toast({
@@ -190,23 +207,19 @@ const BudgetPage = () => {
     onSuccess: (_, deletedBudgetId) => {
       console.log(`Budget ${deletedBudgetId} deleted successfully, invalidating queries`);
       
-      // Immediately update local state to remove the deleted budget
-      setBudgets(prevBudgets => prevBudgets.filter(budget => budget.id !== deletedBudgetId));
+      // Immediately update local state to remove the deleted budget (optional, invalidateQueries handles refetch)
+      // setBudgets(prevBudgets => prevBudgets.filter(budget => budget.id !== deletedBudgetId));
       
-      // Invalidate budget lists
-      queryClient.invalidateQueries({ queryKey: ['budgets'] });
-      
-      // Invalidate specific budget data
-      queryClient.invalidateQueries({ 
-        predicate: (query) => 
-          (query.queryKey[0] === 'budgetSpending' && query.queryKey[1] === deletedBudgetId) || 
-          (query.queryKey[0] === 'budgetCategorySpending' && query.queryKey[1] === deletedBudgetId)
-      });
-      
-      // Also invalidate all spending data to be safe
-      queryClient.invalidateQueries({ 
-        predicate: (query) => query.queryKey[0] === 'budgetSpending' || query.queryKey[0] === 'budgetCategorySpending'
-      });
+      // --- Invalidate relevant queries ---
+      queryClient.invalidateQueries({ queryKey: ['budgets'] }); // Invalidate the main budget list
+       // Invalidate specific budget spending data for the deleted budget
+      queryClient.invalidateQueries({ queryKey: ['budgetSpending', deletedBudgetId] });
+      queryClient.invalidateQueries({ queryKey: ['budgetCategorySpending', deletedBudgetId] });
+      // Invalidate broader spending queries just in case
+      queryClient.invalidateQueries({ queryKey: ['budgetSpending'] });
+      queryClient.invalidateQueries({ queryKey: ['budgetCategorySpending'] });
+      // Invalidate dashboard summary if it includes budget info
+      queryClient.invalidateQueries({ queryKey: ['dashboardSummary'] });
       
       toast({
         title: "Success!",
@@ -313,7 +326,7 @@ const BudgetPage = () => {
   useEffect(() => {
     // If we're not loading and have data, make sure our component state is updated
     if (!budgetsLoading && budgetsData) {
-      setBudgets(budgetsData);
+      setBudgets(budgetsData); // Still set raw data here
       setIsLoading(false);
     }
     
@@ -321,7 +334,7 @@ const BudgetPage = () => {
     if (budgetsLoading) {
       setIsLoading(true);
     }
-  }, [budgetsLoading, budgetsData]);
+  }, [budgetsLoading, budgetsData]); // Depend on raw data
 
   return (
     <Layout>
@@ -392,7 +405,7 @@ const BudgetPage = () => {
         {/* Detailed Budget Grid - Using index.tsx structure with API data */}
         <Card>
           <CardHeader>
-            <CardTitle>Budget Details</CardTitle>
+            <CardTitle>All Budgets (Sorted by Period)</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid gap-4">
@@ -420,9 +433,9 @@ const BudgetPage = () => {
                     Retry
                   </Button>
                 </div>
-              ) : budgets.length === 0 ? (
+              ) : sortedBudgets.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
-                  No budgets found for this period. Create a new budget to get started.
+                  No budgets found. Create a new budget to get started.
                 </div>
               ) : (
                 <>
@@ -433,6 +446,7 @@ const BudgetPage = () => {
                         <thead>
                           <tr className="border-b bg-muted/50">
                             <th className="h-12 px-4 text-left align-middle font-medium">Category</th>
+                            <th className="h-12 px-4 text-left align-middle font-medium">Period</th>
                             <th className="h-12 px-4 text-right align-middle font-medium">Budget</th>
                             <th className="h-12 px-4 text-right align-middle font-medium">Spent</th>
                             <th className="h-12 px-4 text-right align-middle font-medium">Remaining</th>
@@ -441,7 +455,7 @@ const BudgetPage = () => {
                           </tr>
                         </thead>
                         <tbody>
-                          {budgets.map((budget, index) => {
+                          {sortedBudgets.map((budget, index) => {
                             // Get first category for simplicity
                             const budgetCategory = budget.budget_categories?.[0];
                             const category = budgetCategory?.category;
@@ -449,7 +463,7 @@ const BudgetPage = () => {
                             // Get actual spending from the API - safely check if query exists first
                             const spendingQuery = spendingQueries[index];
                             const spent = spendingQuery && spendingQuery.data ? Number(spendingQuery.data) : 0;
-                            const percentage = Math.round((spent / Number(budget.amount)) * 100);
+                            const percentage = budget.amount > 0 ? Math.round((spent / Number(budget.amount)) * 100) : 0;
                             const remaining = Number(budget.amount) - spent;
                             
                             // Determine status-based styling
@@ -468,11 +482,12 @@ const BudgetPage = () => {
                                       className="w-3 h-3 rounded-full"
                                       style={{ backgroundColor: '#' + Math.floor(Math.random()*16777215).toString(16) }}
                                     />
-                                    <span>{category?.name}</span>
+                                    <span>{category?.name || budget.name}</span>
                                   </div>
                                 </td>
+                                <td className="p-4 capitalize">{budget.period.toLowerCase()}</td>
                                 <td className="p-4 text-right">{formatCurrency(Number(budget.amount))}</td>
-                                <td className="p-4 text-right">{formatCurrency(spent)}</td>
+                                <td className="p-4 text-right text-destructive">{formatCurrency(spent)}</td>
                                 <td className="p-4 text-right">{formatCurrency(remaining)}</td>
                                 <td className="p-4">
                                   <div className="flex items-center gap-2">
@@ -504,7 +519,7 @@ const BudgetPage = () => {
 
                   {/* Mobile View - Cards */}
                   <div className="grid gap-4 md:hidden">
-                    {budgets.map((budget, index) => {
+                    {sortedBudgets.map((budget, index) => {
                       // Get first category
                       const budgetCategory = budget.budget_categories?.[0];
                       const category = budgetCategory?.category;
@@ -512,60 +527,49 @@ const BudgetPage = () => {
                       // Get actual spending - safely check if query exists first
                       const spendingQuery = spendingQueries[index];
                       const spent = spendingQuery && spendingQuery.data ? Number(spendingQuery.data) : 0;
-                      const percentage = Math.round((spent / Number(budget.amount)) * 100);
+                      const percentage = budget.amount > 0 ? Math.round((spent / Number(budget.amount)) * 100) : 0;
                       const remaining = Number(budget.amount) - spent;
                       
+                      // Determine status-based styling - DEFINE IT HERE FOR MOBILE VIEW TOO
+                      const getProgressColor = () => {
+                        if (percentage >= 100) return 'bg-finance-expense';
+                        if (percentage >= 80) return 'bg-orange-400';
+                        if (percentage >= 60) return 'bg-yellow-400';
+                        return 'bg-finance-income';
+                      };
+
                       return (
-                        <div key={budget.id} className="rounded-md border p-4">
-                          <div className="flex justify-between items-start mb-2">
-                            <div className="flex items-center gap-2">
-                              <div 
+                        <Card key={budget.id}>
+                          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                             <CardTitle className="text-sm font-medium flex items-center gap-2">
+                              <div
                                 className="w-3 h-3 rounded-full"
                                 style={{ backgroundColor: '#' + Math.floor(Math.random()*16777215).toString(16) }}
                               />
-                              <span className="font-medium">{category?.name}</span>
+                              {category?.name || budget.name}
+                            </CardTitle>
+                             <span className="text-xs text-muted-foreground capitalize">{budget.period.toLowerCase()}</span>
+                          </CardHeader>
+                          <CardContent>
+                            <div className="text-lg font-bold">{formatCurrency(Number(budget.amount))}</div>
+                            <div className="text-xs text-muted-foreground">
+                              Spent: <span className="font-medium text-destructive">{formatCurrency(spent)}</span> ({percentage}%)
                             </div>
-                            <div className="flex items-center">
-                              <span className="text-sm font-medium mr-2">{budget.name}</span>
-                              {percentage >= 90 && (
-                                <div className="text-finance-expense" title="Budget almost exceeded">
-                                  <AlertTriangle className="h-4 w-4" />
-                                </div>
-                              )}
-                              <Button 
-                                variant="ghost" 
-                                size="sm" 
-                                className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
-                                onClick={() => handleDeleteBudget(budget.id)}
-                              >
-                                <span className="sr-only">Delete</span>
-                                <Trash className="h-4 w-4" />
-                              </Button>
+                            <Progress value={percentage} className={cn("h-2 mt-2", getProgressColor())} />
+                            <div className="text-xs text-muted-foreground mt-1">
+                              Remaining: {formatCurrency(remaining)}
                             </div>
-                          </div>
-                          
-                          <div className="space-y-2">
-                            <div className="flex justify-between text-sm">
-                              <span>
-                                Spent: <span className="font-medium">{formatCurrency(spent)}</span>
-                              </span>
-                              <span>
-                                Budget: <span className="font-medium">{formatCurrency(Number(budget.amount))}</span>
-                              </span>
-                            </div>
-                            
-                            <Progress 
-                              value={percentage} 
-                              className={cn("h-2", percentage >= 100 ? "bg-finance-expense" : 
-                                             percentage >= 80 ? "bg-orange-400" : 
-                                             percentage >= 60 ? "bg-yellow-400" : "bg-finance-income")}
-                            />
-                            
-                            <div className="text-right text-sm text-muted-foreground">
-                              Remaining: <span className="font-medium">{formatCurrency(remaining)}</span>
-                            </div>
-                          </div>
-                        </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50 mt-2 float-right"
+                              onClick={() => handleDeleteBudget(budget.id)}
+                            >
+                              <span className="sr-only">Delete</span>
+                              <Trash className="h-4 w-4" />
+                            </Button>
+                          </CardContent>
+                        </Card>
                       );
                     })}
                   </div>
@@ -582,7 +586,12 @@ const BudgetPage = () => {
           onSubmit={handleMainPageBudgetSubmit}
         />
 
-
+        {/* Debug Output */}
+        {debug && (
+          <pre className="mt-4 p-4 bg-muted rounded-md text-xs overflow-x-auto">
+            <code>{debug}</code>
+          </pre>
+        )}
       </div>
     </Layout>
   );

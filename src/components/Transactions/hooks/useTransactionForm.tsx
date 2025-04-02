@@ -5,6 +5,7 @@ import { ExpenseCategory, Expense, CreateExpenseItemRequest, CreateExpenseReques
 import { PaymentMethod } from '@/interfaces/payment-method-interface';
 import { useToast } from '@/components/UI/use-toast';
 import { useDashboard } from '@/context/DashboardContext';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 // Type definitions
 export type TransactionType = 'expense' | 'income';
@@ -28,12 +29,12 @@ export const useTransactionForm = ({
 }: TransactionFormHookProps = {}) => {
   const { toast } = useToast();
   const { userId, refreshData } = useDashboard();
+  const queryClient = useQueryClient();
   
   const [categories, setCategories] = useState<ExpenseCategory[]>([]);
   const [incomeCategories, setIncomeCategories] = useState<ExpenseCategory[]>([]);
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [formErrors, setFormErrors] = useState<{
     date?: string;
     category?: string;
@@ -243,6 +244,60 @@ export const useTransactionForm = ({
     return Object.keys(errors).length === 0;
   };
   
+  // --- Define the Mutation using useMutation --- 
+  const mutation = useMutation({
+    mutationFn: async (formData: CreateExpenseRequest | { id: number; data: Partial<Expense> }) => {
+      if ('id' in formData) {
+        // Update existing expense
+        return expenseApi.update(formData.id, formData.data);
+      } else {
+        // Create new expense
+        return expenseApi.create(formData);
+      }
+    },
+    onSuccess: (_, variables) => {
+      // Determine if it was a create or update based on variables
+      const action = ('id' in variables) ? 'updated' : 'added';
+      
+      toast({
+        title: 'Success',
+        description: `Transaction ${action} successfully`,
+        variant: 'default',
+      });
+      
+      // --- Invalidate Queries --- 
+      console.log(`Transaction ${action}, invalidating relevant queries...`);
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboardSummary'] }); 
+      queryClient.invalidateQueries({ queryKey: ['spendingChartData'] });
+      queryClient.invalidateQueries({ queryKey: ['budgets'] });
+      queryClient.invalidateQueries({ queryKey: ['budgetSpending'] });
+      queryClient.invalidateQueries({ queryKey: ['budgetCategorySpending'] });
+      // Add any other relevant query keys here
+      
+      // Call the original onSuccess callback if provided (e.g., to close modal)
+      if (onSuccess) {
+        onSuccess();
+      }
+      
+      // Refresh dashboard data context (if it does more than just query)
+      refreshData();
+      
+      // Reset form only on successful creation
+      if (!('id' in variables)) {
+        resetForm();
+      }
+    },
+    onError: (error) => {
+      console.error('Error submitting transaction:', error);
+      toast({
+        title: 'Error',
+        description: `Failed to save transaction: ${error.message}`,
+        variant: 'destructive',
+      });
+    },
+  });
+  
   const handleSubmit = async () => {
     if (!validateForm()) {
       return Promise.reject(new Error('Form validation failed'));
@@ -257,87 +312,50 @@ export const useTransactionForm = ({
       return Promise.reject(new Error('User not authenticated'));
     }
     
-    try {
-      setIsSubmitting(true);
-      
-      const amountValue = parseFloat(amount);
-      // Use the correct category based on transaction type
-      const categoryId = parseInt(isExpense ? category : incomeCategory);
-      const paymentMethodId = parseInt(paymentMethod);
-      
-      // Create a proper CreateExpenseItemRequest object
-      const expenseItem: CreateExpenseItemRequest = {
-        category_id: isExpense ? categoryId : null as any, // Type assertion needed due to API design
-        amount: amountValue,
-        description: description
+    const amountValue = parseFloat(amount);
+    const categoryId = parseInt(isExpense ? category : incomeCategory);
+    const paymentMethodId = parseInt(paymentMethod);
+    
+    const expenseItem: CreateExpenseItemRequest = {
+      category_id: isExpense ? categoryId : null as any,
+      amount: amountValue,
+      description: description
+    };
+    if (!isExpense) {
+      (expenseItem as any).income_category_id = categoryId;
+    }
+    
+    let mutationData: CreateExpenseRequest | { id: number; data: Partial<Expense> };
+    
+    if (expenseToEdit) {
+      const updateData: Partial<Expense> = {
+        user_id: userId,
+        date: date.toISOString().split('T')[0],
+        description: description,
+        payment_method_id: paymentMethodId,
+        transaction_type: transactionType,
+        expense_items: [expenseItem] as any
       };
-      
-      // For income transactions, we need to add income_category_id
-      if (!isExpense) {
-        (expenseItem as any).income_category_id = categoryId;
-      }
-      
-      // For editing an existing expense
-      if (expenseToEdit) {
-        const updateData: Partial<Expense> = {
-          user_id: userId,
-          date: date.toISOString().split('T')[0],
-          description: description,
-          payment_method_id: paymentMethodId,
-          transaction_type: transactionType,
-          expense_items: [expenseItem] as any // Type assertion here
-        };
-        
-        await expenseApi.update(expenseToEdit.id, updateData);
-        
-        toast({
-          title: 'Success',
-          description: 'Transaction updated successfully',
-          variant: 'default',
-        });
-      } 
-      // For creating a new expense
-      else {
-        const createData: CreateExpenseRequest = {
-          user_id: userId,
-          date: date.toISOString().split('T')[0],
-          description: description,
-          payment_method_id: paymentMethodId,
-          transaction_type: transactionType,
-          expense_items: [expenseItem]
-        };
-        
-        await expenseApi.create(createData);
-        
-        toast({
-          title: 'Success',
-          description: 'Transaction added successfully',
-          variant: 'default',
-        });
-        
-        // Reset form after successful submission
-        resetForm();
-      }
-      
-      // Call the onSuccess callback if provided
-      if (onSuccess) {
-        onSuccess();
-      }
-      
-      // Refresh dashboard data
-      refreshData();
-      
-      return Promise.resolve(true);
+      mutationData = { id: expenseToEdit.id, data: updateData };
+    } else {
+      const createData: CreateExpenseRequest = {
+        user_id: userId,
+        date: date.toISOString().split('T')[0],
+        description: description,
+        payment_method_id: paymentMethodId,
+        transaction_type: transactionType,
+        expense_items: [expenseItem]
+      };
+      mutationData = createData;
+    }
+    
+    // Trigger the mutation
+    try {
+      await mutation.mutateAsync(mutationData); // Use mutateAsync to await completion for promise chain
+      return Promise.resolve(true); // Resolve promise for the calling component
     } catch (error) {
-      console.error('Error submitting transaction:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to save transaction',
-        variant: 'destructive',
-      });
-      return Promise.reject(error);
-    } finally {
-      setIsSubmitting(false);
+      // Error is handled by onError callback in useMutation
+      return Promise.reject(error); // Reject promise for the calling component
     }
   };
   
@@ -381,7 +399,7 @@ export const useTransactionForm = ({
     paymentMethods,
     isExpense,
     isLoading,
-    isSubmitting,
+    isSubmitting: mutation.isPending,
     handleChange,
     handleTypeChange,
     handleSubmit,
