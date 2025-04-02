@@ -39,6 +39,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/UI/alert-dialog";
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 // Custom MYR currency formatter with error handling
 const formatMYR = (amount: number): string => {
@@ -75,6 +76,7 @@ const TransactionList = () => {
   
   const { toast } = useToast();
   const { refreshData, dateFilter, dateRangeText, userId } = useDashboard();
+  const queryClient = useQueryClient();
   
   // Get date range based on filter
   const getDateRangeForFilter = useCallback(() => {
@@ -383,31 +385,54 @@ const TransactionList = () => {
     setIsDeleteDialogOpen(true);
   };
   
-  // Delete a transaction
-  const handleDelete = async () => {
-    if (!expenseToDelete) return;
-    
-    try {
-      await expenseApi.delete(expenseToDelete);
-      setExpenses(expenses.filter(expense => expense.id !== expenseToDelete));
+  // --- Refactored Delete Mutation --- 
+  const deleteMutation = useMutation({
+    mutationFn: async (expenseId: number) => {
+      return await expenseApi.delete(expenseId);
+    },
+    onSuccess: (data, expenseId) => {
       toast({
         title: 'Transaction deleted',
         variant: 'default',
       });
       
-      // Refresh dashboard data
-      refreshData();
-    } catch (err) {
-      console.error('Error deleting expense:', err);
+      // Invalidate queries after successful deletion
+      queryClient.invalidateQueries({ queryKey: ['expenses', userId] }); 
+      queryClient.invalidateQueries({ queryKey: ['dashboardSummary', userId] });
+      queryClient.invalidateQueries({ queryKey: ['spendingByCategory', userId] });
+      queryClient.invalidateQueries({ queryKey: ['spendingByPayment', userId] });
+      
+      // Invalidate BudgetTracker queries
+      queryClient.invalidateQueries({ queryKey: ['budgets'] }); // Invalidate all budgets queries
+      queryClient.invalidateQueries({ queryKey: ['budgetSpending'] }); // Invalidate all budget spending queries
+      queryClient.invalidateQueries({ queryKey: ['budgetCategorySpending'] }); // Invalidate all budget category spending queries
+      
+      // Optional: Update local state immediately for better UX (Optimistic update could also be used)
+      setExpenses(prev => prev.filter(expense => expense.id !== expenseId));
+
+      // Close the dialog
+      setIsDeleteDialogOpen(false);
+      setExpenseToDelete(null);
+      
+      // Optional: refreshData();
+    },
+    onError: (error) => {
+      console.error('Error deleting expense:', error);
       toast({
         title: 'Error',
         description: 'Failed to delete transaction',
         variant: 'destructive',
       });
-    } finally {
-      setExpenseToDelete(null);
+      // Close the dialog even on error
       setIsDeleteDialogOpen(false);
-    }
+      setExpenseToDelete(null);
+    },
+  });
+
+  // Call the mutation when delete is confirmed
+  const handleDelete = () => {
+    if (!expenseToDelete) return;
+    deleteMutation.mutate(expenseToDelete);
   };
   
   // Filter and paginate expenses
@@ -551,7 +576,12 @@ const TransactionList = () => {
           <CardTitle className="text-xl font-bold">Transactions</CardTitle>
           <CardDescription>View and manage your transactions for {dateRangeText}</CardDescription>
         </div>
-        <TransactionForm onSuccess={handleTransactionAdded} />
+        <TransactionForm 
+          key={expenseToEdit ? `edit-${expenseToEdit.id}` : 'add'}
+          onSuccess={handleTransactionAdded} 
+          expenseToEdit={expenseToEdit}
+          onClose={() => setExpenseToEdit(null)}
+        />
       </CardHeader>
       
       <CardContent>
@@ -723,15 +753,23 @@ const TransactionList = () => {
                     </div>
                     
                     <div className="flex items-center gap-1">
-                      <TransactionForm 
-                        key={expenseToEdit ? `edit-${expenseToEdit.id}` : 'add'}
-                        userId={userId}
-                        onSuccess={handleTransactionAdded}
-                        expenseToEdit={expense}
-                        onClose={() => setExpenseToEdit(null)}
-                      />
-                      <Button variant="ghost" size="icon" onClick={() => confirmDelete(expense.id)}>
+                      <Button 
+                        variant="ghost" 
+                        size="icon"
+                        className="text-gray-500 hover:text-blue-800 hover:bg-blue-100 rounded-full transition-colors"
+                        onClick={() => setExpenseToEdit(expense)}
+                      >
+                        <Edit className="h-4 w-4" />
+                        <span className="sr-only">Edit Transaction</span>
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="text-gray-500 hover:text-red-600 hover:bg-red-100 rounded-full transition-colors"
+                        onClick={() => confirmDelete(expense.id)}
+                      >
                         <Trash2 className="h-4 w-4" />
+                        <span className="sr-only">Delete Transaction</span>
                       </Button>
                     </div>
                   </div>

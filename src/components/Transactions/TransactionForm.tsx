@@ -14,6 +14,7 @@ interface TransactionFormProps {
   buttonIcon?: React.ReactNode;
   onSuccess?: () => void;
   expenseToEdit?: Expense | null;
+  onClose?: () => void;
   buttonVariant?: "default" | "outline" | "secondary" | "destructive" | "ghost" | "link";
   buttonSize?: "default" | "sm" | "lg" | "icon";
   className?: string;
@@ -26,24 +27,27 @@ const TransactionForm = ({
   buttonIcon,
   onSuccess,
   expenseToEdit,
+  onClose,
   buttonVariant = "default",
   buttonSize = "default",
   className = "font-medium shadow-sm hover:shadow-md transition-all",
   asChild = false
 }: TransactionFormProps) => {
-  // Local state for dialog open
+  // State for the dialog
   const [isOpen, setIsOpen] = useState(false);
   
-  // Set default button text and icon based on edit mode
-  const defaultButtonText = expenseToEdit ? 'Edit' : 'Add Transaction';
-  const defaultButtonIcon = expenseToEdit ? <Pencil className="h-4 w-4" /> : <Plus className="h-4 w-4" />;
-  
-  // Use provided values or defaults
+  // Default text & icons
+  const defaultButtonText = 'Add Transaction';
+  const defaultButtonIcon = <Plus className="h-4 w-4" />;
   const finalButtonText = buttonText ?? defaultButtonText;
   const finalButtonIcon = buttonIcon ?? defaultButtonIcon;
 
+  // Setup transaction form hook
   const hookProps: TransactionFormHookProps = {
-    onSuccess,
+    onSuccess: () => {
+      setIsOpen(false);
+      if (onSuccess) onSuccess();
+    },
     expenseToEdit
   };
 
@@ -70,41 +74,54 @@ const TransactionForm = ({
     resetForm
   } = useTransactionForm(hookProps);
 
-  // Handle dialog open change
+  // IMPORTANT: This opens the dialog when expenseToEdit changes from null to a value
+  useEffect(() => {
+    if (expenseToEdit) {
+      console.log("Opening dialog for edit", expenseToEdit.id);
+      setIsOpen(true);
+    }
+  }, [expenseToEdit]);  
+
+  // Handle dialog state changes
   const handleOpenChange = (open: boolean) => {
     setIsOpen(open);
     if (!open) {
-      // Clean up when dialog is closed
       resetForm();
+      if (onClose) {
+        onClose(); // Clear expenseToEdit in parent
+      }
     }
   };
 
-  // Handle button click explicitly
-  const handleButtonClick = (e: React.MouseEvent) => {
-    e.stopPropagation(); // Prevent event propagation
+  // Click handler for the Add button
+  const handleAddButtonClick = () => {
     setIsOpen(true);
   };
 
-  // Set initial transaction type when component mounts or when initialType changes
+  // Set initial transaction type
   useEffect(() => {
-    if (!expenseToEdit) {
+    if (!isEditMode) {
       setTransactionType(initialType);
     }
-  }, [initialType, setTransactionType, expenseToEdit]);
+  }, [initialType, isEditMode, setTransactionType]);
 
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
-      <Button 
-        variant={buttonVariant}
-        size={buttonSize} 
-        className={className}
-        data-transaction-form-trigger
-        onClick={handleButtonClick}
-      >
-        {finalButtonIcon}
-        {finalButtonText}
-      </Button>
-      <DialogContent onClick={(e) => e.stopPropagation()}>
+      {/* Only show Add button when not in edit mode */}
+      {!expenseToEdit && (
+        <DialogTrigger asChild={asChild}>
+          <Button 
+            variant={buttonVariant}
+            size={buttonSize} 
+            className={className}
+            onClick={handleAddButtonClick}
+          >
+            {finalButtonIcon}
+            {finalButtonText}
+          </Button>
+        </DialogTrigger>
+      )}
+      <DialogContent>
         <DialogHeader>
           <DialogTitle className="text-xl font-medium">
             {isEditMode ? 'Edit' : 'Add'} {transactionType === 'expense' ? 'Expense' : 'Income'}
@@ -131,22 +148,15 @@ const TransactionForm = ({
         />
         
         <CardFooter className="flex justify-between">
-          <Button variant="outline" disabled={isSubmitting} onClick={() => setIsOpen(false)}>
+          <Button variant="outline" onClick={() => handleOpenChange(false)}>
             Cancel
           </Button>
           <Button 
             type="submit" 
-            onClick={(e) => {
-              e.stopPropagation();
+            onClick={() => {
               handleSubmit()
-                .then(() => {
-                  // Close the dialog on successful submission
-                  setIsOpen(false);
-                })
                 .catch((error) => {
-                  // Error is already handled by the useTransactionForm hook
                   console.log("Form submission failed:", error);
-                  // Don't close the form so user can correct the errors
                 });
             }}
             disabled={!formIsValid || isSubmitting}

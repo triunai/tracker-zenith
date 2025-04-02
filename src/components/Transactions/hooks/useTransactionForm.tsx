@@ -249,44 +249,39 @@ export const useTransactionForm = ({
     mutationFn: async (formData: CreateExpenseRequest | { id: number; data: Partial<Expense> }) => {
       if ('id' in formData) {
         // Update existing expense
-        return expenseApi.update(formData.id, formData.data);
+        console.log('Updating expense with ID:', formData.id);
+        // Ensure data contains necessary fields for update
+        const updateData = { ...formData.data, user_id: userId }; 
+        return await expenseApi.update(formData.id, updateData);
       } else {
         // Create new expense
-        return expenseApi.create(formData);
+        console.log('Creating new expense...');
+        return await expenseApi.create(formData);
       }
     },
-    onSuccess: (_, variables) => {
-      // Determine if it was a create or update based on variables
-      const action = ('id' in variables) ? 'updated' : 'added';
-      
+    onSuccess: (data, variables) => {
+      console.log('Mutation successful:', data);
       toast({
-        title: 'Success',
-        description: `Transaction ${action} successfully`,
+        title: isEditMode ? 'Transaction Updated' : 'Transaction Added',
         variant: 'default',
       });
       
-      // --- Invalidate Queries --- 
-      console.log(`Transaction ${action}, invalidating relevant queries...`);
-      queryClient.invalidateQueries({ queryKey: ['transactions'] });
-      queryClient.invalidateQueries({ queryKey: ['dashboardSummary'] }); 
-      queryClient.invalidateQueries({ queryKey: ['spendingChartData'] });
-      queryClient.invalidateQueries({ queryKey: ['budgets'] });
-      queryClient.invalidateQueries({ queryKey: ['budgetSpending'] });
-      queryClient.invalidateQueries({ queryKey: ['budgetCategorySpending'] });
-      // Add any other relevant query keys here
+      // Invalidate relevant queries
+      queryClient.invalidateQueries({ queryKey: ['expenses', userId] }); // Invalidate the main transaction list query
+      queryClient.invalidateQueries({ queryKey: ['dashboardSummary', userId] }); // Invalidate dashboard summary
+      queryClient.invalidateQueries({ queryKey: ['spendingByCategory', userId] }); // Invalidate chart data
+      queryClient.invalidateQueries({ queryKey: ['spendingByPayment', userId] }); // Invalidate chart data
       
-      // Call the original onSuccess callback if provided (e.g., to close modal)
+      // Invalidate BudgetTracker queries
+      queryClient.invalidateQueries({ queryKey: ['budgets'] }); // Invalidate all budgets queries
+      queryClient.invalidateQueries({ queryKey: ['budgetSpending'] }); // Invalidate all budget spending queries
+      queryClient.invalidateQueries({ queryKey: ['budgetCategorySpending'] }); // Invalidate all budget category spending queries
+      
+      // Call the onSuccess prop passed to the hook (e.g., to close a modal)
       if (onSuccess) {
         onSuccess();
       }
-      
-      // Refresh dashboard data context (if it does more than just query)
-      refreshData();
-      
-      // Reset form only on successful creation
-      if (!('id' in variables)) {
-        resetForm();
-      }
+      resetForm(); // Reset form fields after successful submission
     },
     onError: (error) => {
       console.error('Error submitting transaction:', error);
