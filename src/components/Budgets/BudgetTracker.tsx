@@ -74,9 +74,24 @@ const BudgetTracker = ({ onDelete, onSubmit }: BudgetTrackerProps) => {
       }
     }
     
+    // Format dates for PostgreSQL compatibility - set time to beginning/end of day
+    const formatStartDate = (date) => {
+      // Set to beginning of day (00:00:00)
+      const d = new Date(date);
+      d.setHours(0, 0, 0, 0);
+      return d.toISOString();
+    };
+    
+    const formatEndDate = (date) => {
+      // Set to end of day (23:59:59)
+      const d = new Date(date);
+      d.setHours(23, 59, 59, 999);
+      return d.toISOString();
+    };
+    
     return {
-      startDate: startDate.toISOString(),
-      endDate: endDate.toISOString()
+      startDate: formatStartDate(startDate),
+      endDate: formatEndDate(endDate)
     };
   }, [dateFilter]);
   
@@ -93,14 +108,24 @@ const BudgetTracker = ({ onDelete, onSubmit }: BudgetTrackerProps) => {
       return {
         queryKey: ['budgetSpending', budget.id, startDate, endDate],
         queryFn: async () => {
-          const { data, error } = await supabase.rpc('calculate_budget_spending_by_date', {
-            budget_id: budget.id,
-            p_start_date: startDate,
-            p_end_date: endDate
-          });
-          
-          if (error) throw error;
-          return data;
+          try {
+            console.log(`Fetching spending data for budget ${budget.id} from ${startDate} to ${endDate}`);
+            const { data, error } = await supabase.rpc('calculate_budget_spending_by_date', {
+              budget_id: budget.id,
+              p_start_date: startDate,
+              p_end_date: endDate
+            });
+            
+            if (error) {
+              console.error(`Error fetching spending for budget ${budget.id}:`, error);
+              throw error;
+            }
+            console.log(`Spending data for budget ${budget.id}:`, data);
+            return data;
+          } catch (e) {
+            console.error(`Exception in spending query for budget ${budget.id}:`, e);
+            return 0; // Return 0 as fallback
+          }
         }
       };
     })
@@ -113,14 +138,24 @@ const BudgetTracker = ({ onDelete, onSubmit }: BudgetTrackerProps) => {
       return {
         queryKey: ['budgetCategorySpending', budget.id, startDate, endDate],
         queryFn: async () => {
-          const { data, error } = await supabase.rpc('get_budget_category_spending_by_date', {
-            budget_id: budget.id,
-            p_start_date: startDate,
-            p_end_date: endDate
-          });
-          
-          if (error) throw error;
-          return data;
+          try {
+            console.log(`Fetching category spending for budget ${budget.id} from ${startDate} to ${endDate}`);
+            const { data, error } = await supabase.rpc('get_budget_category_spending_by_date', {
+              budget_id: budget.id,
+              p_start_date: startDate,
+              p_end_date: endDate
+            });
+            
+            if (error) {
+              console.error(`Error fetching category spending for budget ${budget.id}:`, error);
+              throw error;
+            }
+            console.log(`Category spending data for budget ${budget.id}:`, data);
+            return data;
+          } catch (e) {
+            console.error(`Exception in category spending query for budget ${budget.id}:`, e);
+            return []; // Return empty array as fallback
+          }
         }
       };
     })
@@ -129,13 +164,24 @@ const BudgetTracker = ({ onDelete, onSubmit }: BudgetTrackerProps) => {
   // Period selection buttons
   const periods = Object.values(PeriodEnum);
 
-  // Handle form submission if onSubmit is not provided
-  const handleFormSubmit = (formData: any) => {
-    if (onSubmit) {
-      onSubmit(formData);
+  // Handle New Budget button click (trigger parent form directly)
+  const handleNewBudgetClick = () => {
+    // Check if onSubmit is a function
+    if (typeof onSubmit === 'function') {
+      console.log('Triggering parent new budget form');
+      // Signal to parent that we want to open the form
+      if (typeof window !== 'undefined') {
+        // Create a custom event to notify the parent
+        const event = new CustomEvent('openBudgetForm', { 
+          bubbles: true, 
+          detail: { source: 'BudgetTracker' } 
+        });
+        document.dispatchEvent(event);
+      }
     } else {
-      console.log('New budget created:', formData);
-      setIsNewBudgetOpen(false);
+      // Fallback to local form if no parent handler
+      console.log('Using local form (fallback)');
+      setIsNewBudgetOpen(true);
     }
   };
 
@@ -171,7 +217,7 @@ const BudgetTracker = ({ onDelete, onSubmit }: BudgetTrackerProps) => {
             <Button 
               size="sm" 
               className="gap-1 ml-2"
-              onClick={() => setIsNewBudgetOpen(true)}
+              onClick={handleNewBudgetClick}
             >
               <Plus className="h-4 w-4" /> New Budget
             </Button>
@@ -192,7 +238,7 @@ const BudgetTracker = ({ onDelete, onSubmit }: BudgetTrackerProps) => {
               <Button 
                 variant="outline" 
                 size="sm"
-                onClick={() => setIsNewBudgetOpen(true)}
+                onClick={handleNewBudgetClick}
               >
                 <Plus className="h-4 w-4 mr-2" />
                 Create your first budget
@@ -323,7 +369,28 @@ const BudgetTracker = ({ onDelete, onSubmit }: BudgetTrackerProps) => {
       <BudgetForm 
         open={isNewBudgetOpen} 
         onOpenChange={setIsNewBudgetOpen}
-        onSubmit={handleFormSubmit}
+        onSubmit={(data) => {
+          console.log('BudgetTracker form submission:', data);
+          
+          // Ensure period is in correct format from PeriodEnum
+          // Convert lowercase string like 'monthly' to enum value 'monthly'
+          // This is just defense in case the values aren't formatted correctly 
+          const formattedData = {
+            ...data,
+            period: data.period.toLowerCase()
+          };
+          
+          // If we have a parent handler, use it
+          if (typeof onSubmit === 'function') {
+            onSubmit(formattedData);
+          } else {
+            // No parent handler, just log the data
+            console.warn('No parent onSubmit handler, cannot create budget:', formattedData);
+            alert('Budget creation is disabled in this view.');
+          }
+          // Close the form
+          setIsNewBudgetOpen(false);
+        }}
       />
     </Card>
   );

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient, useQueries } from '@tanstack/react-query';
 import Layout from '@/components/Layout/Layout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/UI/card';
@@ -32,6 +32,7 @@ import {
 } from '@/components/UI/alert-dialog';
 import BudgetTracker from '@/components/Budgets/BudgetTracker';
 import { useDashboard } from '@/context/DashboardContext';
+import { supabase } from '@/lib/supabase/supabase';
 
 const BudgetPage = () => {
   const { toast } = useToast();
@@ -137,24 +138,48 @@ const BudgetPage = () => {
     setBudgetToDelete(null);
   };
   
-  // Handle budget form submit
-  const handleBudgetSubmit = (formData: any) => {
-    const newBudget: CreateBudgetRequest = {
-      user_id: userId,
-      name: `${formData.categoryName || 'New'} Budget`,
-      amount: formData.amount,
-      period: formData.period.toLowerCase(), // Convert to lowercase to match DB
-      start_date: new Date().toISOString(),
-      categories: [
-        {
-          category_id: formData.categoryId,
-          alert_threshold: formData.amount * 0.8 // 80% alert threshold
-        }
-      ]
-    };
+  // Create a more robust handler to debug issues
+  const handleMainPageBudgetSubmit = (formData: any) => {
+    console.log('MAIN PAGE handleBudgetSubmit called:', formData);
     
-    setDebug(`Submitting budget: ${JSON.stringify(newBudget)}`);
-    createBudget.mutate(newBudget);
+    try {
+      // Make sure we have a user ID
+      if (!userId) {
+        console.error('Missing userId, cannot create budget');
+        toast({
+          title: "Error",
+          description: "You must be logged in to create a budget",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      const newBudget: CreateBudgetRequest = {
+        user_id: userId,
+        name: `${formData.categoryName || 'New'} Budget`,
+        amount: formData.amount,
+        period: formData.period,
+        start_date: new Date().toISOString(),
+        categories: [
+          {
+            category_id: formData.categoryId,
+            alert_threshold: formData.amount * 0.8 // 80% alert threshold
+          }
+        ]
+      };
+      
+      console.log('Creating budget with data:', newBudget);
+      
+      // Create the budget using the mutation
+      createBudget.mutate(newBudget);
+    } catch (error) {
+      console.error('Error creating budget:', error);
+      toast({
+        title: "Error",
+        description: `Failed to create budget: ${error.message}`,
+        variant: "destructive",
+      });
+    }
   };
   
   const handleDeleteBudget = (budgetId: number) => {
@@ -162,6 +187,22 @@ const BudgetPage = () => {
   };
   
   const periods = Object.values(PeriodEnum);
+
+  // Set up budget form event listener
+  useEffect(() => {
+    const handleOpenBudgetFormEvent = (event: any) => {
+      console.log('Opening budget form from event:', event.detail);
+      setIsNewBudgetOpen(true);
+    };
+
+    // Add event listener
+    document.addEventListener('openBudgetForm', handleOpenBudgetFormEvent);
+
+    // Clean up
+    return () => {
+      document.removeEventListener('openBudgetForm', handleOpenBudgetFormEvent);
+    };
+  }, []);
 
   return (
     <Layout>
@@ -226,7 +267,7 @@ const BudgetPage = () => {
         {/* Budget Tracker Component */}
         <BudgetTracker 
           onDelete={handleDeleteBudget}
-          onSubmit={handleBudgetSubmit}
+          onSubmit={handleMainPageBudgetSubmit}
         />
 
         {/* Detailed Budget Grid - Using index.tsx structure with API data */}
@@ -395,7 +436,7 @@ const BudgetPage = () => {
         <BudgetForm 
           open={isNewBudgetOpen} 
           onOpenChange={setIsNewBudgetOpen}
-          onSubmit={handleBudgetSubmit}
+          onSubmit={handleMainPageBudgetSubmit}
         />
 
         {/* Debug Information */}

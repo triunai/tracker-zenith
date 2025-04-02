@@ -1,11 +1,11 @@
-
 /**
  * Enum for budget period types
+ * These values must match exactly with the PostgreSQL enum values
  */
 export enum PeriodEnum {
-  DAILY = 'DAILY',
-  WEEKLY = 'WEEKLY',
-  MONTHLY = 'MONTHLY',
-  QUARTERLY = 'QUARTERLY',
-  YEARLY = 'YEARLY'
+  DAILY = 'daily',
+  WEEKLY = 'weekly',
+  MONTHLY = 'monthly',
+  QUARTERLY = 'quarterly',
+  YEARLY = 'yearly'
 }

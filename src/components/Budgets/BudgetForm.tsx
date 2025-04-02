@@ -66,6 +66,7 @@ const BudgetForm = ({ open, onOpenChange, onSubmit }: BudgetFormProps) => {
     resolver: zodResolver(budgetFormSchema),
     defaultValues: {
       period: PeriodEnum.MONTHLY,
+      amount: 0,
     },
   });
 
@@ -76,7 +77,16 @@ const BudgetForm = ({ open, onOpenChange, onSubmit }: BudgetFormProps) => {
       data.categoryName = selectedCategory.name;
     }
     
-    onSubmit(data);
+    console.log('BudgetForm submitting data:', data);
+    
+    // Check if onSubmit is a function before calling it
+    if (typeof onSubmit === 'function') {
+      onSubmit(data);
+    } else {
+      console.error('Invalid onSubmit handler provided to BudgetForm!', onSubmit);
+      alert('Error: Cannot create budget. Please try again or refresh the page.');
+    }
+    
     form.reset();
   };
 

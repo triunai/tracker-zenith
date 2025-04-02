@@ -71,21 +71,104 @@ export const budgetApi = {
   // Create new budget with categories
   create: async (budget: CreateBudgetRequest): Promise<Budget> => {
     try {
-      // First create the budget
+      // Initial data validation and logging
+      console.log("BUDGET DEBUG [STEP 1]: Starting budget creation with data:", {
+        user_id: budget.user_id,
+        name: budget.name,
+        amount: budget.amount,
+        period: budget.period,
+        categories: budget.categories.map(c => ({
+          category_id: c.category_id,
+          alert_threshold: c.alert_threshold
+        }))
+      });
+
+      // Check UUID format
+      const isValidUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(budget.user_id);
+      console.log(`BUDGET DEBUG [STEP 2]: User ID format check - ${budget.user_id} is ${isValidUuid ? 'valid' : 'INVALID'} UUID`);
+
+      // Validate category IDs exist
+      try {
+        console.log(`BUDGET DEBUG [STEP 3]: Validating ${budget.categories.length} category IDs...`);
+        const categoryIds = budget.categories.map(c => c.category_id);
+        const { data: categoriesData, error: categoriesError } = await supabase
+          .from('expense_category')
+          .select('id')
+          .in('id', categoryIds);
+        
+        if (categoriesError) {
+          console.error(`BUDGET DEBUG [STEP 3 ERROR]: Category validation failed: ${categoriesError.message}`);
+        } else {
+          const foundIds = categoriesData?.map(c => c.id) || [];
+          const missingIds = categoryIds.filter(id => !foundIds.includes(id));
+          if (missingIds.length > 0) {
+            console.error(`BUDGET DEBUG [STEP 3 ERROR]: Categories not found: ${missingIds.join(', ')}`);
+          } else {
+            console.log(`BUDGET DEBUG [STEP 3 SUCCESS]: All categories exist in database`);
+          }
+        }
+      } catch (e) {
+        console.error(`BUDGET DEBUG [STEP 3 EXCEPTION]: ${e.message}`);
+      }
+
+      // Verify user exists (foreign key check)
+      try {
+        console.log(`BUDGET DEBUG [STEP 4]: Verifying user exists - ${budget.user_id}`);
+        const { data: userData, error: userError } = await supabase.auth.admin.getUserById(budget.user_id);
+        
+        if (userError) {
+          console.error(`BUDGET DEBUG [STEP 4 ERROR]: User validation failed: ${userError.message}`);
+        } else if (!userData?.user) {
+          console.error(`BUDGET DEBUG [STEP 4 ERROR]: User not found: ${budget.user_id}`);
+        } else {
+          console.log(`BUDGET DEBUG [STEP 4 SUCCESS]: User exists in auth.users`);
+        }
+      } catch (e) {
+        console.error(`BUDGET DEBUG [STEP 4 EXCEPTION]: ${e.message}`);
+        // Continue anyway since we want to see other errors
+      }
+
+      // Fix date format - PostgreSQL date type expects YYYY-MM-DD format, not ISO string
+      const formattedStartDate = budget.start_date ? new Date(budget.start_date).toISOString().split('T')[0] : null;
+      const formattedEndDate = budget.end_date ? new Date(budget.end_date).toISOString().split('T')[0] : null;
+      
+      console.log(`BUDGET DEBUG [STEP 5]: Formatted dates for PostgreSQL:`, {
+        original_start: budget.start_date,
+        formatted_start: formattedStartDate,
+        original_end: budget.end_date,
+        formatted_end: formattedEndDate
+      });
+
+      // First create the budget with raw query to see exact error
+      console.log(`BUDGET DEBUG [STEP 6]: Inserting budget record`);
+      const budgetInsertData = {
+        user_id: budget.user_id,
+        name: budget.name,
+        amount: budget.amount,
+        period: budget.period,
+        start_date: formattedStartDate,
+        end_date: formattedEndDate
+      };
+      
+      console.log(`BUDGET DEBUG [STEP 6 DATA]:`, budgetInsertData);
+      
       const { data: budgetData, error: budgetError } = await supabase
         .from('budget')
-        .insert([{
-          user_id: budget.user_id,
-          name: budget.name,
-          amount: budget.amount,
-          period: budget.period.toLowerCase(), // Ensure lowercase
-          start_date: budget.start_date,
-          end_date: budget.end_date
-        }])
+        .insert([budgetInsertData])
         .select()
         .single();
       
-      if (budgetError) throw budgetError;
+      if (budgetError) {
+        console.error(`BUDGET DEBUG [STEP 6 ERROR]: Budget insertion failed:`, {
+          code: budgetError.code,
+          message: budgetError.message,
+          details: budgetError.details,
+          hint: budgetError.hint
+        });
+        throw budgetError;
+      }
+      
+      console.log(`BUDGET DEBUG [STEP 6 SUCCESS]: Budget record created:`, budgetData);
       
       // Then create the budget categories
       const budgetCategories = budget.categories.map(cat => ({
@@ -94,16 +177,55 @@ export const budgetApi = {
         alert_threshold: cat.alert_threshold
       }));
       
-      const { error: categoriesError } = await supabase
+      console.log(`BUDGET DEBUG [STEP 7]: Inserting ${budgetCategories.length} budget categories:`, budgetCategories);
+      
+      const { data: categoriesData, error: categoriesError } = await supabase
         .from('budget_category')
-        .insert(budgetCategories);
+        .insert(budgetCategories)
+        .select();
       
-      if (categoriesError) throw categoriesError;
+      if (categoriesError) {
+        console.error(`BUDGET DEBUG [STEP 7 ERROR]: Budget categories insertion failed:`, {
+          code: categoriesError.code,
+          message: categoriesError.message,
+          details: categoriesError.details,
+          hint: categoriesError.hint
+        });
+        
+        // This is critical - if categories fail, we should clean up the budget to avoid orphaned records
+        console.log(`BUDGET DEBUG [STEP 7 CLEANUP]: Removing orphaned budget record ID ${budgetData.id}`);
+        const { error: cleanupError } = await supabase
+          .from('budget')
+          .delete()
+          .eq('id', budgetData.id);
+          
+        if (cleanupError) {
+          console.error(`BUDGET DEBUG [STEP 7 CLEANUP ERROR]: Failed to remove orphaned budget:`, cleanupError);
+        }
+        
+        throw categoriesError;
+      }
       
-      // Return the created budget with categories
-      return await budgetApi.getById(budgetData.id) as Budget;
+      console.log(`BUDGET DEBUG [STEP 7 SUCCESS]: Budget categories created:`, categoriesData);
+      
+      // Verify the budget can be retrieved (final check)
+      console.log(`BUDGET DEBUG [STEP 8]: Final verification - fetching budget ID ${budgetData.id}`);
+      const result = await budgetApi.getById(budgetData.id) as Budget;
+      
+      if (!result) {
+        console.error(`BUDGET DEBUG [STEP 8 ERROR]: Budget verification failed - could not retrieve budget`);
+        throw new Error('Budget creation verification failed');
+      }
+      
+      console.log(`BUDGET DEBUG [STEP 8 SUCCESS]: Budget verified and retrievable:`, {
+        id: result.id,
+        name: result.name,
+        categories_count: result.budget_categories?.length || 0
+      });
+      
+      return result;
     } catch (error) {
-      console.error("Error creating budget:", error);
+      console.error(`BUDGET DEBUG [FATAL ERROR]: Budget creation failed:`, error);
       throw error;
     }
   },
@@ -234,5 +356,40 @@ export const budgetApi = {
     
     if (error) throw error;
     return data || [];
+  },
+  
+  // Add a debug function to test direct DB access
+  // This bypasses all the validation for testing
+  testDirectCreation: async (userId: string): Promise<any> => {
+    console.log("TEST DIRECT CREATION: Starting simple DB test with user_id:", userId);
+    
+    try {
+      // Try the simplest possible insertion
+      const simpleData = {
+        user_id: userId,
+        name: "SIMPLE TEST " + Date.now(),
+        amount: 100,
+        period: "monthly",
+        start_date: new Date().toISOString().split('T')[0]
+      };
+      
+      console.log("TEST DIRECT CREATION: Simple insert data:", simpleData);
+      
+      const { data, error } = await supabase
+        .from('budget')
+        .insert([simpleData])
+        .select();
+      
+      if (error) {
+        console.error("TEST DIRECT CREATION: Insert error:", error);
+        return { success: false, error };
+      }
+      
+      console.log("TEST DIRECT CREATION: Success:", data);
+      return { success: true, data };
+    } catch (e) {
+      console.error("TEST DIRECT CREATION: Exception:", e);
+      return { success: false, error: e };
+    }
   }
 };
