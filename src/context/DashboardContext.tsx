@@ -1,9 +1,7 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { supabase } from '@/lib/supabase/supabase';
 import { format, startOfMonth, endOfMonth, subMonths, startOfYear, endOfYear, startOfQuarter, endOfQuarter } from 'date-fns';
-
-// Placeholder until we implement proper auth
-const MOCK_USER_ID = "11111111-1111-1111-1111-111111111111";
+import { useAuth } from '@/context/AuthContext';
 
 // Define filter types
 export type DateFilterType = 'month' | 'quarter' | 'year' | 'custom';
@@ -37,21 +35,45 @@ interface DashboardContextType {
     label: string;
   }[];
   dateRangeText: string;
+  dateFilterApplied: boolean;
+  userId: string | undefined;
+  isAuthenticated: boolean;
 }
 
 const DashboardContext = createContext<DashboardContextType | undefined>(undefined);
 
 export const useDashboard = () => {
   const context = useContext(DashboardContext);
-  if (context === undefined) {
+  if (!context) {
     throw new Error('useDashboard must be used within a DashboardProvider');
   }
   return context;
 };
 
 interface DashboardProviderProps {
-  children: React.ReactNode;
+  children: ReactNode;
 }
+
+// Helper function to add timeout to supabase calls
+const withTimeout = (promise, timeoutMs = 10000) => {
+  let timeoutId;
+  
+  // Create a promise that rejects after the specified timeout
+  const timeoutPromise = new Promise((_, reject) => {
+    timeoutId = setTimeout(() => {
+      reject(new Error(`Operation timed out after ${timeoutMs}ms`));
+    }, timeoutMs);
+  });
+  
+  // Return a promise that resolves/rejects with the result of whichever promise 
+  // completes first (the original promise or the timeout)
+  return Promise.race([
+    promise,
+    timeoutPromise
+  ]).finally(() => {
+    clearTimeout(timeoutId);
+  });
+};
 
 export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }) => {
   const [isLoading, setIsLoading] = useState(true);
@@ -61,14 +83,16 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
   const [expenses, setExpenses] = useState(0);
   const [incomeTrend, setIncomeTrend] = useState<number | null>(null);
   const [expenseTrend, setExpenseTrend] = useState<number | null>(null);
-  
-  // Default date filter is current month
-  const now = new Date();
   const [dateFilter, setDateFilter] = useState<DateFilter>({
     type: 'month',
-    month: now.getMonth(),
-    year: now.getFullYear(),
+    month: new Date().getMonth(),
+    year: new Date().getFullYear(),
   });
+  const [dateFilterApplied, setDateFilterApplied] = useState(false);
+  const [refreshCounter, setRefreshCounter] = useState(0);
+  const { user, isAuthenticated } = useAuth();
+  
+  const userId = isAuthenticated && user ? user.id : undefined;
 
   // Filter options
   const filterOptions = [
@@ -80,20 +104,33 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
   
   // Get human-readable description of current date range
   const getDateRangeText = useCallback(() => {
+    const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+    
     switch (dateFilter.type) {
-      case 'month':
-        return format(new Date(dateFilter.year, dateFilter.month || 0), 'MMMM yyyy');
-      case 'quarter':
-        return `Q${dateFilter.quarter} ${dateFilter.year}`;
-      case 'year':
-        return `Year ${dateFilter.year}`;
-      case 'custom':
+      case 'month': {
+        const year = dateFilter.year;
+        const month = dateFilter.month !== undefined ? dateFilter.month : 0;
+        return `${months[month]} ${year}`;
+      }
+      case 'quarter': {
+        const year = dateFilter.year;
+        const quarter = dateFilter.quarter;
+        return `Q${quarter} ${year}`;
+      }
+      case 'year': {
+        return `${dateFilter.year}`;
+      }
+      case 'custom': {
         if (dateFilter.customRange) {
-          return `${format(dateFilter.customRange.startDate, 'MMM d, yyyy')} - ${format(dateFilter.customRange.endDate, 'MMM d, yyyy')}`;
+          const { startDate, endDate } = dateFilter.customRange;
+          const startFormatted = new Date(startDate).toLocaleDateString();
+          const endFormatted = new Date(endDate).toLocaleDateString();
+          return `${startFormatted} - ${endFormatted}`;
         }
         return 'Custom Range';
+      }
       default:
-        return '';
+        return 'Current Month';
     }
   }, [dateFilter]);
   
@@ -176,80 +213,151 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
   
   const fetchSummaryData = useCallback(async () => {
     try {
+      console.log('🔍 [Dashboard] Starting to fetch summary data...');
       setIsLoading(true);
       setError(null);
       
       const { startDate, endDate } = getDateRange();
       const { startDate: prevStartDate, endDate: prevEndDate } = getPreviousDateRange();
       
+      // Format dates to ensure consistent timezone handling
+      // Start date should be at 00:00:00 and end date at 23:59:59 of the respective days
+      const formatStartDate = (date: Date) => {
+        return new Date(
+          date.getFullYear(), 
+          date.getMonth(), 
+          date.getDate(), 
+          0, 0, 0
+        ).toISOString();
+      };
+      
+      const formatEndDate = (date: Date) => {
+        return new Date(
+          date.getFullYear(), 
+          date.getMonth(), 
+          date.getDate(), 
+          23, 59, 59
+        ).toISOString();
+      };
+      
+      // Apply the formatting to get consistent date strings
+      const startDateStr = formatStartDate(startDate);
+      const endDateStr = formatEndDate(endDate);
+      const prevStartDateStr = formatStartDate(prevStartDate);
+      const prevEndDateStr = formatEndDate(prevEndDate);
+      
+      console.log(`🔍 [Dashboard] Date range: ${startDateStr} to ${endDateStr}`);
+      console.log(`🔍 [Dashboard] Previous date range: ${prevStartDateStr} to ${prevEndDateStr}`);
+      console.log(`🔍 [Dashboard] User ID: ${userId}`);
+      
       // Fetch income using RPC function
-      const { data: incomeData, error: incomeError } = await supabase
+      console.log('🔍 [Dashboard] Calling get_total_income...');
+      const incomePromise = supabase
         .rpc('get_total_income', {
-          p_user_id: MOCK_USER_ID,
-          p_start_date: startDate.toISOString(),
-          p_end_date: endDate.toISOString()
+          p_user_id: userId,
+          p_start_date: startDateStr,
+          p_end_date: endDateStr
         });
+      
+      const { data: incomeData, error: incomeError } = await withTimeout(incomePromise, 8000);
         
-      if (incomeError) throw incomeError;
+      if (incomeError) {
+        console.error('❌ [Dashboard] Income error:', incomeError);
+        throw incomeError;
+      }
+      console.log('✅ [Dashboard] Income data received:', incomeData);
       setIncome(Number(incomeData));
       
       // Fetch expenses using RPC function
-      const { data: expenseData, error: expenseError } = await supabase
+      console.log('🔍 [Dashboard] Calling get_total_expenses...');
+      const expensePromise = supabase
         .rpc('get_total_expenses', {
-          p_user_id: MOCK_USER_ID,
-          p_start_date: startDate.toISOString(),
-          p_end_date: endDate.toISOString()
+          p_user_id: userId,
+          p_start_date: startDateStr,
+          p_end_date: endDateStr
         });
         
-      if (expenseError) throw expenseError;
+      const { data: expenseData, error: expenseError } = await withTimeout(expensePromise, 8000);
+        
+      if (expenseError) {
+        console.error('❌ [Dashboard] Expenses error:', expenseError);
+        throw expenseError;
+      }
+      console.log('✅ [Dashboard] Expense data received:', expenseData);
       setExpenses(Number(expenseData));
       
       // Calculate balance using RPC function
-      const { data: balanceData, error: balanceError } = await supabase
+      console.log('🔍 [Dashboard] Calling get_user_balance...');
+      const balancePromise = supabase
         .rpc('get_user_balance', {
-          p_user_id: MOCK_USER_ID,
-          p_start_date: startDate.toISOString(),
-          p_end_date: endDate.toISOString()
+          p_user_id: userId,
+          p_start_date: startDateStr,
+          p_end_date: endDateStr
         });
         
-      if (balanceError) throw balanceError;
+      const { data: balanceData, error: balanceError } = await withTimeout(balancePromise, 8000);
+        
+      if (balanceError) {
+        console.error('❌ [Dashboard] Balance error:', balanceError);
+        throw balanceError;
+      }
+      console.log('✅ [Dashboard] Balance data received:', balanceData);
       setBalance(Number(balanceData));
       
       // Get trend data for income
-      const { data: incomeTrendData, error: incomeTrendError } = await supabase
+      console.log('🔍 [Dashboard] Calling get_period_comparison for income trend...');
+      const incomeTrendPromise = supabase
         .rpc('get_period_comparison', {
-          p_user_id: MOCK_USER_ID,
-          p_current_start: startDate.toISOString(),
-          p_current_end: endDate.toISOString(),
-          p_previous_start: prevStartDate.toISOString(),
-          p_previous_end: prevEndDate.toISOString(),
+          p_user_id: userId,
+          p_current_start: startDateStr,
+          p_current_end: endDateStr,
+          p_previous_start: prevStartDateStr,
+          p_previous_end: prevEndDateStr,
           p_transaction_type: 'income'
         });
         
-      if (incomeTrendError) throw incomeTrendError;
+      const { data: incomeTrendData, error: incomeTrendError } = await withTimeout(incomeTrendPromise, 8000);
+        
+      if (incomeTrendError) {
+        console.error('❌ [Dashboard] Income trend error:', incomeTrendError);
+        throw incomeTrendError;
+      }
+      console.log('✅ [Dashboard] Income trend data received:', incomeTrendData);
       setIncomeTrend(Number(incomeTrendData?.percentage_change));
       
       // Get trend data for expenses
-      const { data: expenseTrendData, error: expenseTrendError } = await supabase
+      console.log('🔍 [Dashboard] Calling get_period_comparison for expense trend...');
+      const expenseTrendPromise = supabase
         .rpc('get_period_comparison', {
-          p_user_id: MOCK_USER_ID,
-          p_current_start: startDate.toISOString(),
-          p_current_end: endDate.toISOString(),
-          p_previous_start: prevStartDate.toISOString(),
-          p_previous_end: prevEndDate.toISOString(),
+          p_user_id: userId,
+          p_current_start: startDateStr,
+          p_current_end: endDateStr,
+          p_previous_start: prevStartDateStr,
+          p_previous_end: prevEndDateStr,
           p_transaction_type: 'expense'
         });
         
-      if (expenseTrendError) throw expenseTrendError;
+      const { data: expenseTrendData, error: expenseTrendError } = await withTimeout(expenseTrendPromise, 8000);
+        
+      if (expenseTrendError) {
+        console.error('❌ [Dashboard] Expense trend error:', expenseTrendError);
+        throw expenseTrendError;
+      }
+      console.log('✅ [Dashboard] Expense trend data received:', expenseTrendData);
       setExpenseTrend(Number(expenseTrendData?.percentage_change));
       
+      console.log('✅ [Dashboard] All summary data fetched successfully');
+      
     } catch (err) {
-      console.error('Error fetching summary data:', err);
+      console.error('❌ [Dashboard] Error fetching summary data:', err);
+      console.error('❌ [Dashboard] Error stack:', err instanceof Error ? err.stack : 'No stack trace');
+      console.error('❌ [Dashboard] Error details:', JSON.stringify(err, null, 2));
       setError('Failed to load financial summary data');
     } finally {
+      console.log(`🔍 [Dashboard] Setting isLoading to false`);
       setIsLoading(false);
     }
-  }, [getDateRange, getPreviousDateRange]);
+  }, [getDateRange, getPreviousDateRange, userId]);
   
   useEffect(() => {
     fetchSummaryData();
@@ -269,7 +377,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
     return () => {
       subscription.unsubscribe();
     };
-  }, [fetchSummaryData]);
+  }, [fetchSummaryData, userId]);
   
   // Refresh data when date filter changes
   useEffect(() => {
@@ -277,8 +385,8 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
   }, [dateFilter, fetchSummaryData]);
   
   const refreshData = useCallback(() => {
-    fetchSummaryData();
-  }, [fetchSummaryData]);
+    setRefreshCounter(prev => prev + 1);
+  }, []);
   
   const value = {
     isLoading,
@@ -292,7 +400,10 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
     dateFilter,
     setDateFilter,
     filterOptions,
-    dateRangeText: getDateRangeText()
+    dateRangeText: getDateRangeText(),
+    dateFilterApplied,
+    userId,
+    isAuthenticated
   };
   
   return (
