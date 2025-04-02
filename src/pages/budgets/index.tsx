@@ -9,7 +9,7 @@ import { PeriodEnum } from '@/interfaces/enums/PeriodEnum';
 import { cn } from '@/lib/utils';
 import { formatCurrency } from '@/lib/utils';
 import { budgetApi } from '@/lib/api/budgetApi';
-import { CreateBudgetRequest } from '@/interfaces/budget-interface';
+import { CreateBudgetRequest, Budget } from '@/interfaces/budget-interface';
 import { useToast } from '@/components/UI/use-toast';
 import BudgetForm from '@/components/Budgets/BudgetForm';
 import { 
@@ -31,6 +31,7 @@ import {
   AlertDialogTitle,
 } from '@/components/UI/alert-dialog';
 import BudgetTracker from '@/components/Budgets/BudgetTracker';
+import { useDashboard } from '@/context/DashboardContext';
 
 const BudgetPage = () => {
   const { toast } = useToast();
@@ -39,17 +40,21 @@ const BudgetPage = () => {
   const [isNewBudgetOpen, setIsNewBudgetOpen] = useState(false);
   const [debug, setDebug] = useState<string>("");
   const [budgetToDelete, setBudgetToDelete] = useState<number | null>(null);
-
-  // Mock user ID - you'd get this from auth context in a real app
-  const userId = "11111111-1111-1111-1111-111111111111";
+  const [budgets, setBudgets] = useState<Budget[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [activeBudget, setActiveBudget] = useState<number | null>(null);
+  
+  const { userId } = useDashboard();
   
   // Fetch budgets for the selected period
-  const { data: budgets = [], isLoading, error } = useQuery({
+  const { data: budgetsData = [], isLoading: budgetsLoading, error: budgetsError } = useQuery({
     queryKey: ['budgets', selectedPeriod],
     queryFn: async () => {
       try {
         const result = await budgetApi.getByPeriod(userId, selectedPeriod);
         setDebug(`Successfully fetched ${result.length} budgets`);
+        setBudgets(result);
         return result;
       } catch (err) {
         setDebug(`Error: ${err.message}`);
@@ -66,7 +71,7 @@ const BudgetPage = () => {
   
   // Fetch spending data for each budget
   const spendingQueries = useQueries({
-    queries: budgets.map(budget => ({
+    queries: budgetsData.map(budget => ({
       queryKey: ['budgetSpending', budget.id],
       queryFn: () => budgetApi.getBudgetSpending(budget.id),
     }))
@@ -74,7 +79,7 @@ const BudgetPage = () => {
 
   // Fetch category spending data for each budget
   const categorySpendingQueries = useQueries({
-    queries: budgets.map(budget => ({
+    queries: budgetsData.map(budget => ({
       queryKey: ['budgetCategorySpending', budget.id],
       queryFn: () => budgetApi.getBudgetCategorySpending(budget.id),
     }))
