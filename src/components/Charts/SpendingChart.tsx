@@ -37,10 +37,16 @@ const CATEGORY_COLORS = [
 
 const CustomTooltip = ({ active, payload }: TooltipProps<number, string>) => {
   if (active && payload && payload.length) {
+    const data = payload[0].payload;
     return (
       <div className="bg-popover border shadow-md rounded-md p-2 text-sm">
         <p className="font-medium">{payload[0].name}</p>
         <p className="text-primary">{formatCurrency(payload[0].value as number)}</p>
+        {data.percentage && (
+          <p className="text-muted-foreground text-xs">
+            {data.percentage.toFixed(1)}% of total
+          </p>
+        )}
       </div>
     );
   }
@@ -145,12 +151,21 @@ const SpendingChart = () => {
       setIsLoading(true);
       setError(null);
       
+      // Verify that we have a valid user ID before proceeding
+      if (!userId || typeof userId !== 'string' || userId.trim() === '') {
+        console.error('❌ [SpendingChart] Invalid userId:', userId);
+        setError("User authentication issue. Please log in again.");
+        setIsLoading(false);
+        return;
+      }
+      
       const { startDate, endDate } = getDateRangeForFilter();
       console.log(`🔍 [SpendingChart] Date range: ${startDate.toISOString()} to ${endDate.toISOString()}`);
       console.log(`🔍 [SpendingChart] User ID: ${userId}`);
       
       // Fetch spending by category
       console.log('🔍 [SpendingChart] Calling get_spending_by_category...');
+      // Add explicit parameters to ensure SQL function only returns current user's data
       const spendingByCategoryPromise = supabase
         .rpc('get_spending_by_category', {
           p_user_id: userId,
@@ -168,12 +183,33 @@ const SpendingChart = () => {
       const spendingByCategory = spendingByCategoryResponse.data;
       console.log(`✅ [SpendingChart] Received spending by category: ${spendingByCategory?.length} records`);
       
+      // Verify data belongs to current user (additional safety check)
+      if (spendingByCategory && spendingByCategory.length > 0) {
+        console.log(`✅ [SpendingChart] Original categories count: ${spendingByCategory.length}`);
+        console.log(`✅ [SpendingChart] Raw data:`, 
+          spendingByCategory.slice(0, 10).map((item: any) => ({
+            category: item.category_name,
+            amount: parseFloat(item.amount)
+          }))
+        );
+        
+        // Log non-zero categories
+        const categoriesWithValues = spendingByCategory.filter((item: any) => parseFloat(item.amount) > 0);
+        console.log(`✅ [SpendingChart] Non-zero categories (${categoriesWithValues.length}):`, 
+          categoriesWithValues.map((item: any) => ({
+            category: item.category_name,
+            amount: parseFloat(item.amount)
+          }))
+        );
+      }
+      
       // Try to get payment method data from RPC, fallback to manual calculation if not available
       let paymentMethodData = [];
       
       try {
         console.log('🔍 [SpendingChart] Using expenseApi.getSummaryByPaymentMethod...');
         
+        // Explicitly send current userId to ensure we only get current user's data
         const paymentSummary = await expenseApi.getSummaryByPaymentMethod(
           userId,
           startDate.toISOString(),
@@ -190,11 +226,26 @@ const SpendingChart = () => {
         // Fallback to using the expenseApi to get payment method data
         console.log('🔍 [SpendingChart] Fallback: getting payment method data from expenses...');
         
-        // Get expenses data
+        // Get expenses data - ensure we're only getting current user's data
         const expensesResponse = await expenseApi.getAllByUser(userId, {
           startDate: startDate.toISOString(),
           endDate: endDate.toISOString()
         });
+        
+        // Verify expenses are for current user only
+        if (expensesResponse && Array.isArray(expensesResponse) && expensesResponse.length > 0) {
+          const firstExpense = expensesResponse[0];
+          console.log(`✅ [SpendingChart] Expense user verification:`, {
+            expense_user_id: firstExpense.user_id,
+            current_user_id: userId,
+            matching: firstExpense.user_id === userId
+          });
+          
+          if (firstExpense.user_id !== userId) {
+            console.error('❌ [SpendingChart] Expense data mismatch! Expected user:', userId, 'Got:', firstExpense.user_id);
+            throw new Error('Data privacy issue detected. Please contact support.');
+          }
+        }
         
         // Group by payment method
         const paymentMap = new Map<number, { method_name: string; amount: number }>();
@@ -238,18 +289,58 @@ const SpendingChart = () => {
       // Prepare data for spending by category chart
       if (spendingByCategory && spendingByCategory.length > 0) {
         console.log('🔍 [SpendingChart] Processing spending by category data...');
-        // Sort by amount descending
-        spendingByCategory.sort((a: any, b: any) => parseFloat(b.amount) - parseFloat(a.amount));
         
-        // Transform to recharts format
-        const formattedCategoryData = spendingByCategory.map((item: any, index: number) => ({
-          name: item.category_name,
-          value: parseFloat(item.amount),
-          color: CATEGORY_COLORS[index % CATEGORY_COLORS.length]
-        }));
+        // Filter out categories with zero amounts
+        const validCategories = spendingByCategory.filter((item: any) => 
+          parseFloat(item.amount) > 0
+        );
+        
+        console.log(`🔍 [SpendingChart] Filtered ${spendingByCategory.length} categories down to ${validCategories.length} with non-zero amounts`);
+        
+        // Sort by amount descending
+        validCategories.sort((a: any, b: any) => parseFloat(b.amount) - parseFloat(a.amount));
+        
+        // Calculate total amount for percentage threshold
+        const totalAmount = validCategories.reduce((sum: number, item: any) => 
+          sum + parseFloat(item.amount), 0);
+        
+        // Get top 8 categories and group the rest as "Other"
+        const MAX_CATEGORIES = 8;
+        const MIN_PERCENTAGE = 1; // Categories must be at least 1% of total to be shown individually
+        
+        let formattedCategoryData = [];
+        let otherAmount = 0;
+        
+        validCategories.forEach((item: any, index: number) => {
+          const amount = parseFloat(item.amount);
+          const percentage = (amount / totalAmount) * 100;
+          
+          // Add to top categories if it's in the top 8 AND above the minimum percentage threshold
+          if (index < MAX_CATEGORIES && percentage >= MIN_PERCENTAGE) {
+            formattedCategoryData.push({
+              name: item.category_name,
+              value: amount,
+              color: CATEGORY_COLORS[index % CATEGORY_COLORS.length],
+              percentage: percentage
+            });
+          } else {
+            // Otherwise add to "Other"
+            otherAmount += amount;
+          }
+        });
+        
+        // Add "Other" category if it has a value
+        if (otherAmount > 0) {
+          formattedCategoryData.push({
+            name: 'Other',
+            value: otherAmount,
+            color: '#888888', // Gray color for "Other"
+            percentage: (otherAmount / totalAmount) * 100
+          });
+        }
         
         setCategoryData(formattedCategoryData);
-        console.log('✅ [SpendingChart] Spending by category data processed');
+        console.log('✅ [SpendingChart] Spending by category data processed with top categories');
       } else {
         console.log('ℹ️ [SpendingChart] No spending by category data available');
         setCategoryData([]);
@@ -258,18 +349,58 @@ const SpendingChart = () => {
       // Prepare data for spending by payment method chart
       if (paymentMethodData && paymentMethodData.length > 0) {
         console.log('🔍 [SpendingChart] Processing spending by payment method data...');
-        // Sort by amount descending
-        paymentMethodData.sort((a: any, b: any) => parseFloat(b.amount) - parseFloat(a.amount));
         
-        // Transform to recharts format
-        const formattedPaymentData = paymentMethodData.map((item: any, index: number) => ({
-          name: item.method_name || 'Unknown',
-          value: parseFloat(item.amount),
-          color: CATEGORY_COLORS[index % CATEGORY_COLORS.length]
-        }));
+        // Filter out payment methods with zero amounts
+        const validPaymentMethods = paymentMethodData.filter((item: any) => 
+          parseFloat(item.amount) > 0
+        );
+        
+        console.log(`🔍 [SpendingChart] Filtered ${paymentMethodData.length} payment methods down to ${validPaymentMethods.length} with non-zero amounts`);
+        
+        // Sort by amount descending
+        validPaymentMethods.sort((a: any, b: any) => parseFloat(b.amount) - parseFloat(a.amount));
+        
+        // Calculate total amount for percentage threshold
+        const totalAmount = validPaymentMethods.reduce((sum: number, item: any) => 
+          sum + parseFloat(item.amount), 0);
+        
+        // Get top 8 payment methods and group the rest as "Other"
+        const MAX_PAYMENT_METHODS = 8;
+        const MIN_PERCENTAGE = 1; // Payment methods must be at least 1% of total to be shown individually
+        
+        let formattedPaymentData = [];
+        let otherAmount = 0;
+        
+        validPaymentMethods.forEach((item: any, index: number) => {
+          const amount = parseFloat(item.amount);
+          const percentage = (amount / totalAmount) * 100;
+          
+          // Add to top payment methods if it's in the top MAX_PAYMENT_METHODS AND above the minimum threshold
+          if (index < MAX_PAYMENT_METHODS && percentage >= MIN_PERCENTAGE) {
+            formattedPaymentData.push({
+              name: item.method_name || 'Unknown',
+              value: amount,
+              color: CATEGORY_COLORS[index % CATEGORY_COLORS.length],
+              percentage: percentage
+            });
+          } else {
+            // Otherwise add to "Other"
+            otherAmount += amount;
+          }
+        });
+        
+        // Add "Other" category if it has a value
+        if (otherAmount > 0) {
+          formattedPaymentData.push({
+            name: 'Other',
+            value: otherAmount,
+            color: '#888888', // Gray color for "Other"
+            percentage: (otherAmount / totalAmount) * 100
+          });
+        }
         
         setPaymentData(formattedPaymentData);
-        console.log('✅ [SpendingChart] Spending by payment method data processed');
+        console.log('✅ [SpendingChart] Spending by payment method data processed with top methods');
       } else {
         console.log('ℹ️ [SpendingChart] No spending by payment method data available');
         setPaymentData([]);
@@ -295,6 +426,9 @@ const SpendingChart = () => {
   const getCurrentChartData = () => {
     return dataType === 'category' ? categoryData : paymentData;
   };
+  
+  const chartData = getCurrentChartData();
+  const hasData = chartData && chartData.length > 0;
   
   // Render loading skeleton
   if (isLoading) {
@@ -331,9 +465,6 @@ const SpendingChart = () => {
       </Card>
     );
   }
-  
-  const chartData = getCurrentChartData();
-  const hasData = chartData && chartData.length > 0;
   
   return (
     <Card className="animate-fade-up animate-delay-300">

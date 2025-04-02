@@ -50,19 +50,58 @@ const BudgetPage = () => {
   
   // Fetch budgets for the selected period
   const { data: budgetsData = [], isLoading: budgetsLoading, error: budgetsError } = useQuery({
-    queryKey: ['budgets', selectedPeriod],
+    queryKey: ['budgets', selectedPeriod, userId],
     queryFn: async () => {
       try {
+        // Ensure we have a valid userId
+        if (!userId) {
+          console.warn('No userId available, cannot fetch budgets');
+          setDebug(`Warning: No userId available, cannot fetch budgets`);
+          return [];
+        }
+        
+        console.log(`Fetching budgets for period ${selectedPeriod} and user ${userId}`);
         const result = await budgetApi.getByPeriod(userId, selectedPeriod);
-        setDebug(`Successfully fetched ${result.length} budgets`);
-        setBudgets(result);
+        console.log(`Fetch result:`, result);
+        setDebug(`Successfully fetched ${result.length} budgets for period ${selectedPeriod}`);
         return result;
       } catch (err) {
+        console.error(`Error fetching budgets:`, err);
         setDebug(`Error: ${err.message}`);
         throw err;
       }
     },
+    enabled: !!userId, // Only enable the query if userId is available
   });
+  
+  // Sync isLoading state with budgetsLoading from useQuery
+  useEffect(() => {
+    console.log(`Budget loading state changed: isLoading=${budgetsLoading}`);
+    setIsLoading(budgetsLoading);
+    
+    // If there's an error, update the error state
+    if (budgetsError) {
+      console.error('Budget loading error:', budgetsError);
+      setError(budgetsError.message);
+      setDebug(`Error loading budgets: ${budgetsError.message}`);
+    }
+  }, [budgetsLoading, budgetsError]);
+  
+  // Sync budgets state with budgetsData
+  useEffect(() => {
+    if (budgetsData) {
+      console.log(`Budget data updated: ${budgetsData.length} budgets available`);
+      if (!budgetsLoading) {
+        console.log('Setting budgets state with data from query');
+        setBudgets(budgetsData);
+      }
+    }
+  }, [budgetsData, budgetsLoading]);
+  
+  // Debug state changes
+  useEffect(() => {
+    console.log(`Local budgets state changed: ${budgets.length} budgets, isLoading=${isLoading}`);
+  }, [budgets, isLoading]);
   
   // Fetch categories
   const { data: categories = [] } = useQuery({
@@ -204,6 +243,28 @@ const BudgetPage = () => {
     };
   }, []);
 
+  // Ensure we refresh data when userId changes
+  useEffect(() => {
+    if (userId) {
+      console.log(`UserId changed to ${userId}, refreshing budget data...`);
+      queryClient.invalidateQueries({ queryKey: ['budgets'] });
+    }
+  }, [userId, queryClient]);
+  
+  // Use React Query's direct states more reliably
+  useEffect(() => {
+    // If we're not loading and have data, make sure our component state is updated
+    if (!budgetsLoading && budgetsData) {
+      setBudgets(budgetsData);
+      setIsLoading(false);
+    }
+    
+    // If we are loading, make sure our component shows loading state
+    if (budgetsLoading) {
+      setIsLoading(true);
+    }
+  }, [budgetsLoading, budgetsData]);
+
   return (
     <Layout>
       <div className="container mx-auto space-y-6">
@@ -245,7 +306,7 @@ const BudgetPage = () => {
         {/* Period Selection */}
         <Card>
           <CardHeader>
-            <CardTitle>Budget Overview</CardTitle>
+            <CardTitle>Budget Overview(dont click no work)</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex gap-2 flex-wrap">
@@ -278,7 +339,29 @@ const BudgetPage = () => {
           <CardContent>
             <div className="grid gap-4">
               {isLoading ? (
-                <div className="flex justify-center py-8">Loading budgets...</div>
+                <div className="flex flex-col items-center justify-center py-8 gap-2">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                  <div>Loading budgets...</div>
+                  <div className="text-xs text-muted-foreground">
+                    {userId ? `User ID: ${userId.substring(0, 8)}...` : 'No user ID available'}
+                  </div>
+                </div>
+              ) : error ? (
+                <div className="text-center py-8 text-destructive">
+                  <div>Error loading budgets</div>
+                  <div className="text-sm mt-2">{error}</div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="mt-4"
+                    onClick={() => {
+                      queryClient.invalidateQueries({ queryKey: ['budgets'] });
+                      setDebug("Manually refreshing budgets query...");
+                    }}
+                  >
+                    Retry
+                  </Button>
+                </div>
               ) : budgets.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
                   No budgets found for this period. Create a new budget to get started.
@@ -439,11 +522,7 @@ const BudgetPage = () => {
           onSubmit={handleMainPageBudgetSubmit}
         />
 
-        {/* Debug Information */}
-        <div className="mt-8 p-4 border rounded bg-gray-50">
-          <h2 className="text-lg font-semibold mb-2">Debug Information</h2>
-          <pre className="whitespace-pre-wrap text-xs">{debug}</pre>
-        </div>
+
       </div>
     </Layout>
   );
