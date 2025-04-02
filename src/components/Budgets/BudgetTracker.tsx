@@ -26,11 +26,8 @@ interface BudgetTrackerProps {
 const BudgetTracker = ({ onDelete, onSubmit }: BudgetTrackerProps) => {
   const [selectedPeriod, setSelectedPeriod] = useState<PeriodEnum>(PeriodEnum.MONTHLY);
   const [isNewBudgetOpen, setIsNewBudgetOpen] = useState(false);
-  const { dateFilter } = useDashboard();
+  const { dateFilter, userId } = useDashboard();
 
-  // Mock user ID - you'd get this from auth context in a real app
-  const userId = "11111111-1111-1111-1111-111111111111";
-  
   // Get date range based on the filter
   const getDateRangeForFilter = useCallback(() => {
     let startDate, endDate;

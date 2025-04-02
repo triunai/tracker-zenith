@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { 
   TrendingDown, 
   TrendingUp, 
@@ -17,9 +17,6 @@ import { useToast } from '@/components/UI/use-toast';
 import TransactionForm from '@/components/Transactions/TransactionForm';
 import { useDashboard } from '@/context/DashboardContext';
 import DateFilter from './DateFilter';
-
-// Placeholder until we implement proper auth
-const MOCK_USER_ID = "11111111-1111-1111-1111-111111111111";
 
 // Helper function to format trend values
 const formatTrendValue = (value: number | null): { value: number, isPositive: boolean } => {
@@ -43,12 +40,40 @@ const DashboardSummary = () => {
     income, 
     expenses, 
     incomeTrend, 
-    expenseTrend, 
-    refreshData,
-    dateRangeText
+    expenseTrend,
+    dateFilter, 
+    dateRangeText, 
+    userId,
+    refreshData
   } = useDashboard();
   
   const { toast } = useToast();
+  
+  // Log dashboard state on mount and when any data changes
+  useEffect(() => {
+    console.log('🔍 [DashboardSummary] State:', {
+      isLoading,
+      error,
+      balance,
+      income,
+      expenses,
+      incomeTrend,
+      expenseTrend,
+      dateFilter,
+      dateRangeText,
+      userId
+    });
+  }, [isLoading, error, balance, income, expenses, incomeTrend, expenseTrend, dateFilter, dateRangeText, userId]);
+  
+  // Handle manual refresh
+  const handleRefresh = () => {
+    console.log('🔍 [DashboardSummary] Manual refresh requested');
+    refreshData();
+    toast({
+      title: "Refreshing data",
+      description: "Fetching the latest financial data...",
+    });
+  };
   
   return (
     <div className="space-y-6">
@@ -86,7 +111,7 @@ const DashboardSummary = () => {
           <Button 
             variant="outline" 
             className="mt-2"
-            onClick={refreshData}
+            onClick={handleRefresh}
           >
             Try Again
           </Button>

@@ -40,9 +40,6 @@ import {
   AlertDialogTitle,
 } from "@/components/UI/alert-dialog";
 
-// Placeholder until we implement proper auth
-const MOCK_USER_ID = "11111111-1111-1111-1111-111111111111";
-
 // Custom MYR currency formatter with error handling
 const formatMYR = (amount: number): string => {
   try {
@@ -77,7 +74,7 @@ const TransactionList = () => {
   const [transactionTypeFilter, setTransactionTypeFilter] = useState<'all' | 'expense' | 'income'>('all');
   
   const { toast } = useToast();
-  const { refreshData, dateFilter, dateRangeText } = useDashboard();
+  const { refreshData, dateFilter, dateRangeText, userId } = useDashboard();
   
   // Get date range based on filter
   const getDateRangeForFilter = useCallback(() => {
@@ -125,14 +122,38 @@ const TransactionList = () => {
       }
     }
     
+    // Format dates to ensure consistent timezone handling
+    // Start date should be at 00:00:00 and end date at 23:59:59 of the respective days
+    const formattedStartDate = new Date(
+      startDate.getFullYear(), 
+      startDate.getMonth(), 
+      startDate.getDate(), 
+      0, 0, 0
+    ).toISOString();
+    
+    const formattedEndDate = new Date(
+      endDate.getFullYear(), 
+      endDate.getMonth(), 
+      endDate.getDate(), 
+      23, 59, 59
+    ).toISOString();
+    
+    console.log(`Transaction List: Using date range ${formattedStartDate} to ${formattedEndDate}`);
+    
     return {
-      startDate: startDate.toISOString(),
-      endDate: endDate.toISOString()
+      startDate: formattedStartDate,
+      endDate: formattedEndDate
     };
   }, [dateFilter]);
   
   // Fetch data from API
   const fetchTransactions = useCallback(async () => {
+    // Only fetch if we have a user ID
+    if (!userId) {
+      setIsLoading(false);
+      return;
+    }
+    
     try {
       setIsLoading(true);
       setError(null);
@@ -141,7 +162,7 @@ const TransactionList = () => {
       const { startDate, endDate } = getDateRangeForFilter();
       
       // Fetch expenses with pagination and date range
-      const expenseData = await expenseApi.getAllByUser(MOCK_USER_ID, {
+      const expenseData = await expenseApi.getAllByUser(userId, {
         limit: 50, // fetch a larger batch initially for client-side filtering
         startDate,
         endDate
@@ -162,6 +183,8 @@ const TransactionList = () => {
       );
       
       console.log(`Setting ${validExpenses.length} valid expenses in state for date range: ${startDate} to ${endDate}`);
+      console.log(validExpenses);
+      
       setExpenses(validExpenses);
       
       // Fetch categories and payment methods for filters
@@ -182,13 +205,16 @@ const TransactionList = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [toast, getDateRangeForFilter]);
+  }, [toast, getDateRangeForFilter, userId]);
   
   useEffect(() => {
     fetchTransactions();
     
+    // Only set up subscription if we have a user ID
+    if (!userId) return;
+    
     // Set up subscription to real-time updates
-    const subscription = expenseApi.subscribeToExpenses(MOCK_USER_ID, (payload) => {
+    const subscription = expenseApi.subscribeToExpenses(userId, (payload) => {
       // Refetch data when changes occur
       fetchTransactions();
       
@@ -197,9 +223,9 @@ const TransactionList = () => {
     });
     
     return () => {
-      subscription.unsubscribe();
+      subscription?.unsubscribe();
     };
-  }, [fetchTransactions, refreshData]);
+  }, [fetchTransactions, refreshData, userId]);
   
   // Open delete confirmation dialog
   const confirmDelete = (expenseId: number) => {
@@ -293,12 +319,17 @@ const TransactionList = () => {
 
   // Handle reload after adding or editing a transaction
   const handleTransactionAdded = () => {
-    // Refetch the expenses data
-    fetchTransactions();
-    // Also refresh dashboard data
-    refreshData();
-    // Clear any editing state
+    console.log("Transaction added/edited, triggering complete refresh");
+    // Clear any editing state first
     setExpenseToEdit(null);
+    
+    // Wait a short delay to ensure database writes have completed
+    setTimeout(() => {
+      // Refetch the expenses data
+      fetchTransactions();
+      // Also refresh dashboard data
+      refreshData();
+    }, 500);
   };
 
   return (
@@ -393,7 +424,7 @@ const TransactionList = () => {
             <Button 
               variant="outline" 
               className="mt-2"
-              onClick={() => expenseApi.getAllByUser(MOCK_USER_ID).then(setExpenses).catch(console.error)}
+              onClick={() => expenseApi.getAllByUser(userId).then(setExpenses).catch(console.error)}
             >
               Try Again
             </Button>

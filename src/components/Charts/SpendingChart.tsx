@@ -25,9 +25,9 @@ import {
 import { expenseApi } from '@/lib/api/expenseApi';
 import { LoaderCircle } from 'lucide-react';
 import { useDashboard } from '@/context/DashboardContext';
-
-// Placeholder until we implement proper auth
-const MOCK_USER_ID = "11111111-1111-1111-1111-111111111111";
+import { Skeleton } from '@/components/UI/skeleton';
+import { supabase } from '@/lib/supabase/supabase';
+import { format } from 'date-fns';
 
 // Colors for the chart
 const CATEGORY_COLORS = [
@@ -48,17 +48,41 @@ const CustomTooltip = ({ active, payload }: TooltipProps<number, string>) => {
   return null;
 };
 
+// Helper function to add timeout to supabase calls
+const withTimeout = (promise, timeoutMs = 10000) => {
+  let timeoutId;
+  
+  // Create a promise that rejects after the specified timeout
+  const timeoutPromise = new Promise((_, reject) => {
+    timeoutId = setTimeout(() => {
+      reject(new Error(`Operation timed out after ${timeoutMs}ms`));
+    }, timeoutMs);
+  });
+  
+  // Return a promise that resolves/rejects with the result of whichever promise 
+  // completes first (the original promise or the timeout)
+  return Promise.race([
+    promise,
+    timeoutPromise
+  ]).finally(() => {
+    clearTimeout(timeoutId);
+  });
+};
+
 const SpendingChart = () => {
+  const { dateFilter, userId, dateRangeText } = useDashboard();
   const [chartType, setChartType] = useState('pie');
   const [dataType, setDataType] = useState('category');
-  const [chartData, setChartData] = useState<{ name: string; value: number; color: string }[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { dateFilter, dateRangeText } = useDashboard();
+  
+  // State for chart data
+  const [categoryData, setCategoryData] = useState<any[]>([]);
+  const [paymentData, setPaymentData] = useState<any[]>([]);
   
   // Get date range based on filter
   const getDateRangeForFilter = useCallback(() => {
-    let startDate, endDate;
+    let startDate: Date, endDate: Date;
     
     switch (dateFilter.type) {
       case 'month': {
@@ -84,8 +108,8 @@ const SpendingChart = () => {
       }
       case 'custom': {
         if (dateFilter.customRange) {
-          startDate = dateFilter.customRange.startDate;
-          endDate = dateFilter.customRange.endDate;
+          startDate = new Date(dateFilter.customRange.startDate);
+          endDate = new Date(dateFilter.customRange.endDate);
         } else {
           // Default to current month if no custom range
           const now = new Date();
@@ -103,68 +127,81 @@ const SpendingChart = () => {
     }
     
     return {
-      startDate: startDate.toISOString(),
-      endDate: endDate.toISOString()
+      startDate,
+      endDate
     };
   }, [dateFilter]);
   
-  // Load data whenever the data type or date filter changes
-  useEffect(() => {
-    const loadChartData = async () => {
+  // Load spending data
+  const loadChartData = useCallback(async () => {
+    if (!userId) {
+      console.log('❌ [SpendingChart] Aborting data fetch - no userId available');
+      setIsLoading(false);
+      return;
+    }
+    
+    try {
+      console.log('🔍 [SpendingChart] Starting to load chart data...');
+      setIsLoading(true);
+      setError(null);
+      
+      const { startDate, endDate } = getDateRangeForFilter();
+      console.log(`🔍 [SpendingChart] Date range: ${startDate.toISOString()} to ${endDate.toISOString()}`);
+      console.log(`🔍 [SpendingChart] User ID: ${userId}`);
+      
+      // Fetch spending by category
+      console.log('🔍 [SpendingChart] Calling get_spending_by_category...');
+      const spendingByCategoryPromise = supabase
+        .rpc('get_spending_by_category', {
+          p_user_id: userId,
+          p_start_date: startDate.toISOString(),
+          p_end_date: endDate.toISOString()
+        });
+      
+      const spendingByCategoryResponse = await withTimeout(spendingByCategoryPromise, 8000);
+      
+      if (spendingByCategoryResponse.error) {
+        console.error('❌ [SpendingChart] Error fetching spending by category:', spendingByCategoryResponse.error);
+        throw spendingByCategoryResponse.error;
+      }
+      
+      const spendingByCategory = spendingByCategoryResponse.data;
+      console.log(`✅ [SpendingChart] Received spending by category: ${spendingByCategory?.length} records`);
+      
+      // Try to get payment method data from RPC, fallback to manual calculation if not available
+      let paymentMethodData = [];
+      
       try {
-        setIsLoading(true);
-        setError(null);
-        const { startDate, endDate } = getDateRangeForFilter();
+        console.log('🔍 [SpendingChart] Using expenseApi.getSummaryByPaymentMethod...');
+        
+        const paymentSummary = await expenseApi.getSummaryByPaymentMethod(
+          userId,
+          startDate.toISOString(),
+          endDate.toISOString()
+        );
+        
+        paymentMethodData = paymentSummary.map(item => ({
+          method_name: item.method_name,
+          amount: item.total
+        }));
+        
+        console.log(`✅ [SpendingChart] Received spending by payment method: ${paymentMethodData.length} records`);
+      } catch (err) {
+        // Fallback to using the expenseApi to get payment method data
+        console.log('🔍 [SpendingChart] Fallback: getting payment method data from expenses...');
         
         // Get expenses data
-        const expenses = await expenseApi.getAllByUser(MOCK_USER_ID, {
-          startDate,
-          endDate
+        const expensesResponse = await expenseApi.getAllByUser(userId, {
+          startDate: startDate.toISOString(),
+          endDate: endDate.toISOString()
         });
         
-        if (dataType === 'category') {
-          // Group by category
-          const categoryMap = new Map<number, { name: string; value: number; color: string }>();
-          
+        // Group by payment method
+        const paymentMap = new Map<number, { method_name: string; amount: number }>();
+        
+        if (expensesResponse && Array.isArray(expensesResponse)) {
           // Process each expense
-          expenses.forEach(expense => {
-            expense.expense_items?.forEach(item => {
-              if (!item.category) return;
-              
-              const categoryId = item.category_id;
-              const categoryName = item.category.name;
-              const amount = Number(item.amount);
-              
-              if (categoryMap.has(categoryId)) {
-                // Add to existing category
-                const current = categoryMap.get(categoryId)!;
-                categoryMap.set(categoryId, {
-                  ...current,
-                  value: current.value + amount
-                });
-              } else {
-                // Create new category entry
-                const colorIndex = categoryMap.size % CATEGORY_COLORS.length;
-                categoryMap.set(categoryId, {
-                  name: categoryName,
-                  value: amount,
-                  color: CATEGORY_COLORS[colorIndex]
-                });
-              }
-            });
-          });
-          
-          // Convert map to array and sort by value
-          const chartDataArray = Array.from(categoryMap.values())
-            .sort((a, b) => b.value - a.value);
-          
-          setChartData(chartDataArray);
-        } else {
-          // Group by payment method
-          const paymentMap = new Map<number, { name: string; value: number; color: string }>();
-          
-          // Process each expense
-          expenses.forEach(expense => {
+          expensesResponse.forEach(expense => {
             if (!expense.payment_method_id || !expense.payment_method) return;
             
             const paymentMethodId = expense.payment_method_id;
@@ -178,36 +215,125 @@ const SpendingChart = () => {
               // Add to existing payment method
               const current = paymentMap.get(paymentMethodId)!;
               paymentMap.set(paymentMethodId, {
-                ...current,
-                value: current.value + totalAmount
+                method_name: current.method_name,
+                amount: current.amount + totalAmount
               });
             } else {
               // Create new payment method entry
-              const colorIndex = paymentMap.size % CATEGORY_COLORS.length;
               paymentMap.set(paymentMethodId, {
-                name: methodName,
-                value: totalAmount,
-                color: CATEGORY_COLORS[colorIndex]
+                method_name: methodName,
+                amount: totalAmount
               });
             }
           });
           
-          // Convert map to array and sort by value
-          const chartDataArray = Array.from(paymentMap.values())
-            .sort((a, b) => b.value - a.value);
-          
-          setChartData(chartDataArray);
+          // Convert map to array
+          paymentMethodData = Array.from(paymentMap.values());
+          console.log(`✅ [SpendingChart] Fallback: created payment method data with ${paymentMethodData.length} records`);
+        } else {
+          console.log('⚠️ [SpendingChart] Fallback: could not get expenses for payment methods');
         }
-      } catch (err) {
-        console.error('Error loading chart data:', err);
-        setError('Failed to load spending analysis data');
-      } finally {
-        setIsLoading(false);
       }
-    };
-    
+      
+      // Prepare data for spending by category chart
+      if (spendingByCategory && spendingByCategory.length > 0) {
+        console.log('🔍 [SpendingChart] Processing spending by category data...');
+        // Sort by amount descending
+        spendingByCategory.sort((a: any, b: any) => parseFloat(b.amount) - parseFloat(a.amount));
+        
+        // Transform to recharts format
+        const formattedCategoryData = spendingByCategory.map((item: any, index: number) => ({
+          name: item.category_name,
+          value: parseFloat(item.amount),
+          color: CATEGORY_COLORS[index % CATEGORY_COLORS.length]
+        }));
+        
+        setCategoryData(formattedCategoryData);
+        console.log('✅ [SpendingChart] Spending by category data processed');
+      } else {
+        console.log('ℹ️ [SpendingChart] No spending by category data available');
+        setCategoryData([]);
+      }
+      
+      // Prepare data for spending by payment method chart
+      if (paymentMethodData && paymentMethodData.length > 0) {
+        console.log('🔍 [SpendingChart] Processing spending by payment method data...');
+        // Sort by amount descending
+        paymentMethodData.sort((a: any, b: any) => parseFloat(b.amount) - parseFloat(a.amount));
+        
+        // Transform to recharts format
+        const formattedPaymentData = paymentMethodData.map((item: any, index: number) => ({
+          name: item.method_name || 'Unknown',
+          value: parseFloat(item.amount),
+          color: CATEGORY_COLORS[index % CATEGORY_COLORS.length]
+        }));
+        
+        setPaymentData(formattedPaymentData);
+        console.log('✅ [SpendingChart] Spending by payment method data processed');
+      } else {
+        console.log('ℹ️ [SpendingChart] No spending by payment method data available');
+        setPaymentData([]);
+      }
+      
+      console.log('✅ [SpendingChart] All chart data loaded successfully');
+    } catch (err) {
+      console.error("❌ [SpendingChart] Error loading chart data:", err);
+      console.error("❌ [SpendingChart] Error details:", JSON.stringify(err, null, 2));
+      setError("Failed to load chart data");
+    } finally {
+      console.log('🔍 [SpendingChart] Setting isLoading to false');
+      setIsLoading(false);
+    }
+  }, [getDateRangeForFilter, userId]);
+  
+  // Load chart data when the component mounts or when date filter changes
+  useEffect(() => {
     loadChartData();
-  }, [dataType, getDateRangeForFilter, dateFilter]);
+  }, [loadChartData, dateFilter]);
+  
+  // Get current chart data based on data type
+  const getCurrentChartData = () => {
+    return dataType === 'category' ? categoryData : paymentData;
+  };
+  
+  // Render loading skeleton
+  if (isLoading) {
+    return (
+      <Card className="animate-fade-up animate-delay-300">
+        <CardHeader>
+          <CardTitle>Spending Analysis</CardTitle>
+          <CardDescription>Loading your spending data...</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="h-[300px]">
+            <div className="flex h-full flex-col items-center justify-center">
+              <Skeleton className="h-[240px] w-full" />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+  
+  // Render error message
+  if (error) {
+    return (
+      <Card className="animate-fade-up animate-delay-300">
+        <CardHeader>
+          <CardTitle>Spending Analysis</CardTitle>
+          <CardDescription className="text-destructive">{error}</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="h-[300px] flex items-center justify-center">
+            <p>Failed to load chart data. Please try again later.</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+  
+  const chartData = getCurrentChartData();
+  const hasData = chartData && chartData.length > 0;
   
   return (
     <Card className="animate-fade-up animate-delay-300">
@@ -245,66 +371,57 @@ const SpendingChart = () => {
         </div>
       </CardHeader>
       <CardContent className="pt-2">
-        {isLoading ? (
-          <div className="h-[300px] w-full flex items-center justify-center">
-            <LoaderCircle className="mr-2 h-5 w-5 animate-spin" />
-            <span>Loading chart data...</span>
-          </div>
-        ) : error ? (
-          <div className="h-[300px] w-full flex items-center justify-center text-destructive">
-            <p>{error}</p>
-          </div>
-        ) : chartData.length === 0 ? (
+        {!hasData ? (
           <div className="h-[300px] w-full flex items-center justify-center text-muted-foreground">
             <p>No expense data available for {dateRangeText}</p>
           </div>
         ) : (
-          <div className="h-[300px] w-full">
-            {chartType === 'pie' ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={chartData}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    outerRadius={100}
-                    fill="#8884d8"
-                    dataKey="value"
-                    label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                  >
-                    {chartData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip content={<CustomTooltip />} />
-                  <Legend />
-                </PieChart>
-              </ResponsiveContainer>
-            ) : (
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart
+        <div className="h-[300px] w-full">
+          {chartType === 'pie' ? (
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
                   data={chartData}
-                  margin={{
-                    top: 20,
-                    right: 30,
-                    left: 20,
-                    bottom: 5,
-                  }}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  outerRadius={100}
+                  fill="#8884d8"
+                  dataKey="value"
+                  label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
                 >
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="name" />
-                  <YAxis />
-                  <Tooltip content={<CustomTooltip />} />
-                  <Bar dataKey="value">
-                    {chartData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            )}
-          </div>
+                  {chartData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Pie>
+                <Tooltip content={<CustomTooltip />} />
+                <Legend />
+              </PieChart>
+            </ResponsiveContainer>
+          ) : (
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                data={chartData}
+                margin={{
+                  top: 20,
+                  right: 30,
+                  left: 20,
+                  bottom: 5,
+                }}
+              >
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" />
+                <YAxis />
+                <Tooltip content={<CustomTooltip />} />
+                <Bar dataKey="value">
+                  {chartData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          )}
+        </div>
         )}
       </CardContent>
     </Card>
