@@ -233,15 +233,12 @@ export const SignupForm: React.FC = () => {
               <div className="text-destructive text-sm">{error}</div>
             )}
             
-            <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Creating account...
-                </>
-              ) : (
-                'Sign Up'
-              )}
+            <Button 
+              type="submit" 
+              className={`w-full ${isLoading ? 'auth-loading-indicator' : ''}`}
+              disabled={isLoading}
+            >
+              {isLoading ? 'Creating account...' : 'Create account'}
             </Button>
           </div>
         </form>
