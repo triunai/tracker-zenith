@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useAuth } from '@/context/AuthContext';
+import { useAuth } from '@/lib/auth';
 import { UpdateProfileData } from '@/interfaces/user-interface';
 import { Loader2 } from 'lucide-react';
 
