@@ -6,7 +6,7 @@ import BudgetTracker from '@/components/Budgets/BudgetTracker';
 import SpendingChart from '@/components/Charts/SpendingChart';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { budgetApi } from '@/lib/api/budgetApi';
-import { useToast } from '@/components/UI/use-toast';
+import { useToast } from '@/components/UI/use-toast.ts';
 import { useDashboard } from '@/context/DashboardContext';
 import { CreateBudgetRequest } from '@/interfaces/budget-interface';
 import BudgetForm from '@/components/Budgets/BudgetForm';
