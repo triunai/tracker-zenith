@@ -5,8 +5,7 @@ import {
   Route,
 } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { Toaster } from '@/components/UI/toaster';
-import { ToastProvider } from '@/components/UI/use-toast';
+import { Toaster, ToastProvider } from '@/components/UI';
 import { TooltipProvider } from '@/components/UI/tooltip';
 import { ThemeProvider } from '@/components/theme-provider';
 import { DashboardProvider } from '@/context/DashboardContext';
