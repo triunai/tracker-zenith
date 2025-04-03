@@ -10,7 +10,7 @@ import {
   CardFooter, 
   CardHeader, 
   CardTitle 
-} from '@/components/UI/card';
+} from '@/components/UI/card.tsx';
 import { Input } from '@/components/UI/input';
 import { Button } from '@/components/UI/button';
 import { Label } from '@/components/UI/label';
