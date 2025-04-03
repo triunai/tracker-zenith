@@ -5,8 +5,8 @@ import {
   Route,
 } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { Toaster } from "@/components/UI/toaster.tsx";
-import { TooltipProvider } from "./components/UI/tooltip.tsx";
+// import { Toaster } from "@/components/UI/toaster.tsx"; // Temporarily commented out
+// import { TooltipProvider } from "./components/UI/tooltip.tsx"; // Temporarily commented out
 import { ThemeProvider } from '@/components/theme-provider';
 import { DashboardProvider } from '@/context/DashboardContext';
 import { AuthProvider, initTokenManager } from '@/lib/auth';
@@ -120,7 +120,7 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider defaultTheme="light" storageKey="zenith-theme">
-        <TooltipProvider>
+        {/* <TooltipProvider> */}{/* Temporarily commented out */}
           <AuthProvider>
             <DashboardProvider>
               <Router>
@@ -140,10 +140,10 @@ function App() {
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </Router>
-              <Toaster />
+              {/* <Toaster /> */}{/* Temporarily commented out */}
             </DashboardProvider>
           </AuthProvider>
-        </TooltipProvider>
+        {/* </TooltipProvider> */}{/* Temporarily commented out */}
       </ThemeProvider>
       {/* Optionally add ReactQueryDevtools back if needed */}
       {/* <ReactQueryDevtools initialIsOpen={false} /> */}
