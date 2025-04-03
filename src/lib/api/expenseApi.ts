@@ -362,6 +362,24 @@ export const expenseApi = {
     const expenseItems = expense.expense_items;
     const { expense_items, ...expenseData } = expense;
     
+    // Fix for date timezone issue - ensure local date is preserved
+    if (expense.date) {
+      try {
+        // Create a new Date object from the date (works with strings or Date objects)
+        const d = new Date(expense.date);
+        if (!isNaN(d.getTime())) {
+          // Valid date - format as YYYY-MM-DD in local timezone
+          const year = d.getFullYear();
+          const month = String(d.getMonth() + 1).padStart(2, '0');
+          const day = String(d.getDate()).padStart(2, '0');
+          expenseData.date = `${year}-${month}-${day}`;
+        }
+      } catch (e) {
+        // If there's an error parsing the date, log it but continue with the update
+        console.error(`[expenseApi:update] Error formatting date: ${expense.date}`, e);
+      }
+    }
+    
     logWithTimestamp(`[expenseApi:update] Updating expense ID ${id}`, expenseData);
     
     try {
