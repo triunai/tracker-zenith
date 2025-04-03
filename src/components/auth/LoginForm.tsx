@@ -4,11 +4,11 @@ import { useAuth } from '@/lib/auth';
 import { SignInCredentials } from '@/interfaces/user-interface';
 import { Loader2, Eye, EyeOff } from 'lucide-react';
 
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
-import { useToast } from '@/components/ui/use-toast';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card.tsx';
+import { Input } from '@/components/ui/input.tsx';
+import { Button } from '@/components/ui/button.tsx';
+import { Label } from '@/components/ui/label.tsx';
+import { useToast } from '@/components/ui/use-toast.ts';
 
 export const LoginForm: React.FC = () => {
   const navigate = useNavigate();

@@ -3,7 +3,7 @@ import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/lib/auth';
 import { Loader2, RefreshCcw, Trash2, Database } from 'lucide-react';
 import { sessionApi } from '@/lib/auth';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui/button.tsx';
 import { supabase } from '@/lib/supabase/supabase.ts';
 
 // Helper function for consistent timestamp logging

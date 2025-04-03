@@ -1,23 +1,23 @@
 import React, { useEffect, useState } from 'react';
-import { format } from "date-fns";
-import { Calendar as CalendarIcon } from "lucide-react";
+import { format } from 'date-fns';
+import { Calendar as CalendarIcon } from 'lucide-react';
 import { getPaymentMethodName } from '@/lib/utils';
 import { PaymentMethodEnum } from '@/interfaces/payment-method-interface';
-import FormField from './FormField';
-import { FormErrors } from '@/interfaces/types/transaction';
+import { FormErrors } from '@/interfaces/types/transaction.tsx';
 import { TransactionType } from './hooks/useTransactionForm';
+import FormField from './FormField';
 import { supabase } from '@/lib/supabase/supabase';
 import { useQuery } from '@tanstack/react-query';
 import { expenseApi } from '@/lib/api/expenseApi';
 import { paymentMethodApi } from '@/lib/api/paymentMethodApi';
 
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { cn } from "@/lib/utils";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { Button } from '@/components/ui/button.tsx';
+import { Input } from '@/components/ui/input.tsx';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select.tsx';
+import { Calendar } from '@/components/ui/calendar.tsx';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover.tsx';
+import { cn } from '@/lib/utils';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group.tsx';
 
 interface TransactionFormFieldsProps {
   date: Date;
