@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '@/context/AuthContext';
+import { useAuth } from '@/lib/auth';
 import { SignUpCredentials } from '@/interfaces/user-interface';
 import { Loader2, Eye, EyeOff } from 'lucide-react';
 

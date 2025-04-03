@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
-import { useAuth } from '@/context/AuthContext';
+import { useAuth } from '@/lib/auth';
 import { Loader2, RefreshCcw, Trash2, Database } from 'lucide-react';
-import { authApi } from '@/lib/api/authApi';
+import { sessionApi } from '@/lib/auth';
 import { Button } from '@/components/UI/button';
 import { supabase } from '@/lib/supabase/supabase';
 
@@ -121,7 +121,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     try {
       // Try to refresh the session
       logWithTimestamp(`[ProtectedRoute] Attempting to refresh session`);
-      await authApi.refreshSession();
+      await sessionApi.refreshSession();
       // Reload the page to retry the auth flow
       logWithTimestamp(`[ProtectedRoute] Session refresh attempt completed, reloading page`);
       window.location.reload();
