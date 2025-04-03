@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { cn } from '@/lib/utils';
-import { Badge } from '@/components/UI/badge.tsx';
+import { Badge } from '@/components/ui/badge';
 import { 
   Home, Utensils, Car, Tv, ShoppingBag, Zap, 
   Briefcase, TrendingUp, Gift, HelpCircle 

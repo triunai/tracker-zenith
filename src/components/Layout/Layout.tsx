@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
-import { Button } from '@/components/UI/button.tsx';
+import { Button } from '@/components/ui/button';
 import { 
   LayoutDashboard, 
   CreditCard, 
@@ -16,9 +16,9 @@ import {
   ChevronRight
 } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { ThemeToggle } from '@/components/UI/theme-toggle.tsx';
+import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { useAuth } from '@/lib/auth';
-import { useToast } from '@/components/UI/use-toast.ts';
+import { useToast } from '@/components/ui/use-toast';
 
 interface LayoutProps {
   children: React.ReactNode;

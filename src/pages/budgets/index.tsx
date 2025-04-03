@@ -1,16 +1,16 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient, useQueries } from '@tanstack/react-query';
 import Layout from '@/components/Layout/Layout';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/UI/card.tsx';
-import { Button } from '@/components/UI/button.tsx';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { Plus, AlertTriangle, Trash } from 'lucide-react';
-import { Progress } from '@/components/UI/progress.tsx';
+import { Progress } from '@/components/ui/progress';
 import { PeriodEnum } from '@/interfaces/enums/PeriodEnum';
 import { cn } from '@/lib/utils';
 import { formatCurrency } from '@/lib/utils';
 import { budgetApi } from '@/lib/api/budgetApi';
 import { CreateBudgetRequest, Budget } from '@/interfaces/budget-interface';
-import { useToast } from '@/components/UI/use-toast.ts';
+import { useToast } from '@/components/ui/use-toast';
 import BudgetForm from '@/components/Budgets/BudgetForm';
 import { 
   Dialog, 
@@ -19,7 +19,7 @@ import {
   DialogTitle, 
   DialogDescription,
   DialogFooter
-} from '@/components/UI/dialog.tsx';
+} from '@/components/ui/dialog';
 import { 
   AlertDialog,
   AlertDialogAction,
@@ -29,7 +29,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from '@/components/UI/alert-dialog.tsx';
+} from '@/components/ui/alert-dialog';
 import BudgetTracker from '@/components/Budgets/BudgetTracker';
 import { useDashboard } from '@/context/DashboardContext';
 import { supabase } from '@/lib/supabase/supabase';

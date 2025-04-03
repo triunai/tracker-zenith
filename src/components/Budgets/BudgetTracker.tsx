@@ -6,9 +6,9 @@ import {
   CardDescription, 
   CardHeader, 
   CardTitle 
-} from "@/components/UI/card.tsx";
-import { Progress } from "@/components/UI/progress.tsx";
-import { Button } from '@/components/UI/button.tsx';
+} from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
+import { Button } from '@/components/ui/button';
 import { Plus, AlertTriangle, Trash } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatCurrency } from '@/lib/utils';

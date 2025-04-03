@@ -3,17 +3,17 @@ import * as React from "react"
 import { cva } from "class-variance-authority"
 
 import { cn } from "@/lib/utils"
-import { Button } from "@/components/UI/button.tsx"
-import { Input } from "@/components/UI/input.tsx"
-import { Separator } from "@/components/UI/separator.tsx"
-import { Sheet, SheetContent, SheetTrigger } from "@/components/UI/sheet.tsx"
-import { Skeleton } from "@/components/UI/skeleton.tsx"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Separator } from "@/components/ui/separator"
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
+import { Skeleton } from "@/components/ui/skeleton"
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from "@/components/UI/tooltip.tsx"
+} from "@/components/ui/tooltip"
 
 const sidebarVariants = cva(
   "fixed inset-y-0 z-50 flex flex-col w-[var(--sidebar-width)] bg-secondary/50 backdrop-blur-sm border-r border-r-secondary/50",

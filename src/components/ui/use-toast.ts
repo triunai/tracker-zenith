@@ -1,5 +1,5 @@
 import * as React from "react";
-import type { ToastProps, ToastActionElement } from "@/components/UI/toast.tsx";
+import type { ToastProps, ToastActionElement } from "@/components/ui/toast";
 
 // Define our toast types
 type ToastType = {

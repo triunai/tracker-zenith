@@ -7,18 +7,18 @@ import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@/components/UI/popover.tsx";
-import { Button } from "@/components/UI/button.tsx";
+} from "@/components/ui/popover";
+import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/UI/select.tsx";
-import { Card, CardContent } from '@/components/UI/card.tsx';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/UI/tabs.tsx';
-import { DatePickerWithRange } from '@/components/UI/date-range-picker.tsx';
+} from "@/components/ui/select";
+import { Card, CardContent } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { DatePickerWithRange } from '@/components/ui/date-range-picker';
 
 const DateFilter = () => {
   const { dateFilter, setDateFilter, filterOptions, dateRangeText } = useDashboard();

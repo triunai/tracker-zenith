@@ -2,11 +2,11 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/auth';
 import { supabase } from '@/lib/supabase/supabase.ts';
 import { UpdateProfileData } from '@/interfaces/user-interface.ts';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/UI/card.tsx";
-import { Label } from "@/components/UI/label.tsx";
-import { Input } from "@/components/UI/input.tsx";
-import { Button } from "@/components/UI/button.tsx";
-import { useToast } from "@/components/UI/use-toast.ts";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { useToast } from "@/components/ui/use-toast";
 import { Loader2 } from 'lucide-react';
 
 const Profile: React.FC = () => {

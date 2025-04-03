@@ -4,13 +4,13 @@ import { Calendar as CalendarIcon } from "lucide-react";
 import { DateRange } from "react-day-picker";
 
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/UI/button.tsx";
-import { Calendar } from "@/components/UI/calendar.tsx";
+import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@/components/UI/popover.tsx";
+} from "@/components/ui/popover";
 
 interface DatePickerWithRangeProps {
   className?: string;

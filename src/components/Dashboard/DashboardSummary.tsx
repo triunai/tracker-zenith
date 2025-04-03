@@ -10,10 +10,10 @@ import {
   MinusCircle
 } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
-import StatCard from '@/components/UI/StatCard.tsx';
-import { Button } from '@/components/UI/button.tsx';
+import StatCard from '@/components/ui/StatCard';
+import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { useToast } from '@/components/UI/use-toast.ts';
+import { useToast } from '@/components/ui/use-toast';
 import TransactionForm from '@/components/Transactions/TransactionForm';
 import { useDashboard } from '@/context/DashboardContext';
 import DateFilter from './DateFilter';

@@ -3,7 +3,7 @@ import { TransactionData } from '@/interfaces/types/transaction';
 import { expenseApi } from '@/lib/api/expenseApi';
 import { ExpenseCategory, Expense, CreateExpenseItemRequest, CreateExpenseRequest } from '@/interfaces/expense-interface';
 import { PaymentMethod } from '@/interfaces/payment-method-interface';
-import { useToast } from '@/components/UI/use-toast.ts';
+import { useToast } from '@/components/ui/use-toast';
 import { useDashboard } from '@/context/DashboardContext';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 

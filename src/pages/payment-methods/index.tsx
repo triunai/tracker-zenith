@@ -2,10 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { paymentMethodApi } from '@/lib/api/paymentMethodApi';
 import { PaymentMethod, CreatePaymentMethodRequest } from '@/interfaces/payment-method-interface';
-import { Button } from '@/components/UI/button.tsx';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/UI/card.tsx';
-import { Input } from '@/components/UI/input.tsx';
-import { useToast } from '@/components/UI/use-toast.ts';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { useToast } from '@/components/ui/use-toast';
 import { PlusIcon, PencilIcon, TrashIcon, CheckIcon, XIcon } from 'lucide-react';
 
 const PaymentMethodsPage = () => {

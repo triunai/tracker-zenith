@@ -11,13 +11,13 @@ import { useQuery } from '@tanstack/react-query';
 import { expenseApi } from '@/lib/api/expenseApi';
 import { paymentMethodApi } from '@/lib/api/paymentMethodApi';
 
-import { Button } from "@/components/UI/button.tsx";
-import { Input } from "@/components/UI/input.tsx";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/UI/select.tsx";
-import { Calendar } from "@/components/UI/calendar.tsx";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/UI/popover.tsx";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
-import { ToggleGroup, ToggleGroupItem } from "@/components/UI/toggle-group.tsx";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
 interface TransactionFormFieldsProps {
   date: Date;

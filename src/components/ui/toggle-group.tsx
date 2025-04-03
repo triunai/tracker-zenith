@@ -4,7 +4,7 @@ import { ToggleGroupItemProps } from "@radix-ui/react-toggle-group"
 import { type VariantProps } from "class-variance-authority"
 
 import { cn } from "@/lib/utils"
-import { toggleVariants } from "@/components/UI/toggle.tsx"
+import { toggleVariants } from "@/components/ui/toggle"
 
 const ToggleGroup = React.forwardRef<
   React.ElementRef<typeof ToggleGroupPrimitive.Root>,
