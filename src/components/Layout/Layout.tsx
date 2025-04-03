@@ -16,9 +16,9 @@ import {
   ChevronRight
 } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { ThemeToggle } from '@/components/ui/theme-toggle';
+import { ThemeToggle } from '@/components/ui/theme-toggle.tsx';
 import { useAuth } from '@/lib/auth';
-import { useToast } from '@/components/ui/use-toast';
+import { useToast } from '@/components/ui/use-toast.ts';
 
 interface LayoutProps {
   children: React.ReactNode;
