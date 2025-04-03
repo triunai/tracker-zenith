@@ -9,12 +9,12 @@ import {
   CardDescription, 
   CardFooter, 
   CardHeader, 
-  CardTitle 
-} from '@/components/UI/card.tsx';
-import { Input } from '@/components/UI/input';
-import { Button } from '@/components/UI/button';
-import { Label } from '@/components/UI/label';
-import { useToast } from '@/components/UI/use-toast';
+  CardTitle, 
+  Input, 
+  Button, 
+  Label, 
+  useToast
+} from '@/components/UI';
 
 const Profile: React.FC = () => {
   const { user, profile, updateProfile, isLoading } = useAuth();
