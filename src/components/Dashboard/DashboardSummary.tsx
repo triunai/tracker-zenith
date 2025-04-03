@@ -167,7 +167,14 @@ const DashboardSummary = () => {
           <Button 
             variant="outline" 
             className="h-auto py-4 flex flex-col items-center justify-center gap-2 shadow-purple-sm hover:shadow-purple" 
-            onClick={() => window.location.href = '/budgets'}
+            onClick={() => {
+              // Create and dispatch custom event to open the budget form
+              const event = new CustomEvent('openBudgetForm', { 
+                bubbles: true, 
+                detail: { source: 'DashboardQuickAction' } 
+              });
+              document.dispatchEvent(event);
+            }}
           >
             <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
               <Wallet size={20} />

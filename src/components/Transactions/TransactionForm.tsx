@@ -115,6 +115,7 @@ const TransactionForm = ({
             size={buttonSize} 
             className={className}
             onClick={handleAddButtonClick}
+            data-transaction-form-trigger
           >
             {finalButtonIcon}
             {finalButtonText}
