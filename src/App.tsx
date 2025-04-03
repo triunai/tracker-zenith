@@ -10,9 +10,8 @@ import { ToastProvider } from '@/components/UI/use-toast';
 import { TooltipProvider } from '@/components/UI/tooltip';
 import { ThemeProvider } from '@/components/theme-provider';
 import { DashboardProvider } from '@/context/DashboardContext';
-import { AuthProvider } from '@/context/AuthContext';
+import { AuthProvider, initTokenManager } from '@/lib/auth';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
-import { initTokenCleaner } from '@/lib/utils/tokenCleaner';
 
 // Pages
 import Index from './pages/Index';
@@ -37,19 +36,35 @@ function App() {
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const forceClean = urlParams.get('force_clean') === 'true';
+    const resetAuth = urlParams.get('reset_auth') === 'true';
     
     if (forceClean) {
       logWithTimestamp('[App] Force clean requested via URL parameter');
     }
     
+    if (resetAuth) {
+      logWithTimestamp('[App] Auth reset requested via URL parameter');
+      // Clear any auth-related storage
+      sessionStorage.removeItem('auth_hang_detected');
+      localStorage.removeItem('supabase.auth.token');
+      sessionStorage.removeItem('supabase.auth.token');
+    }
+    
     // Check if there was a previously detected hanging auth call
     const hangDetected = sessionStorage.getItem('auth_hang_detected');
+    
+    // Only force clean if explicitly requested or if a hang was detected
+    // This prevents automatic token clearing on normal page reloads
     if (hangDetected) {
       logWithTimestamp('[App] Previous authentication hang detected, clearing tokens');
       sessionStorage.removeItem('auth_hang_detected');
-      initTokenCleaner(true);
+      initTokenManager({ forceClean: true }); // Force clean tokens
+    } else if (forceClean) {
+      // Only force clean if explicitly requested in URL
+      initTokenManager({ forceClean: true });
     } else {
-      initTokenCleaner(forceClean);
+      // For normal page loads, don't force clean
+      initTokenManager({ forceClean: false });
     }
     
     // Set up a global handler to detect potential auth hangs
@@ -58,18 +73,27 @@ function App() {
     
     // Create a MutationObserver to watch for loading UI
     const observer = new MutationObserver((mutations) => {
-      // Check if the loading UI for auth is visible
-      const isAuthLoading = document.querySelector('.auth-loading-indicator');
+      // Check if the loading UI for auth is visible (look for multiple possible indicators)
+      const isAuthLoading = 
+        document.querySelector('.auth-loading-indicator') || 
+        document.querySelector('.auth-spinner') || 
+        document.querySelector('[data-auth-loading="true"]');
       
       if (isAuthLoading && !authOperationStarted) {
         authOperationStarted = true;
+        logWithTimestamp('[App] Auth operation detected, starting timer');
         // If loading indicator is visible for too long, mark as potential hang
         authOperationTimeout = setTimeout(() => {
           logWithTimestamp('[App] Auth operation taking too long, marking potential hang');
           sessionStorage.setItem('auth_hang_detected', 'true');
+          // Offer a reset option to the user
+          if (confirm('Authentication is taking longer than expected. Would you like to reset and try again?')) {
+            window.location.href = window.location.pathname + '?reset_auth=true';
+          }
         }, 15000); // 15 seconds is very generous for auth operations
       } else if (!isAuthLoading && authOperationStarted) {
         // Loading finished, clear the timeout
+        logWithTimestamp('[App] Auth operation completed successfully');
         authOperationStarted = false;
         if (authOperationTimeout) {
           clearTimeout(authOperationTimeout);
@@ -82,7 +106,7 @@ function App() {
       childList: true, 
       subtree: true,
       attributes: true,
-      attributeFilter: ['class'] 
+      attributeFilter: ['class', 'data-auth-loading'] 
     });
     
     return () => {

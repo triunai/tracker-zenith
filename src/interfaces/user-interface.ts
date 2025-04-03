@@ -43,4 +43,17 @@ export interface ResetPasswordCredentials {
 export interface UpdateProfileData {
   display_name?: string;
   avatar_url?: string;
+}
+
+/**
+ * Extended auth context type that includes state and actions
+ */
+export interface AuthContextType extends AuthState {
+  signIn: (credentials: SignInCredentials) => Promise<void>;
+  signUp: (credentials: SignUpCredentials) => Promise<void>;
+  signOut: () => Promise<void>;
+  resetPassword: (email: string) => Promise<void>;
+  updateProfile: (data: UpdateProfileData) => Promise<void>;
+  clearError: () => void;
+  clearTokens: () => void;
 } 

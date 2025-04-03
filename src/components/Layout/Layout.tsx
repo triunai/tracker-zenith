@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { ThemeToggle } from '@/components/UI/theme-toggle';
-import { useAuth } from '@/context/AuthContext';
+import { useAuth } from '@/lib/auth';
 import { useToast } from '@/components/UI/use-toast';
 
 interface LayoutProps {
