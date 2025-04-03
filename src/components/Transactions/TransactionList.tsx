@@ -17,18 +17,18 @@ import {
 } from 'lucide-react';
 
 // Import UI components
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/UI/card";
-import { Button } from "@/components/UI/button";
-import { Input } from "@/components/UI/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/UI/select";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/UI/card.tsx";
+import { Button } from "@/components/UI/button.tsx";
+import { Input } from "@/components/UI/input.tsx";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/UI/select.tsx";
 import { Expense, ExpenseCategory } from '@/interfaces/expense-interface';
 import { PaymentMethod } from '@/interfaces/payment-method-interface';
 import { expenseApi } from '@/lib/api/expenseApi';
-import { useToast } from '@/components/UI/use-toast';
-import { Badge } from '@/components/UI/badge';
+import { useToast } from '@/components/UI/use-toast.ts';
+import { Badge } from '@/components/UI/badge.tsx';
 import { format } from 'date-fns';
 import { useDashboard } from '@/context/DashboardContext';
-import { Tabs, TabsList, TabsTrigger } from "@/components/UI/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/UI/tabs.tsx";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -38,7 +38,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/UI/alert-dialog";
+} from "@/components/UI/alert-dialog.tsx";
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 // Custom MYR currency formatter with error handling

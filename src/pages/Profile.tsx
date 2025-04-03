@@ -1,20 +1,13 @@
-import React, { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/auth';
-import { UpdateProfileData } from '@/interfaces/user-interface';
+import { supabase } from '@/lib/supabase/supabase.ts';
+import { UpdateProfileData } from '@/interfaces/user-interface.ts';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/UI/card.tsx";
+import { Label } from "@/components/UI/label.tsx";
+import { Input } from "@/components/UI/input.tsx";
+import { Button } from "@/components/UI/button.tsx";
+import { useToast } from "@/components/UI/use-toast.ts";
 import { Loader2 } from 'lucide-react';
-
-import { 
-  Card, 
-  CardContent, 
-  CardDescription, 
-  CardFooter, 
-  CardHeader, 
-  CardTitle, 
-  Input, 
-  Button, 
-  Label, 
-  useToast
-} from '@/components/UI';
 
 const Profile: React.FC = () => {
   const { user, profile, updateProfile, isLoading } = useAuth();

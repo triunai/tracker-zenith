@@ -4,9 +4,9 @@ import { useTransactionForm, TransactionType, TransactionFormHookProps } from '.
 import TransactionFormFields from './TransactionFormFields';
 import { Expense } from '@/interfaces/expense-interface';
 
-import { Button } from "@/components/UI/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from "@/components/UI/dialog";
-import { CardFooter } from "@/components/UI/card";
+import { Button } from "@/components/UI/button.tsx";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from "@/components/UI/dialog.tsx";
+import { CardFooter } from "@/components/UI/card.tsx";
 
 interface TransactionFormProps {
   initialType?: TransactionType;

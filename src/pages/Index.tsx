@@ -10,6 +10,10 @@ import { useToast } from '@/components/UI/use-toast.ts';
 import { useDashboard } from '@/context/DashboardContext';
 import { CreateBudgetRequest } from '@/interfaces/budget-interface';
 import BudgetForm from '@/components/Budgets/BudgetForm';
+import { supabase } from '@/lib/supabase/supabase.ts';
+import { AuthError } from '@supabase/supabase-js';
+import { useAuth } from '@/lib/auth';
+import { Button } from '@/components/UI/button.tsx';
 
 const Index = () => {
   const { toast } = useToast();

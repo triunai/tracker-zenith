@@ -5,8 +5,8 @@ import {
   CardDescription, 
   CardHeader, 
   CardTitle 
-} from "@/components/UI/card";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/UI/tabs";
+} from "@/components/UI/card.tsx";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/UI/tabs.tsx";
 import { formatCurrency } from '@/lib/utils';
 import { 
   PieChart, 
@@ -25,7 +25,7 @@ import {
 import { expenseApi } from '@/lib/api/expenseApi';
 import { LoaderCircle } from 'lucide-react';
 import { useDashboard } from '@/context/DashboardContext';
-import { Skeleton } from '@/components/UI/skeleton';
+import { Skeleton } from '@/components/UI/skeleton.tsx';
 import { supabase } from '@/lib/supabase/supabase';
 import { useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';

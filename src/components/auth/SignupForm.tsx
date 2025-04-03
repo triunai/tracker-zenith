@@ -4,18 +4,11 @@ import { useAuth } from '@/lib/auth';
 import { SignUpCredentials } from '@/interfaces/user-interface';
 import { Loader2, Eye, EyeOff } from 'lucide-react';
 
-import { 
-  Card, 
-  CardContent, 
-  CardDescription, 
-  CardFooter, 
-  CardHeader, 
-  CardTitle 
-} from '@/components/UI/card';
-import { Input } from '@/components/UI/input';
-import { Button } from '@/components/UI/button';
-import { Label } from '@/components/UI/label';
-import { useToast } from '@/components/UI/use-toast';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/UI/card.tsx';
+import { Input } from '@/components/UI/input.tsx';
+import { Button } from '@/components/UI/button.tsx';
+import { Label } from '@/components/UI/label.tsx';
+import { useToast } from '@/components/UI/use-toast.ts';
 
 export const SignupForm: React.FC = () => {
   const navigate = useNavigate();

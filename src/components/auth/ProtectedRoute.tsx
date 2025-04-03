@@ -3,8 +3,8 @@ import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/lib/auth';
 import { Loader2, RefreshCcw, Trash2, Database } from 'lucide-react';
 import { sessionApi } from '@/lib/auth';
-import { Button } from '@/components/UI/button';
-import { supabase } from '@/lib/supabase/supabase';
+import { Button } from '@/components/UI/button.tsx';
+import { supabase } from '@/lib/supabase/supabase.ts';
 
 // Helper function for consistent timestamp logging
 const logWithTimestamp = (message: string, data?: any) => {

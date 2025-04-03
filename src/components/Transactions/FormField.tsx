@@ -1,6 +1,5 @@
-
 import React from 'react';
-import { Label } from "@/components/UI/label";
+import { Label } from "@/components/UI/label.tsx";
 
 interface FormFieldProps {
   id: string;
