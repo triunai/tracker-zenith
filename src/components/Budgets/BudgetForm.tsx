@@ -1,11 +1,11 @@
 // Updated BudgetForm.tsx
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { useQuery } from '@tanstack/react-query';
-import { budgetApi } from '@/lib/api/budgetApi';
 import { PeriodEnum } from '@/interfaces/enums/PeriodEnum';
+import { Budget } from '@/interfaces/budget-interface';
+import { ExpenseCategory } from '@/interfaces/expense-interface';
 import { 
   Dialog,
   DialogContent,
@@ -37,7 +37,7 @@ import { Loader2 } from 'lucide-react';
 const budgetFormSchema = z.object({
   categoryId: z.number({
     required_error: "Please select a category",
-  }),
+  }).optional(),
   categoryName: z.string().optional(),
   amount: z.number({
     required_error: "Please enter an amount",
@@ -53,50 +53,69 @@ interface BudgetFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSubmit: (data: BudgetFormValues) => void;
+  initialData?: Budget | null;
+  categories?: ExpenseCategory[];
 }
 
-const BudgetForm = ({ open, onOpenChange, onSubmit }: BudgetFormProps) => {
-  // Fetch categories
-  const { data: categories = [], isLoading: isLoadingCategories } = useQuery({
-    queryKey: ['expenseCategories'],
-    queryFn: budgetApi.getCategories,
-  });
-  
+const BudgetForm = ({ open, onOpenChange, onSubmit, initialData, categories = [] }: BudgetFormProps) => {
+  const isEditing = !!initialData;
+
   const form = useForm<BudgetFormValues>({
     resolver: zodResolver(budgetFormSchema),
     defaultValues: {
       period: PeriodEnum.MONTHLY,
       amount: 0,
+      categoryId: undefined,
     },
   });
 
+  useEffect(() => {
+    if (isEditing && initialData) {
+      const firstCategoryId = initialData.budget_categories?.[0]?.category_id;
+
+      form.reset({
+        categoryId: firstCategoryId,
+        amount: Number(initialData.amount) || 0,
+        period: initialData.period,
+        categoryName: undefined,
+      });
+    } else {
+      form.reset({
+        period: PeriodEnum.MONTHLY,
+        amount: 0,
+        categoryId: undefined,
+        categoryName: undefined,
+      });
+    }
+  }, [initialData, isEditing, form.reset]);
+
   const handleSubmit = async (data: BudgetFormValues) => {
-    // Find selected category to get the name
     const selectedCategory = categories.find(c => c.id === data.categoryId);
     if (selectedCategory) {
       data.categoryName = selectedCategory.name;
+    } else {
+      data.categoryName = undefined;
     }
-    
-    console.log('BudgetForm submitting data:', data);
-    
-    // Check if onSubmit is a function before calling it
+
+    console.log(`BudgetForm submitting (${isEditing ? 'Edit' : 'Create'}):`, data);
+
     if (typeof onSubmit === 'function') {
       onSubmit(data);
     } else {
       console.error('Invalid onSubmit handler provided to BudgetForm!', onSubmit);
-      alert('Error: Cannot create budget. Please try again or refresh the page.');
+      alert(`Error: Cannot ${isEditing ? 'update' : 'create'} budget. Please try again or refresh the page.`);
     }
-    
-    form.reset();
   };
+
+  const isLoadingCategories = categories.length === 0 && !isEditing;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Create New Budget</DialogTitle>
+          <DialogTitle>{isEditing ? 'Edit Budget' : 'Create New Budget'}</DialogTitle>
           <DialogDescription>
-            Set up a new budget for tracking your expenses.
+            {isEditing ? 'Update the details for this budget.' : 'Set up a new budget for tracking your expenses.'}
           </DialogDescription>
         </DialogHeader>
         
@@ -109,9 +128,9 @@ const BudgetForm = ({ open, onOpenChange, onSubmit }: BudgetFormProps) => {
                 <FormItem>
                   <FormLabel>Category</FormLabel>
                   <Select 
+                    value={field.value?.toString()}
                     onValueChange={value => field.onChange(Number(value))}
-                    defaultValue={field.value?.toString()}
-                    disabled={isLoadingCategories}
+                    disabled={isLoadingCategories || isEditing}
                   >
                     <FormControl>
                       <SelectTrigger>
@@ -139,6 +158,7 @@ const BudgetForm = ({ open, onOpenChange, onSubmit }: BudgetFormProps) => {
                       )}
                     </SelectContent>
                   </Select>
+                  {isEditing && <p className="text-xs text-muted-foreground mt-1">Category cannot be changed after creation.</p>}
                   <FormMessage />
                 </FormItem>
               )}
@@ -215,10 +235,10 @@ const BudgetForm = ({ open, onOpenChange, onSubmit }: BudgetFormProps) => {
                 {form.formState.isSubmitting ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Creating...
+                    {isEditing ? 'Saving...' : 'Creating...'}
                   </>
                 ) : (
-                  'Create Budget'
+                  isEditing ? 'Save Changes' : 'Create Budget'
                 )}
               </Button>
             </DialogFooter>
