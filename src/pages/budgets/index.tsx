@@ -3,13 +3,13 @@ import { useQuery, useMutation, useQueryClient, useQueries } from '@tanstack/rea
 import Layout from '@/components/Layout/Layout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card.tsx';
 import { Button } from '@/components/ui/button.tsx';
-import { Plus, AlertTriangle, Trash } from 'lucide-react';
+import { Edit, Plus, AlertTriangle, Trash } from 'lucide-react';
 import { Progress } from '@/components/ui/progress.tsx';
 import { PeriodEnum } from '@/interfaces/enums/PeriodEnum';
 import { cn } from '@/lib/utils';
 import { formatCurrency } from '@/lib/utils';
 import { budgetApi } from '@/lib/api/budgetApi';
-import { CreateBudgetRequest, Budget } from '@/interfaces/budget-interface';
+import { CreateBudgetRequest, UpdateBudgetRequest, Budget } from '@/interfaces/budget-interface';
 import { useToast } from '@/components/ui/use-toast.ts';
 import BudgetForm from '@/components/Budgets/BudgetForm';
 import { 
@@ -44,6 +44,7 @@ const BudgetPage = () => {
   const [isNewBudgetOpen, setIsNewBudgetOpen] = useState(false);
   const [debug, setDebug] = useState<string>("");
   const [budgetToDelete, setBudgetToDelete] = useState<number | null>(null);
+  const [budgetToEdit, setBudgetToEdit] = useState<Budget | null>(null);
   const [budgets, setBudgets] = useState<Budget[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -204,6 +205,43 @@ const BudgetPage = () => {
     }
   });
   
+  // Update budget mutation
+  const updateBudget = useMutation({
+    mutationFn: async (updatedBudgetData: { id: number; data: UpdateBudgetRequest }) => {
+      // Replace placeholder with actual API call
+      console.log(`Calling budgetApi.update for budget ID: ${updatedBudgetData.id}`);
+      return await budgetApi.update(updatedBudgetData.id, updatedBudgetData.data);
+      // --- Placeholder logic removed ---
+      // console.log(`Placeholder: Would update budget ${updatedBudgetData.id} with data:`, updatedBudgetData.data);
+      // await new Promise(resolve => setTimeout(resolve, 500));
+      // return { ...updatedBudgetData.data, id: updatedBudgetData.id };
+      // --- End of removed placeholder ---
+    },
+    onSuccess: (data) => { // data here is the updated Budget returned by budgetApi.update
+      console.log('Budget updated successfully via API, invalidating queries:', data);
+      queryClient.invalidateQueries({ queryKey: ['budgets'] }); // Invalidate list
+      queryClient.invalidateQueries({ queryKey: ['budgetSpending', data.id] }); // Invalidate specific spending
+      queryClient.invalidateQueries({ queryKey: ['budgetCategorySpending', data.id] }); // Invalidate specific category spending
+      queryClient.invalidateQueries({ queryKey: ['dashboardSummary'] }); // Invalidate dashboard if needed
+
+      setIsNewBudgetOpen(false); // Close the dialog
+      setBudgetToEdit(null); // Clear editing state
+      toast({
+        title: "Success!",
+        description: "Budget has been updated successfully.",
+      });
+    },
+    onError: (error: Error, variables) => {
+      console.error(`Failed to update budget ${variables.id} via API:`, error);
+      toast({
+        title: "Error",
+        description: `Failed to update budget: ${error.message}`,
+        variant: "destructive",
+      });
+      setDebug(`Error updating budget ${variables.id}: ${error.message}`);
+    }
+  });
+  
   // Delete budget mutation
   const deleteBudget = useMutation({
     mutationFn: (budgetId: number) => budgetApi.delete(budgetId),
@@ -251,52 +289,87 @@ const BudgetPage = () => {
     setBudgetToDelete(null);
   };
   
-  // Create a more robust handler to debug issues
-  const handleMainPageBudgetSubmit = (formData: any) => {
-    console.log('MAIN PAGE handleBudgetSubmit called:', formData);
-    
+  // Updated handler for form submission
+  const handleMainPageBudgetSubmit = (formData: any) => { // formData comes from BudgetFormValues
+    console.log('MAIN PAGE handleBudgetSubmit called with form data:', formData);
+    console.log('Current budgetToEdit state:', budgetToEdit);
+
     try {
-      // Make sure we have a user ID
       if (!userId) {
-        console.error('Missing userId, cannot create budget');
-        toast({
-          title: "Error",
-          description: "You must be logged in to create a budget",
-          variant: "destructive",
-        });
-        return;
+        throw new Error("User ID is missing. Cannot proceed.");
       }
-      
-      const newBudget: CreateBudgetRequest = {
-        user_id: userId,
-        name: `${formData.categoryName || 'New'} Budget`,
-        amount: formData.amount,
-        period: formData.period,
-        start_date: new Date().toISOString(),
-        categories: [
-          {
-            category_id: formData.categoryId,
-            alert_threshold: formData.amount * 0.8 // 80% alert threshold
-          }
-        ]
-      };
-      
-      console.log('Creating budget with data:', newBudget);
-      
-      // Create the budget using the mutation
-      createBudget.mutate(newBudget);
-    } catch (error) {
-      console.error('Error creating budget:', error);
+
+      if (budgetToEdit) {
+        // --- UPDATE LOGIC ---
+        console.log(`Preparing to UPDATE budget ID: ${budgetToEdit.id}`);
+
+        // Construct the update request payload
+        // Note: We are not allowing category changes in this implementation
+        const updatePayload: UpdateBudgetRequest = {
+          // user_id is usually not needed for update, but depends on your API/RPC
+          name: budgetToEdit.name, // Keep original name (or derive if category changes were allowed)
+          amount: formData.amount,
+          period: formData.period,
+          // start_date/end_date might need updating depending on requirements
+          // categories are NOT updated here as the form disables category change
+        };
+
+        console.log('Updating budget with payload:', updatePayload);
+        updateBudget.mutate({ id: budgetToEdit.id, data: updatePayload });
+
+      } else {
+        // --- CREATE LOGIC ---
+        console.log("Preparing to CREATE new budget");
+        
+        // Ensure categoryId exists before creating
+        if (!formData.categoryId) {
+            throw new Error("Category is required to create a budget.");
+        }
+
+        const newBudget: CreateBudgetRequest = {
+          user_id: userId,
+          name: `${formData.categoryName || 'New'} Budget`, // Use category name from form data
+          amount: formData.amount,
+          period: formData.period,
+          start_date: new Date().toISOString(), // Keep default start date
+          categories: [
+            {
+              category_id: formData.categoryId,
+              alert_threshold: formData.amount * 0.8 // Keep 80% threshold
+            }
+          ]
+        };
+
+        console.log('Creating budget with data:', newBudget);
+        createBudget.mutate(newBudget);
+      }
+
+    } catch (error: any) { // Catch specific errors
+      console.error('Error in handleMainPageBudgetSubmit:', error);
       toast({
-        title: "Error",
-        description: `Failed to create budget: ${error.message}`,
+        title: "Submission Error",
+        description: `Failed to process budget: ${error.message}`,
         variant: "destructive",
       });
+      setDebug(`Error submitting budget: ${error.message}`);
     }
   };
   
   const handleDeleteBudget = (budgetId: number) => {
     setBudgetToDelete(budgetId);
+  };
+  
+  // Handler to set the budget for editing and open the form
+  const handleEditBudget = (budget: Budget) => {
+    console.log("Editing budget:", budget);
+    setBudgetToEdit(budget);
+    setIsNewBudgetOpen(true); // Open the existing form dialog
+  };
+
+  // Handler for clicking the "Create New Budget" button
+  const handleOpenCreateForm = () => {
+    setBudgetToEdit(null); // Ensure we are not editing when creating
+    setIsNewBudgetOpen(true);
   };
   
   const periods = Object.values(PeriodEnum);
@@ -370,7 +443,7 @@ const BudgetPage = () => {
           </div>
           <Button 
             className="gap-2" 
-            onClick={() => setIsNewBudgetOpen(true)}
+            onClick={handleOpenCreateForm}
           >
             <Plus className="h-4 w-4" />
             Create New Budget
@@ -502,15 +575,28 @@ const BudgetPage = () => {
                                   </div>
                                 </td>
                                 <td className="p-4">
-                                  <Button 
-                                    variant="ghost" 
-                                    size="sm" 
-                                    className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
-                                    onClick={() => handleDeleteBudget(budget.id)}
-                                  >
-                                    <span className="sr-only">Delete</span>
-                                    <Trash className="h-4 w-4" />
-                                  </Button>
+                                  <div className="flex items-center gap-1">
+                                    {/* Edit Button */}
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-8 w-8 p-0 text-gray-500 hover:text-gray-700 hover:bg-gray-100"
+                                      onClick={() => handleEditBudget(budget)}
+                                    >
+                                      <span className="sr-only">Edit</span>
+                                      <Edit className="h-4 w-4" />
+                                    </Button>
+                                    {/* Delete Button */}
+                                    <Button 
+                                      variant="ghost" 
+                                      size="sm" 
+                                      className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+                                      onClick={() => handleDeleteBudget(budget.id)}
+                                    >
+                                      <span className="sr-only">Delete</span>
+                                      <Trash className="h-4 w-4" />
+                                    </Button>
+                                  </div>
                                 </td>
                               </tr>
                             );
@@ -562,15 +648,28 @@ const BudgetPage = () => {
                             <div className="text-xs text-muted-foreground mt-1">
                               Remaining: {formatCurrency(remaining)}
                             </div>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50 mt-2 float-right"
-                              onClick={() => handleDeleteBudget(budget.id)}
-                            >
-                              <span className="sr-only">Delete</span>
-                              <Trash className="h-4 w-4" />
-                            </Button>
+                            <div className="flex justify-end gap-1 mt-2">
+                              {/* Edit Button */}
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 w-8 p-0 text-gray-500 hover:text-gray-700 hover:bg-gray-100"
+                                onClick={() => handleEditBudget(budget)}
+                              >
+                                <span className="sr-only">Edit</span>
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              {/* Delete Button */}
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+                                onClick={() => handleDeleteBudget(budget.id)}
+                              >
+                                <span className="sr-only">Delete</span>
+                                <Trash className="h-4 w-4" />
+                              </Button>
+                            </div>
                           </CardContent>
                         </Card>
                       );
@@ -585,8 +684,16 @@ const BudgetPage = () => {
         {/* Budget Form Dialog */}
         <BudgetForm 
           open={isNewBudgetOpen} 
-          onOpenChange={setIsNewBudgetOpen}
+          onOpenChange={(isOpen) => {
+            setIsNewBudgetOpen(isOpen);
+            // Clear budgetToEdit when closing the dialog UNLESS it's kept open
+            if (!isOpen) {
+              setBudgetToEdit(null);
+            }
+          }}
           onSubmit={handleMainPageBudgetSubmit}
+          initialData={budgetToEdit}
+          categories={categories}
         />
 
         {/* Debug Output */}
