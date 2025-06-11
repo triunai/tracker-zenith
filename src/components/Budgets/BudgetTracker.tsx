@@ -250,7 +250,8 @@ const BudgetTracker = ({ onDelete, onSubmit, onEditBudget }: BudgetTrackerProps)
               className="gap-1 ml-2"
               onClick={handleNewBudgetClick}
             >
-              <Plus className="h-4 w-4" /> New Budget
+              <Plus className="h-4 w-4" />
+              New Budget
             </Button>
           </div>
         </div>

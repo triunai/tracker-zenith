@@ -450,7 +450,6 @@ const BudgetPage = () => {
           </Button>
         </div>
 
-        {/* Period Selection */}
         
 
         {/* Budget Tracker Component */}
