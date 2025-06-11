@@ -17,13 +17,23 @@ import { PeriodEnum } from '@/interfaces/enums/PeriodEnum';
 import { budgetApi } from '@/lib/api/budgetApi';
 import { useDashboard } from '@/context/DashboardContext';
 import { supabase } from '@/lib/supabase/supabase';
+import { Budget, CreateBudgetRequest } from '@/interfaces/budget-interface';
+
+// Define the shape of the form data right here or import from the form component if exported
+interface BudgetFormValues {
+  categoryId?: number;
+  categoryName?: string;
+  amount: number;
+  period: PeriodEnum;
+}
 
 interface BudgetTrackerProps {
   onDelete?: (budgetId: number) => void;
-  onSubmit?: (formData: any) => void;
+  onSubmit?: (formData: CreateBudgetRequest) => void;
+  onEditBudget?: (budget: Budget) => void;
 }
 
-const BudgetTracker = ({ onDelete, onSubmit }: BudgetTrackerProps) => {
+const BudgetTracker = ({ onDelete, onSubmit, onEditBudget }: BudgetTrackerProps) => {
   const [selectedPeriod, setSelectedPeriod] = useState<PeriodEnum>(PeriodEnum.MONTHLY);
   const [isNewBudgetOpen, setIsNewBudgetOpen] = useState(false);
   const { dateFilter, userId } = useDashboard();
@@ -195,6 +205,26 @@ const BudgetTracker = ({ onDelete, onSubmit }: BudgetTrackerProps) => {
     }
   };
 
+  const handleLocalBudgetSubmit = (formData: BudgetFormValues) => {
+    if (onSubmit && userId) {
+      const budgetToSubmit: CreateBudgetRequest = {
+        user_id: userId,
+        name: `${formData.categoryName || 'New'} Budget`,
+        amount: formData.amount,
+        period: formData.period,
+        start_date: new Date().toISOString(),
+        categories: [
+          {
+            category_id: formData.categoryId,
+            alert_threshold: formData.amount * 0.8,
+          },
+        ],
+      };
+      onSubmit(budgetToSubmit);
+      setIsNewBudgetOpen(false);
+    }
+  };
+
   return (
     <Card className="animate-fade-up animate-delay-200 shadow-purple">
       <CardHeader>
@@ -249,101 +279,35 @@ const BudgetTracker = ({ onDelete, onSubmit }: BudgetTrackerProps) => {
         ) : (
           <div className="space-y-4">
             {budgets.map((budget, index) => {
-              // Get first category for simplicity
-              const budgetCategory = budget.budget_categories?.[0];
-              const category = budgetCategory?.category;
-              
-              // Get actual spending from the API
-              const spendingQuery = spendingQueries[index];
-              const spent = Number(spendingQuery.data || 0);
-              const percentage = Math.round((spent / Number(budget.amount)) * 100);
-              const remaining = Number(budget.amount) - spent;
-              
-              // Get category-specific spending
-              const categorySpendingQuery = categorySpendingQueries[index];
-              const categorySpending = categorySpendingQuery.data || [];
-              
-              // Debug - log spending values
-              console.log(`Budget ${budget.id} (${budget.name}) spending data:`, {
-                overall_api_spending: spent,
-                calculated_percentage: percentage,
-                remaining: remaining,
-                category_spending_count: categorySpending.length,
-                category_spending_total: categorySpending.reduce((total, item) => total + Number(item.total_spent || 0), 0),
-                spent_progressive_bar_value: percentage
-              });
+              const spendingData = spendingQueries[index]?.data ?? 0;
+              const categorySpendingData = categorySpendingQueries[index]?.data ?? [];
+              const isLoadingSpending = spendingQueries[index]?.isLoading;
 
-              // Determine status-based styling
-              const getProgressColor = () => {
-                if (percentage >= 100) return 'bg-finance-expense';
-                if (percentage >= 80) return 'bg-orange-400';
-                if (percentage >= 60) return 'bg-yellow-400';
-                return 'bg-finance-income';
-              };
-              
-              // Debug inconsistencies between total spending and category spending
-              const totalCategorySpending = categorySpending.reduce((total, item) => total + Number(item.total_spent || 0), 0);
-              if (Math.abs(totalCategorySpending - spent) > 0.01) { // Check for difference greater than 1 cent
-                console.warn(`Budget ${budget.id} (${budget.name}) has inconsistent spending data:`, {
-                  overall_spending: spent,
-                  total_from_categories: totalCategorySpending,
-                  difference: totalCategorySpending - spent,
-                  category_breakdown: categorySpending.map(item => ({
-                    category: item.category_name,
-                    amount: Number(item.total_spent || 0)
-                  }))
-                });
-              }
-              
               return (
-                <div 
-                  key={budget.id} 
-                  className={cn(
-                    "p-4 rounded-lg border",
-                    percentage >= 90 ? "animate-pulse" : ""
-                  )}
-                >
-                  <div className="flex justify-between items-start mb-2">
-                    <div className="flex items-center gap-2">
-                      {category && (
-                        <>
-                          <div 
-                            className="w-3 h-3 rounded-full"
-                            style={{ backgroundColor: '#' + Math.floor(Math.random()*16777215).toString(16) }}
-                          ></div>
-                          <span className="font-medium">{category.name}</span>
-                        </>
-                      )}
+                <div key={budget.id} className="border rounded-lg p-4">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <h4 className="font-semibold">{budget.name}</h4>
+                      <p className="text-sm text-muted-foreground">
+                        {formatCurrency(spendingData)} spent of {formatCurrency(Number(budget.amount))}
+                      </p>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium">
-                        {budget.name}
-                      </span>
-                      {/* Show warning icon if budget is near limit */}
-                      {percentage >= 90 && (
-                        <div className="text-finance-expense" title="Budget almost exceeded">
-                          <AlertTriangle className="h-4 w-4" />
-                        </div>
-                      )}
-                      {/* Delete button */}
-                      {onDelete && (
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
-                          onClick={() => handleDeleteBudget(budget.id)}
-                        >
-                          <span className="sr-only">Delete</span>
-                          <Trash className="h-4 w-4" />
+                       {onEditBudget && (
+                        <Button variant="ghost" size="sm" onClick={() => onEditBudget(budget)}>
+                          Edit
                         </Button>
                       )}
+                      <Button variant="ghost" size="sm" className="text-destructive" onClick={() => handleDeleteBudget(budget.id)}>
+                        <Trash className="h-4 w-4" />
+                      </Button>
                     </div>
                   </div>
                   
                   <div className="space-y-2">
                     <div className="flex justify-between text-sm">
                       <span>
-                        Spent: <span className="font-medium">{formatCurrency(spent)}</span>
+                        Spent: <span className="font-medium">{formatCurrency(spendingData)}</span>
                       </span>
                       <span>
                         Budget: <span className="font-medium">{formatCurrency(Number(budget.amount))}</span>
@@ -351,20 +315,20 @@ const BudgetTracker = ({ onDelete, onSubmit }: BudgetTrackerProps) => {
                     </div>
                     
                     <Progress 
-                      value={percentage} 
-                      className={cn("h-2", getProgressColor())}
+                      value={Math.round((spendingData / Number(budget.amount)) * 100)} 
+                      className={cn("h-2", spendingData >= Number(budget.amount) ? "bg-finance-expense" : "bg-finance-income")}
                     />
                     
                     <div className="text-right text-sm text-muted-foreground">
-                      Remaining: <span className="font-medium">{formatCurrency(remaining)}</span>
+                      Remaining: <span className="font-medium">{formatCurrency(Number(budget.amount) - spendingData)}</span>
                     </div>
                     
                     {/* Show category breakdown if available */}
-                    {categorySpending.length > 0 && (
+                    {categorySpendingData.length > 0 && (
                       <div className="mt-4">
                         <p className="text-sm font-medium mb-2">Category Breakdown:</p>
                         <div className="space-y-2">
-                          {categorySpending.map(item => {
+                          {categorySpendingData.map(item => {
                             const catPercentage = Math.round((Number(item.total_spent) / Number(budget.amount)) * 100);
                             return (
                               <div key={item.category_id} className="text-xs">
@@ -388,35 +352,12 @@ const BudgetTracker = ({ onDelete, onSubmit }: BudgetTrackerProps) => {
             })}
           </div>
         )}
+        <BudgetForm
+          open={isNewBudgetOpen}
+          onOpenChange={setIsNewBudgetOpen}
+          onSubmit={handleLocalBudgetSubmit}
+        />
       </CardContent>
-
-      {/* Budget Form Modal */}
-      <BudgetForm 
-        open={isNewBudgetOpen} 
-        onOpenChange={setIsNewBudgetOpen}
-        onSubmit={(data) => {
-          console.log('BudgetTracker form submission:', data);
-          
-          // Ensure period is in correct format from PeriodEnum
-          // Convert lowercase string like 'monthly' to enum value 'monthly'
-          // This is just defense in case the values aren't formatted correctly 
-          const formattedData = {
-            ...data,
-            period: data.period.toLowerCase()
-          };
-          
-          // If we have a parent handler, use it
-          if (typeof onSubmit === 'function') {
-            onSubmit(formattedData);
-          } else {
-            // No parent handler, just log the data
-            console.warn('No parent onSubmit handler, cannot create budget:', formattedData);
-            alert('Budget creation is disabled in this view.');
-          }
-          // Close the form
-          setIsNewBudgetOpen(false);
-        }}
-      />
     </Card>
   );
 };

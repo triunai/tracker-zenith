@@ -1,134 +1,78 @@
-import React, { useState, useEffect } from 'react';
-import Layout from '@/components/Layout/Layout';
+import { useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { useAuth } from '@/lib/auth/hooks/useAuth';
+import { Button } from '@/components/ui/button';
+import { DashboardProvider, useDashboard } from '@/context/DashboardContext';
+import { DocumentUploader } from '@/components/Dashboard/DocumentUploader';
 import DashboardSummary from '@/components/Dashboard/DashboardSummary';
+import SpendingChart from '@/components/Charts/SpendingChart';
 import TransactionList from '@/components/Transactions/TransactionList';
 import BudgetTracker from '@/components/Budgets/BudgetTracker';
-import SpendingChart from '@/components/Charts/SpendingChart';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { budgetApi } from '@/lib/api/budgetApi';
-import { useToast } from '@/components/ui/use-toast.ts';
-import { useDashboard } from '@/context/DashboardContext';
-import { CreateBudgetRequest } from '@/interfaces/budget-interface';
 import BudgetForm from '@/components/Budgets/BudgetForm';
-import { supabase } from '@/lib/supabase/supabase.ts';
-import { AuthError } from '@supabase/supabase-js';
-import { useAuth } from '@/lib/auth';
-import { Button } from '@/components/ui/button.tsx';
+import { Budget, CreateBudgetRequest } from '@/interfaces/budget-interface';
+import DateFilter from '@/components/Dashboard/DateFilter';
 
 const Index = () => {
-  const { toast } = useToast();
   const { userId } = useDashboard();
   const queryClient = useQueryClient();
-  // State for controlling the budget form
-  const [isNewBudgetOpen, setIsNewBudgetOpen] = useState(false);
+  const { user } = useAuth();
   
-  // Create budget mutation
-  const createBudget = useMutation({
-    mutationFn: (budget: CreateBudgetRequest) => budgetApi.create(budget),
-    onSuccess: () => {
-      toast({
-        title: "Success",
-        description: "Budget created successfully",
-      });
-      queryClient.invalidateQueries({ queryKey: ['budgets'] });
-      setIsNewBudgetOpen(false);
-    },
-    onError: (error) => {
-      console.error('Error creating budget:', error);
-      toast({
-        title: "Error",
-        description: `Failed to create budget: ${error.message}`,
-        variant: "destructive",
-      });
-    }
-  });
+  const [isNewBudgetOpen, setIsNewBudgetOpen] = useState(false);
+  const [editingBudget, setEditingBudget] = useState<Budget | null>(null);
 
-  // Handle budget form submission
-  const handleBudgetSubmit = (formData: any) => {
-    console.log('Dashboard - handleBudgetSubmit called:', formData);
-    
-    try {
-      // Make sure we have a user ID
-      if (!userId) {
-        console.error('Missing userId, cannot create budget');
-        toast({
-          title: "Error",
-          description: "You must be logged in to create a budget",
-          variant: "destructive",
-        });
-        return;
-      }
-      
-      const newBudget: CreateBudgetRequest = {
-        user_id: userId,
-        name: `${formData.categoryName || 'New'} Budget`,
-        amount: formData.amount,
-        period: formData.period,
-        start_date: new Date().toISOString(),
-        categories: [
-          {
-            category_id: formData.categoryId,
-            alert_threshold: formData.amount * 0.8 // 80% alert threshold
-          }
-        ]
-      };
-      
-      console.log('Creating budget with data:', newBudget);
-      
-      // Create the budget using the mutation
-      createBudget.mutate(newBudget);
-    } catch (error) {
-      console.error('Error creating budget:', error);
-      toast({
-        title: "Error",
-        description: `Failed to create budget: ${error.message}`,
-        variant: "destructive",
-      });
-    }
+  const handleBudgetSubmit = (formData: CreateBudgetRequest) => {
+    console.log('Submitting budget from dashboard:', formData);
+    queryClient.invalidateQueries({ queryKey: ['budgets'] });
+    setIsNewBudgetOpen(false);
+    setEditingBudget(null);
   };
 
-  // Listen for openBudgetForm event
-  useEffect(() => {
-    const handleOpenBudgetFormEvent = (event: any) => {
-      console.log('Opening budget form from event:', event.detail);
-      setIsNewBudgetOpen(true);
-    };
+  const handleEditBudget = (budget: Budget) => {
+    setEditingBudget(budget);
+    setIsNewBudgetOpen(true);
+  };
 
-    // Add event listener
-    document.addEventListener('openBudgetForm', handleOpenBudgetFormEvent);
-
-    // Clean up
-    return () => {
-      document.removeEventListener('openBudgetForm', handleOpenBudgetFormEvent);
-    };
-  }, []);
+  const handleOpenNewBudgetForm = () => {
+    setEditingBudget(null);
+    setIsNewBudgetOpen(true);
+  }
 
   return (
-    <Layout>
-      <div className="space-y-8">
+    <DashboardProvider>
+      <div className="flex-1 space-y-4 p-4 pt-6 md:p-8">
+        <div className="flex items-center justify-between space-y-2">
+          <h2 className="text-3xl font-bold tracking-tight">
+            Hi, Welcome back {user?.display_name ?? 'User'} 👋
+          </h2>
+          <div className="flex items-center space-x-2">
+            <DateFilter />
+            <Button onClick={handleOpenNewBudgetForm}>Add New Budget</Button>
+          </div>
+        </div>
+        <DocumentUploader />
         <DashboardSummary />
-        
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+          <div className="col-span-4">
+            <SpendingChart />
+          </div>
+          <div className="col-span-3">
             <TransactionList />
           </div>
-          <div className="lg:col-span-1">
-            <BudgetTracker onSubmit={handleBudgetSubmit} />
-          </div>
         </div>
-        
-        <div className="grid grid-cols-1 gap-6">
-          <SpendingChart />
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+           <div className="col-span-4">
+              <BudgetTracker onEditBudget={handleEditBudget} onSubmit={handleBudgetSubmit} />
+            </div>
         </div>
 
-        {/* Budget Form Dialog */}
-        <BudgetForm 
-          open={isNewBudgetOpen} 
+        <BudgetForm
+          open={isNewBudgetOpen}
           onOpenChange={setIsNewBudgetOpen}
           onSubmit={handleBudgetSubmit}
+          initialData={editingBudget}
         />
       </div>
-    </Layout>
+    </DashboardProvider>
   );
 };
 

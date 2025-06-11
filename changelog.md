@@ -1,7 +1,4 @@
 # Changes
-
-
-
 ### 10/4/25
 - Added changelog for better tracking
 - Added basic edit functionality without category update to budgets
