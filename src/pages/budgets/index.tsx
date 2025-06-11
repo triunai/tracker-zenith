@@ -451,26 +451,7 @@ const BudgetPage = () => {
         </div>
 
         {/* Period Selection */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Budget Overview(dont click no work)</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex gap-2 flex-wrap">
-              {periods.map((period) => (
-                <Button
-                  key={period}
-                  size="sm"
-                  variant={selectedPeriod === period ? 'default' : 'outline'}
-                  onClick={() => setSelectedPeriod(period)}
-                  className="capitalize"
-                >
-                  {period.toLowerCase()}
-                </Button>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+        
 
         {/* Budget Tracker Component */}
         <BudgetTracker 
