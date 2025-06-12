@@ -40,7 +40,7 @@ const DateFilter = () => {
     };
     
     switch (value) {
-      case 'month':
+      case 'month': {
         newFilter = {
           type: 'month',
           month: now.getMonth(),
@@ -48,7 +48,8 @@ const DateFilter = () => {
         };
         setSelectedDate(now);
         break;
-      case 'quarter':
+      }
+      case 'quarter': {
         const currentQuarter = Math.floor(now.getMonth() / 3) + 1;
         newFilter = {
           type: 'quarter',
@@ -56,13 +57,15 @@ const DateFilter = () => {
           year: now.getFullYear(),
         };
         break;
-      case 'year':
+      }
+      case 'year': {
         newFilter = {
           type: 'year',
           year: now.getFullYear(),
         };
         break;
-      case 'custom':
+      }
+      case 'custom': {
         // Keep existing custom range or initialize a new one
         if (!dateFilter.customRange) {
           const startDate = new Date();
@@ -77,6 +80,7 @@ const DateFilter = () => {
           };
         }
         break;
+      }
     }
     
     setDateFilter(newFilter);
@@ -117,28 +121,32 @@ const DateFilter = () => {
     const newYear = parseInt(year);
     
     switch (dateFilter.type) {
-      case 'month':
+      case 'month': {
         setDateFilter({
           ...dateFilter,
           year: newYear,
         });
         setSelectedDate(setYear(selectedDate, newYear));
         break;
-      case 'quarter':
+      }
+      case 'quarter': {
         setDateFilter({
           ...dateFilter,
           year: newYear,
         });
         break;
-      case 'year':
+      }
+      case 'year': {
         setDateFilter({
           ...dateFilter,
           year: newYear,
         });
         break;
-      case 'custom':
+      }
+      case 'custom': {
         // For custom range, we don't change anything
         break;
+      }
     }
   };
   
@@ -190,7 +198,7 @@ const DateFilter = () => {
   ));
   
   return (
-    <div className="mb-6">
+    <div>
       <Popover open={isOpen} onOpenChange={setIsOpen}>
         <PopoverTrigger asChild>
           <Button 
@@ -296,42 +304,20 @@ const DateFilter = () => {
                   </div>
                 </TabsContent>
                 
-                <TabsContent value="year" className="mt-4">
-                  <div>
-                    <Select
-                      value={dateFilter.year.toString()}
-                      onValueChange={handleYearChange}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Year" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {yearOptions}
-                      </SelectContent>
-                    </Select>
-                  </div>
+                <TabsContent value="custom" className="mt-4">
+                   <DatePickerWithRange
+                      onUpdate={(range) => {
+                        if (range?.from && range?.to) {
+                          handleDateRangeChange({ from: range.from, to: range.to });
+                        }
+                      }}
+                      initialDateRange={dateFilter.customRange}
+                    />
                 </TabsContent>
-                
-                {/* Custom range is disabled for now */}
-                {/* <TabsContent value="custom" className="mt-4">
-                  <DatePickerWithRange 
-                    initialDateRange={dateFilter.customRange ? {
-                      from: dateFilter.customRange.startDate,
-                      to: dateFilter.customRange.endDate
-                    } : undefined}
-                    onUpdate={handleDateRangeChange}
-                  />
-                </TabsContent> */}
               </Tabs>
               
-              <div className="flex justify-end mt-4">
-                <Button 
-                  variant="default" 
-                  size="sm"
-                  onClick={() => setIsOpen(false)}
-                >
-                  Apply
-                </Button>
+              <div className="mt-4 flex justify-end">
+                <Button onClick={() => setIsOpen(false)} size="sm">Apply</Button>
               </div>
             </CardContent>
           </Card>

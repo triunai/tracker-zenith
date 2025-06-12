@@ -67,19 +67,21 @@ const Index = () => {
             </div>
 
             {/* Action Buttons */}
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-wrap items-center justify-between gap-2">
               <DateFilter />
-              <TransactionForm
-                initialType="income"
-                buttonText="Add Income"
-                buttonIcon={<PlusCircle className="h-4 w-4 md:mr-1" />}
-              />
-              <TransactionForm
-                initialType="expense"
-                buttonText="Add Expense"
-                buttonIcon={<MinusCircle className="h-4 w-4 md:mr-1" />}
-              />
-              <Button onClick={handleOpenNewBudgetForm}>Add New Budget</Button>
+              <div className="flex flex-wrap items-center gap-2">
+                <TransactionForm
+                  initialType="income"
+                  buttonText="Add Income"
+                  buttonIcon={<PlusCircle className="h-4 w-4 md:mr-1" />}
+                />
+                <TransactionForm
+                  initialType="expense"
+                  buttonText="Add Expense"
+                  buttonIcon={<MinusCircle className="h-4 w-4 md:mr-1" />}
+                />
+                <Button onClick={handleOpenNewBudgetForm}>Add New Budget</Button>
+              </div>
             </div>
           </div>
           
