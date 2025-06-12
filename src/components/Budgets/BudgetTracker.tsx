@@ -20,7 +20,7 @@ import { Budget } from '@/interfaces/budget-interface';
 
 const BudgetTracker = () => {
   const [selectedPeriod, setSelectedPeriod] = useState<PeriodEnum>(PeriodEnum.MONTHLY);
-  const { dateFilter, userId } = useDashboard();
+  const { userId, startDate, endDate } = useDashboard();
 
   const { data: budgets = [], isLoading, error: budgetsError } = useQuery({
     queryKey: ['budgets', userId, selectedPeriod],
@@ -28,53 +28,14 @@ const BudgetTracker = () => {
     enabled: !!userId,
   });
 
-  const getDateRangeForFilter = useCallback(() => {
-    let startDate, endDate;
-    const { type, year, month, quarter, customRange } = dateFilter;
+  const handleNewBudgetClick = () => {
+    // This will require the parent component (`Index.tsx`) to handle the modal state
+    // We can dispatch a custom event for this.
+    document.dispatchEvent(new CustomEvent('openBudgetForm'));
+  };
 
-    switch (type) {
-      case 'month': {
-        startDate = new Date(year, month || 0, 1);
-        endDate = new Date(year, (month || 0) + 1, 0);
-        break;
-      }
-      case 'quarter': {
-        const startMonth = ((quarter || 1) - 1) * 3;
-        startDate = new Date(year, startMonth, 1);
-        endDate = new Date(year, startMonth + 3, 0);
-        break;
-      }
-      case 'year': {
-        startDate = new Date(year, 0, 1);
-        endDate = new Date(year, 11, 31);
-        break;
-      }
-      case 'custom': {
-        if (customRange) {
-          startDate = customRange.from;
-          endDate = customRange.to;
-        } else {
-          startDate = new Date();
-          endDate = new Date();
-        }
-        break;
-      }
-      default: {
-        startDate = new Date();
-        endDate = new Date();
-      }
-    }
-    
-    const formatForDb = (date: Date) => date.toISOString();
-    return {
-      startDate: formatForDb(startDate),
-      endDate: formatForDb(endDate)
-    };
-  }, [dateFilter]);
-  
   const spendingQueries = useQueries({
     queries: budgets.map(budget => {
-      const { startDate, endDate } = getDateRangeForFilter();
       return {
         queryKey: ['budgetSpending', budget.id, startDate, endDate],
         queryFn: async () => {
@@ -90,12 +51,6 @@ const BudgetTracker = () => {
       };
     })
   });
-
-  const handleNewBudgetClick = () => {
-    // This will require the parent component (`Index.tsx`) to handle the modal state
-    // We can dispatch a custom event for this.
-    document.dispatchEvent(new CustomEvent('openBudgetForm'));
-  };
 
   const isSpendingLoading = spendingQueries.some(q => q.isLoading);
 

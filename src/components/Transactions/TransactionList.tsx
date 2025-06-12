@@ -75,85 +75,10 @@ const TransactionList = () => {
   const [transactionTypeFilter, setTransactionTypeFilter] = useState<'all' | 'expense' | 'income'>('all');
   
   const { toast } = useToast();
-  const { refreshData, dateFilter, dateRangeText, userId } = useDashboard();
+  const { refreshData, dateFilter, dateRangeText, userId, startDate, endDate } = useDashboard();
   const queryClient = useQueryClient();
   
-  // Get date range based on filter
-  const getDateRangeForFilter = useCallback(() => {
-    let startDate, endDate;
-    
-    switch (dateFilter.type) {
-      case 'month': {
-        const year = dateFilter.year;
-        const month = dateFilter.month || 0;
-        startDate = new Date(year, month, 1);
-        endDate = new Date(year, month + 1, 0);
-        break;
-      }
-      case 'quarter': {
-        const year = dateFilter.year;
-        const quarter = dateFilter.quarter || 1;
-        const startMonth = (quarter - 1) * 3;
-        startDate = new Date(year, startMonth, 1);
-        endDate = new Date(year, startMonth + 3, 0);
-        break;
-      }
-      case 'year': {
-        const year = dateFilter.year;
-        startDate = new Date(year, 0, 1);
-        endDate = new Date(year, 11, 31);
-        break;
-      }
-      case 'custom': {
-        if (dateFilter.customRange) {
-          startDate = dateFilter.customRange.from;
-          endDate = dateFilter.customRange.to;
-        } else {
-          // Default to current month if no custom range
-          const now = new Date();
-          startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-          endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-        }
-        break;
-      }
-      default: {
-        // Default to current month
-        const now = new Date();
-        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-        endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-      }
-    }
-    
-    // Fix timezone issues by using a timezone-safe approach
-    // Method 1: Create a timezone-safe range by directly formatting dates
-    // to avoid the implicit timezone conversion of toISOString()
-    
-    // Format start date as YYYY-MM-DDT00:00:00Z to ensure correct day
-    const formatDate = (date: Date, isEndDate = false) => {
-      const year = date.getFullYear();
-      // Month is 0-based in JS, but we want 1-based for formatting
-      const month = String(date.getMonth() + 1).padStart(2, '0');
-      const day = String(date.getDate()).padStart(2, '0');
-      
-      // Set to beginning of day for start date, end of day for end date
-      const time = isEndDate ? 'T23:59:59.999Z' : 'T00:00:00.000Z';
-      
-      return `${year}-${month}-${day}${time}`;
-    };
-    
-    // Use our safer date formatting method
-    const formattedStartDate = formatDate(startDate, false);
-    const formattedEndDate = formatDate(endDate, true);
-    
-    console.log(`Transaction List: Using date range ${formattedStartDate} to ${formattedEndDate}`);
-    console.log(`Debug - Original dates: start=${startDate.toDateString()}, end=${endDate.toDateString()}`);
-    console.log(`Debug - Formatted without timezone shift: start=${formattedStartDate}, end=${formattedEndDate}`);
-    
-    return {
-      startDate: formattedStartDate,
-      endDate: formattedEndDate
-    };
-  }, [dateFilter]);
+  // Date ranges are now provided by DashboardContext for consistency
   
   // Fetch data from API
   const fetchTransactions = useCallback(async () => {
@@ -168,8 +93,7 @@ const TransactionList = () => {
       setIsLoading(true);
       setError(null);
       
-      // Get date range from filter
-      const { startDate, endDate } = getDateRangeForFilter();
+      // Use date ranges from DashboardContext for consistency
       
       // Add enhanced debugging information
       console.log(`💡 DIAGNOSTIC: TransactionList fetchTransactions STARTING with filters:`, {
@@ -315,7 +239,7 @@ const TransactionList = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [userId, dateFilter, getDateRangeForFilter]);
+  }, [userId, startDate, endDate]);
   
   // Helper function to check if a date is within a range - improved with better error handling
   const isDateInRange = (dateStr: string, startDate: string, endDate: string) => {

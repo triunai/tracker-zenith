@@ -290,7 +290,12 @@ const BudgetPage = () => {
   };
   
   // Updated handler for form submission
-  const handleMainPageBudgetSubmit = (formData: any) => { // formData comes from BudgetFormValues
+  const handleMainPageBudgetSubmit = (formData: {
+    amount: number;
+    period: PeriodEnum;
+    categoryId?: number;
+    categoryName?: string;
+  }) => {
     console.log('MAIN PAGE handleBudgetSubmit called with form data:', formData);
     console.log('Current budgetToEdit state:', budgetToEdit);
 
@@ -344,14 +349,15 @@ const BudgetPage = () => {
         createBudget.mutate(newBudget);
       }
 
-    } catch (error: any) { // Catch specific errors
+    } catch (error: unknown) {
       console.error('Error in handleMainPageBudgetSubmit:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       toast({
         title: "Submission Error",
-        description: `Failed to process budget: ${error.message}`,
+        description: `Failed to process budget: ${errorMessage}`,
         variant: "destructive",
       });
-      setDebug(`Error submitting budget: ${error.message}`);
+      setDebug(`Error submitting budget: ${errorMessage}`);
     }
   };
   
@@ -376,7 +382,7 @@ const BudgetPage = () => {
 
   // Set up budget form event listener
   useEffect(() => {
-    const handleOpenBudgetFormEvent = (event: any) => {
+    const handleOpenBudgetFormEvent = (event: CustomEvent) => {
       console.log('Opening budget form from event:', event.detail);
       setIsNewBudgetOpen(true);
     };
@@ -453,10 +459,7 @@ const BudgetPage = () => {
         
 
         {/* Budget Tracker Component */}
-        <BudgetTracker 
-          onDelete={handleDeleteBudget}
-          onSubmit={handleMainPageBudgetSubmit}
-        />
+        <BudgetTracker />
 
         {/* Detailed Budget Grid - Using index.tsx structure with API data */}
         <Card>

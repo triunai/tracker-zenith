@@ -26,7 +26,7 @@ import Profile from './pages/Profile';
 const queryClient = new QueryClient();
 
 // Helper function for consistent timestamp logging
-const logWithTimestamp = (message: string, data?: any) => {
+const logWithTimestamp = (message: string, data?: unknown) => {
   console.log(`[${new Date().toISOString()}] ${message}`, data ? data : '');
 };
 
@@ -122,8 +122,8 @@ function App() {
       <ThemeProvider defaultTheme="light" storageKey="zenith-theme">
         <TooltipProvider>
           <AuthProvider>
-            <DashboardProvider>
-              <Router>
+            <Router>
+              <DashboardProvider>
                 <Routes>
                   {/* Public Routes */}
                   <Route path="/login" element={<Login />} />
@@ -139,9 +139,9 @@ function App() {
                   {/* 404 Route */}
                   <Route path="*" element={<NotFound />} />
                 </Routes>
-              </Router>
-              <Toaster />
-            </DashboardProvider>
+                <Toaster />
+              </DashboardProvider>
+            </Router>
           </AuthProvider>
         </TooltipProvider>
       </ThemeProvider>

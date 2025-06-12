@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode, useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { supabase } from '@/lib/supabase/supabase';
-import { format, startOfMonth, endOfMonth, subMonths, startOfYear, endOfYear, startOfQuarter, endOfQuarter } from 'date-fns';
+import { format, startOfMonth, endOfMonth, subMonths, startOfYear, endOfYear, startOfQuarter, endOfQuarter, isValid } from 'date-fns';
 import { useAuth } from '@/lib/auth';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 
@@ -43,6 +44,11 @@ interface DashboardContextType extends DashboardSummaryData { // Inherit summary
   dateFilterApplied: boolean;
   userId: string | undefined;
   isAuthenticated: boolean;
+  // Calculated date ranges for consistent use across components
+  startDate: string;
+  endDate: string;
+  prevStartDate: string;
+  prevEndDate: string;
 }
 
 const DashboardContext = createContext<DashboardContextType | undefined>(undefined);
@@ -63,14 +69,64 @@ interface DashboardProviderProps {
 
 export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }) => {
   const queryClient = useQueryClient();
-  const [dateFilter, setDateFilter] = useState<DateFilter>({
-    type: 'month',
-    month: new Date().getMonth(),
-    year: new Date().getFullYear(),
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const [dateFilter, setDateFilter] = useState<DateFilter>(() => {
+    const type = searchParams.get('type') as DateFilterType | null;
+    const year = parseInt(searchParams.get('year') || '', 10);
+    const month = parseInt(searchParams.get('month') || '', 10);
+    const quarter = parseInt(searchParams.get('quarter') || '', 10);
+    const from = searchParams.get('from');
+    const to = searchParams.get('to');
+
+    if (type && !isNaN(year)) {
+      if (type === 'month' && !isNaN(month)) {
+        return { type, year, month };
+      }
+      if (type === 'quarter' && !isNaN(quarter)) {
+        return { type, year, quarter };
+      }
+      if (type === 'year') {
+        return { type, year };
+      }
+      if (type === 'custom' && from && to) {
+        const fromDate = new Date(from);
+        const toDate = new Date(to);
+        if (isValid(fromDate) && isValid(toDate)) {
+          return { type, year, customRange: { from: fromDate, to: toDate } };
+        }
+      }
+    }
+    // Default value
+    return {
+      type: 'month',
+      month: new Date().getMonth(),
+      year: new Date().getFullYear(),
+    };
   });
-  const [dateFilterApplied, setDateFilterApplied] = useState(false);
+
   const { user, isAuthenticated } = useAuth();
   const userId = isAuthenticated && user ? user.id : undefined;
+
+  // Update URL when dateFilter changes
+  useEffect(() => {
+    const params = new URLSearchParams();
+    params.set('type', dateFilter.type);
+    params.set('year', dateFilter.year.toString());
+
+    if (dateFilter.month !== undefined) {
+      params.set('month', dateFilter.month.toString());
+    }
+    if (dateFilter.quarter !== undefined) {
+      params.set('quarter', dateFilter.quarter.toString());
+    }
+    if (dateFilter.customRange) {
+      params.set('from', dateFilter.customRange.from.toISOString().split('T')[0]);
+      params.set('to', dateFilter.customRange.to.toISOString().split('T')[0]);
+    }
+    
+    setSearchParams(params, { replace: true });
+  }, [dateFilter, setSearchParams]);
 
   // --- Calculate Date Ranges using useMemo for stability ---
   const { startDate, endDate, prevStartDate, prevEndDate } = useMemo(() => {
@@ -265,6 +321,10 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
     refetch(); // Call the refetch function from useQuery
   }, [refetch]);
   
+  const handleSetDateFilter = (newFilter: DateFilter) => {
+    setDateFilter(newFilter);
+  };
+
   const value: DashboardContextType = {
     isLoading,
     error,
@@ -275,12 +335,17 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
     expenseTrend,
     refreshData,
     dateFilter,
-    setDateFilter, // Pass setDateFilter to allow components to change it
+    setDateFilter: handleSetDateFilter,
     filterOptions,
     dateRangeText: getDateRangeText(),
-    dateFilterApplied, // Keep this if used elsewhere, otherwise can be removed
+    dateFilterApplied: false,
     userId,
-    isAuthenticated
+    isAuthenticated,
+    // Expose calculated date ranges for consistent use across components
+    startDate,
+    endDate,
+    prevStartDate,
+    prevEndDate
   };
   
   return (

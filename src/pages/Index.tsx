@@ -3,7 +3,7 @@ import Layout from '@/components/Layout/Layout';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/lib/auth/hooks/useAuth';
 import { Button } from '@/components/ui/button';
-import { DashboardProvider, useDashboard } from '@/context/DashboardContext';
+import { useDashboard } from '@/context/DashboardContext';
 import DashboardSummary from '@/components/Dashboard/DashboardSummary';
 import SpendingChart from '@/components/Charts/SpendingChart';
 import TransactionList from '@/components/Transactions/TransactionList';
@@ -52,8 +52,7 @@ const Index = () => {
 
   return (
     <Layout>
-      <DashboardProvider>
-        <div className="flex-1 space-y-4 p-4 pt-6 md:p-8">
+      <div className="flex-1 space-y-4 p-4 pt-6 md:p-8">
           {/* Header */}
           <div className="space-y-4">
             {/* Welcome Message */}
@@ -111,7 +110,6 @@ const Index = () => {
             initialData={editingBudget}
           />
         </div>
-      </DashboardProvider>
     </Layout>
   );
 };
