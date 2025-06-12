@@ -1,7 +1,7 @@
 import React from 'react';
 import Layout from '@/components/Layout/Layout';
 import TransactionList from '@/components/Transactions/TransactionList';
-import { DocumentUploader } from '@/components/Dashboard/DocumentUploader';
+import { DocumentUploader } from '@/components/Dashboard/DocumentUploader.tsx';
 import DateFilter from '@/components/Dashboard/DateFilter';
 import { useDashboard } from '@/context/DashboardContext';
 
