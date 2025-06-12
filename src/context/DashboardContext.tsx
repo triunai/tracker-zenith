@@ -8,8 +8,8 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 export type DateFilterType = 'month' | 'quarter' | 'year' | 'custom';
 
 export interface DateRange {
-  startDate: Date;
-  endDate: Date;
+  from: Date;
+  to: Date;
 }
 
 export interface DateFilter {
@@ -77,61 +77,71 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
     let currentStart: Date, currentEnd: Date;
     // Calculate current range
     switch (dateFilter.type) {
-      case 'month':
+      case 'month': {
         const month = dateFilter.month || 0;
         const year = dateFilter.year;
         currentStart = startOfMonth(new Date(year, month));
         currentEnd = endOfMonth(new Date(year, month));
         break;
-      case 'quarter':
+      }
+      case 'quarter': {
         const quarter = dateFilter.quarter || 1;
         const qYear = dateFilter.year;
         const startMonth = (quarter - 1) * 3;
         currentStart = startOfQuarter(new Date(qYear, startMonth));
         currentEnd = endOfQuarter(new Date(qYear, startMonth));
         break;
-      case 'year':
+      }
+      case 'year': {
         const yYear = dateFilter.year;
         currentStart = startOfYear(new Date(yYear, 0));
         currentEnd = endOfYear(new Date(yYear, 0));
         break;
-      case 'custom':
+      }
+      case 'custom': {
         if (dateFilter.customRange) {
-          currentStart = dateFilter.customRange.startDate;
-          currentEnd = dateFilter.customRange.endDate;
+          currentStart = dateFilter.customRange.from;
+          currentEnd = dateFilter.customRange.to;
         } else {
           currentStart = startOfMonth(new Date());
           currentEnd = endOfMonth(new Date());
         }
         break;
-      default:
+      }
+      default: {
         currentStart = startOfMonth(new Date());
         currentEnd = endOfMonth(new Date());
+      }
     }
 
     // Calculate previous range based on current
     let previousStart: Date, previousEnd: Date;
     switch (dateFilter.type) {
-      case 'month':
+      case 'month': {
         previousStart = subMonths(currentStart, 1);
         previousEnd = endOfMonth(previousStart);
         break;
-      case 'quarter':
+      }
+      case 'quarter': {
         previousStart = subMonths(currentStart, 3);
         previousEnd = endOfQuarter(previousStart);
         break;
-      case 'year':
+      }
+      case 'year': {
         previousStart = subMonths(currentStart, 12);
         previousEnd = endOfYear(previousStart);
         break;
-      case 'custom':
+      }
+      case 'custom': {
         const duration = currentEnd.getTime() - currentStart.getTime();
         previousStart = new Date(currentStart.getTime() - duration);
         previousEnd = new Date(currentStart.getTime() - 1); // End day before current start
         break;
-      default:
+      }
+      default: {
          previousStart = subMonths(currentStart, 1);
          previousEnd = endOfMonth(previousStart);
+      }
     }
     
     // Format dates for API calls (consistent ISO strings)
@@ -237,7 +247,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
       }
       case 'custom': {
         if (dateFilter.customRange) {
-          const { startDate: customStart, endDate: customEnd } = dateFilter.customRange;
+          const { from: customStart, to: customEnd } = dateFilter.customRange;
           const startFormatted = new Date(customStart).toLocaleDateString();
           const endFormatted = new Date(customEnd).toLocaleDateString();
           return `${startFormatted} - ${endFormatted}`;

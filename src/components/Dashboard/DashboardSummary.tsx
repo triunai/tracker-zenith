@@ -77,29 +77,6 @@ const DashboardSummary = () => {
   
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
-          <p className="text-muted-foreground mt-1">
-            Your financial overview for {dateRangeText}
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <TransactionForm 
-            initialType="income" 
-            buttonText="Add Income" 
-            buttonIcon={<PlusCircle className="h-4 w-4 mr-1" />}
-          />
-          <TransactionForm 
-            initialType="expense" 
-            buttonText="Add Expense" 
-            buttonIcon={<MinusCircle className="h-4 w-4 mr-1" />}
-          />
-        </div>
-      </div>
-      
-      <DateFilter />
-      
       {isLoading ? (
         <div className="flex justify-center items-center py-8">
           <LoaderCircle className="mr-2 h-5 w-5 animate-spin" />

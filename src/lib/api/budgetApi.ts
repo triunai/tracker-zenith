@@ -2,7 +2,8 @@ import { supabase } from '../supabase/supabase';
 import { 
   Budget, 
   BudgetCategory, 
-  CreateBudgetRequest 
+  CreateBudgetRequest,
+  UpdateBudgetRequest
 } from '@/interfaces/budget-interface';
 import { ExpenseCategory } from '@/interfaces/expense-interface';
 
@@ -265,17 +266,56 @@ export const budgetApi = {
     return await budgetApi.getById(budgetData.id) as Budget;
   },
   
-  // Update budget
-  update: async (id: number, budget: Partial<Budget>): Promise<Budget> => {
-    const { data, error } = await supabase
-      .from('budget')
-      .update(budget)
-      .eq('id', id)
-      .select()
-      .single();
-    
-    if (error) throw error;
-    return data;
+  // Update existing budget
+  update: async (budgetId: number, payload: UpdateBudgetRequest): Promise<Budget> => {
+    console.log(`BUDGET API: Updating budget ${budgetId} with payload:`, payload);
+
+    // Prepare parameters for the RPC call, prefixing with 'p_' is a common convention
+    const rpcParams: any = { // Use any temporarily for easier key deletion
+      p_budget_id: budgetId,
+      p_name: payload.name,
+      p_amount: payload.amount,
+      p_period: payload.period,
+      // Add p_start_date and p_end_date if they are included in the payload and need formatting
+      // p_start_date: payload.start_date ? new Date(payload.start_date).toISOString().split('T')[0] : null,
+      // p_end_date: payload.end_date ? new Date(payload.end_date).toISOString().split('T')[0] : null,
+    };
+
+    // Remove undefined fields from params, as RPC might expect all params or handle nulls
+    Object.keys(rpcParams).forEach(key => rpcParams[key] === undefined && delete rpcParams[key]);
+
+    console.log(`BUDGET API: Calling RPC 'update_budget' with params:`, rpcParams);
+
+    const { data, error } = await supabase.rpc('update_budget', rpcParams);
+
+    if (error) {
+      console.error(`BUDGET API: Error updating budget ${budgetId}:`, error);
+      throw error; // Re-throw the error to be caught by useMutation's onError
+    }
+
+    console.log(`BUDGET API: Budget ${budgetId} updated successfully. RPC Response:`, data);
+
+    // Assuming the RPC function returns the updated budget record or relevant data.
+    // If it doesn't return the full budget, we might need to fetch it again or adjust expectations.
+    // For now, let's assume it returns enough information or we might need to adjust the return type.
+    // If the RPC returns nothing on success, we might return the payload merged with ID.
+    // If the RPC returns a specific structure, adjust the return value accordingly.
+    // Let's assume for now it returns the updated budget row(s) and we take the first one if needed.
+    // If the RPC is designed to return a single updated row, this should be fine.
+    const updatedBudget = Array.isArray(data) ? data[0] : data; // Handle if RPC returns array
+
+     if (!updatedBudget) {
+        // If RPC returns nothing meaningful on success, fetch the updated budget
+        console.warn(`BUDGET API: RPC 'update_budget' did not return data. Fetching updated budget ID: ${budgetId}`);
+        const fetchedBudget = await budgetApi.getById(budgetId);
+        if (!fetchedBudget) {
+             throw new Error(`Failed to fetch budget ${budgetId} after update.`);
+        }
+        return fetchedBudget;
+     }
+
+    // Cast the result to Budget type if necessary and structure matches
+    return updatedBudget as Budget;
   },
   
   // Add a category to a budget

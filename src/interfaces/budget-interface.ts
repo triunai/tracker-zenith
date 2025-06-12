@@ -57,6 +57,21 @@ export interface CreateBudgetRequest {
 }
 
 /**
+ * Interface for updating an existing budget
+ * Contains only the fields that can be updated.
+ * Note: Currently, category changes are not supported via this interface.
+ *       Name is included but might not be directly editable in the form.
+ */
+export interface UpdateBudgetRequest {
+  name?: string; // Optional, as it might not always be updated
+  amount?: number; // Optional
+  period?: PeriodEnum; // Optional
+  start_date?: string; // Optional, if needed
+  end_date?: string; // Optional, if needed
+  // We are NOT including categories here as we decided not to allow category changes during edit
+}
+
+/**
  * Interface for budget with spending data
  */
 export interface BudgetWithSpending extends Budget {
