@@ -54,7 +54,9 @@ const Index = () => {
     <Layout>
       <DashboardProvider>
         <div className="flex-1 space-y-4 p-4 pt-6 md:p-8">
-          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          {/* Header */}
+          <div className="space-y-4">
+            {/* Welcome Message */}
             <div>
               <h2 className="text-3xl font-bold tracking-tight">
                 Hi, Welcome back {user?.display_name ?? 'User'} 👋
@@ -63,7 +65,9 @@ const Index = () => {
                 Your financial overview for {dateRangeText}.
               </p>
             </div>
-            <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+
+            {/* Action Buttons */}
+            <div className="flex flex-wrap items-center gap-2">
               <DateFilter />
               <TransactionForm
                 initialType="income"
@@ -78,14 +82,18 @@ const Index = () => {
               <Button onClick={handleOpenNewBudgetForm}>Add New Budget</Button>
             </div>
           </div>
+          
+          {/* Main Content */}
           <DashboardSummary />
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-10">
-            {/* Top Row */}
-            <div className="lg:col-span-7">
-              <TransactionList />
-            </div>
-            <div className="lg:col-span-3">
-              <BudgetTracker onEditBudget={handleEditBudget} onSubmit={handleBudgetSubmit} />
+            {/* Top Row: Make items stretch to the same height */}
+            <div className="grid auto-rows-fr grid-cols-1 gap-4 lg:col-span-10 lg:grid-cols-10">
+              <div className="lg:col-span-7">
+                <TransactionList />
+              </div>
+              <div className="lg:col-span-3">
+                <BudgetTracker />
+              </div>
             </div>
 
             {/* Bottom Row */}

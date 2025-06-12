@@ -248,25 +248,8 @@ const TransactionList = () => {
       // Add more detailed logging about results
       console.log(`💡 DIAGNOSTIC: TransactionList: Got ${expenseData.length} expenses from API`, {
         hasSomeData: expenseData.length > 0,
-        newest_expense: expenseData.length > 0 ? {
-          id: expenseData[0]?.id,
-          date: expenseData[0]?.date,
-          dateFormatted: new Date(expenseData[0]?.date).toLocaleString(),
-          dateInRange: isDateInRange(expenseData[0]?.date, startDateIso, endDateIso),
-          description: expenseData[0]?.description,
-          first_item: expenseData[0]?.expense_items?.[0]?.description || 'No items',
-          transaction_type: expenseData[0]?.transaction_type,
-          expense_items: expenseData[0]?.expense_items?.map(item => ({
-            id: item.id,
-            category_id: item.category_id,
-            amount: item.amount,
-            description: item.description
-          }))
-        } : 'No expenses',
-        originalDateRange: {
-          startDate: startDateIso,
-          endDate: endDateIso
-        }
+        uniqueCategories: [...new Set(expenseData.flatMap(e => e.expense_items?.map(i => i.category?.name)))],
+        uniquePaymentMethods: [...new Set(expenseData.map(e => e.payment_method?.method_name))]
       });
       
       // Check for expenses with no valid expense_items
@@ -317,28 +300,25 @@ const TransactionList = () => {
       
       setExpenses(validExpenses);
       
-      // Fetch categories and payment methods for filters
-      const categoryData = await expenseApi.getCategories();
+      // Fetch categories and payment methods for filtering
+      const [categoryData, paymentMethodData] = await Promise.all([
+        expenseApi.getCategories(),
+        expenseApi.getPaymentMethods()
+      ]);
+
       setCategories(categoryData);
-      
-      // Fetch payment methods from the API
-      const paymentMethodsData = await expenseApi.getPaymentMethods();
-      setPaymentMethods(paymentMethodsData);
-    } catch (err) {
-      console.error('💡 DIAGNOSTIC: Error fetching expense data:', err);
-      setError('Failed to fetch transaction data. Please try again.');
-      toast({
-        title: 'Error',
-        description: 'Failed to load transactions',
-        variant: 'destructive',
-      });
+      setPaymentMethods(paymentMethodData);
+    } catch (e: unknown) {
+      const errorMessage = e instanceof Error ? e.message : String(e);
+      console.error(`Failed to fetch transactions: ${errorMessage}`, e);
+      setError(`Failed to fetch transactions: ${errorMessage}`);
     } finally {
       setIsLoading(false);
     }
-  }, [toast, getDateRangeForFilter, userId, dateFilter, transactionTypeFilter, selectedCategory, selectedPaymentMethod]);
+  }, [userId, dateFilter, getDateRangeForFilter]);
   
   // Helper function to check if a date is within a range - improved with better error handling
-  const isDateInRange = (dateStr, startDate, endDate) => {
+  const isDateInRange = (dateStr: string, startDate: string, endDate: string) => {
     if (!dateStr) return false;
     
     try {
@@ -387,43 +367,23 @@ const TransactionList = () => {
   
   // --- Refactored Delete Mutation --- 
   const deleteMutation = useMutation({
-    mutationFn: async (expenseId: number) => {
-      return await expenseApi.delete(expenseId);
-    },
-    onSuccess: (data, expenseId) => {
+    mutationFn: (expenseId: number) => expenseApi.delete(expenseId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['transactions', userId] });
       toast({
-        title: 'Transaction deleted',
-        variant: 'default',
+        title: 'Success',
+        description: 'Transaction deleted successfully.',
       });
-      
-      // Invalidate queries after successful deletion
-      queryClient.invalidateQueries({ queryKey: ['expenses', userId] }); 
-      queryClient.invalidateQueries({ queryKey: ['dashboardSummary', userId] });
-      queryClient.invalidateQueries({ queryKey: ['spendingByCategory', userId] });
-      queryClient.invalidateQueries({ queryKey: ['spendingByPayment', userId] });
-      
-      // Invalidate BudgetTracker queries
-      queryClient.invalidateQueries({ queryKey: ['budgets'] }); // Invalidate all budgets queries
-      queryClient.invalidateQueries({ queryKey: ['budgetSpending'] }); // Invalidate all budget spending queries
-      queryClient.invalidateQueries({ queryKey: ['budgetCategorySpending'] }); // Invalidate all budget category spending queries
-      
-      // Optional: Update local state immediately for better UX (Optimistic update could also be used)
-      setExpenses(prev => prev.filter(expense => expense.id !== expenseId));
-
-      // Close the dialog
+      refreshData();
       setIsDeleteDialogOpen(false);
       setExpenseToDelete(null);
-      
-      // Optional: refreshData();
     },
-    onError: (error) => {
-      console.error('Error deleting expense:', error);
+    onError: (error: Error) => {
       toast({
         title: 'Error',
-        description: 'Failed to delete transaction',
+        description: `Failed to delete transaction: ${error.message}`,
         variant: 'destructive',
       });
-      // Close the dialog even on error
       setIsDeleteDialogOpen(false);
       setExpenseToDelete(null);
     },
@@ -431,8 +391,9 @@ const TransactionList = () => {
 
   // Call the mutation when delete is confirmed
   const handleDelete = () => {
-    if (!expenseToDelete) return;
-    deleteMutation.mutate(expenseToDelete);
+    if (expenseToDelete !== null) {
+      deleteMutation.mutate(expenseToDelete);
+    }
   };
   
   // Filter and paginate expenses
@@ -552,10 +513,10 @@ const TransactionList = () => {
   }, [searchTerm, selectedCategory, selectedPaymentMethod, transactionTypeFilter]);
   
   // Handle transaction added event
-  const handleTransactionAdded = useCallback(() => {
+  const handleTransactionAdded = () => {
     console.log('Transaction added, refreshing data...');
     fetchTransactions();
-  }, [fetchTransactions]);
+  };
   
   // Paginate transactions
   const paginatedExpenses = useMemo(() => {
@@ -570,7 +531,7 @@ const TransactionList = () => {
 
   return (
     <>
-    <Card className="shadow-purple">
+    <Card className="h-full shadow-purple">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <div>
           <CardTitle className="text-xl font-bold">Transactions</CardTitle>
@@ -661,14 +622,8 @@ const TransactionList = () => {
         {/* Error state */}
         {error && (
           <div className="text-center py-8 text-destructive">
+            <AlertTriangle className="mx-auto h-8 w-8 mb-2" />
             <p>{error}</p>
-            <Button 
-              variant="outline" 
-              className="mt-2"
-              onClick={() => expenseApi.getAllByUser(userId).then(setExpenses).catch(console.error)}
-            >
-              Try Again
-            </Button>
           </div>
         )}
         
@@ -814,18 +769,19 @@ const TransactionList = () => {
     <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Are you sure you want to delete this transaction?</AlertDialogTitle>
+          <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
           <AlertDialogDescription>
-            This action cannot be undone. This will permanently delete the transaction.
+            This action cannot be undone. This will permanently delete this transaction record.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogCancel onClick={() => setIsDeleteDialogOpen(false)}>Cancel</AlertDialogCancel>
           <AlertDialogAction
             onClick={handleDelete}
-            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            disabled={deleteMutation.isPending}
           >
-            Delete
+            {deleteMutation.isPending && <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />}
+            Continue
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

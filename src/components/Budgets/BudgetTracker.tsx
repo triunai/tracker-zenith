@@ -1,5 +1,5 @@
-import React, { useState, useCallback } from 'react';
-import { useQuery, useQueries } from '@tanstack/react-query';
+import React, { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { 
   Card, 
   CardContent, 
@@ -9,355 +9,88 @@ import {
 } from "@/components/ui/card.tsx";
 import { Progress } from "@/components/ui/progress.tsx";
 import { Button } from '@/components/ui/button.tsx';
-import { Plus, AlertTriangle, Trash } from 'lucide-react';
+import { Plus, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatCurrency } from '@/lib/utils';
-import BudgetForm from '@/components/Budgets/BudgetForm';
 import { PeriodEnum } from '@/interfaces/enums/PeriodEnum';
 import { budgetApi } from '@/lib/api/budgetApi';
 import { useDashboard } from '@/context/DashboardContext';
-import { supabase } from '@/lib/supabase/supabase';
-import { Budget, CreateBudgetRequest } from '@/interfaces/budget-interface';
-
-// Define the shape of the form data right here or import from the form component if exported
-interface BudgetFormValues {
-  categoryId?: number;
-  categoryName?: string;
-  amount: number;
-  period: PeriodEnum;
-}
+import { Budget } from '@/interfaces/budget-interface';
 
 interface BudgetTrackerProps {
-  onDelete?: (budgetId: number) => void;
-  onSubmit?: (formData: CreateBudgetRequest) => void;
-  onEditBudget?: (budget: Budget) => void;
+  className?: string;
 }
 
-const BudgetTracker = ({ onDelete, onSubmit, onEditBudget }: BudgetTrackerProps) => {
+const BudgetTracker = ({ className }: BudgetTrackerProps) => {
   const [selectedPeriod, setSelectedPeriod] = useState<PeriodEnum>(PeriodEnum.MONTHLY);
-  const [isNewBudgetOpen, setIsNewBudgetOpen] = useState(false);
-  const { dateFilter, userId } = useDashboard();
+  const { userId } = useDashboard();
 
-  // Get date range based on the filter
-  const getDateRangeForFilter = useCallback(() => {
-    let startDate, endDate;
-    
-    switch (dateFilter.type) {
-      case 'month': {
-        const year = dateFilter.year;
-        const month = dateFilter.month || 0;
-        startDate = new Date(year, month, 1);
-        endDate = new Date(year, month + 1, 0);
-        break;
-      }
-      case 'quarter': {
-        const year = dateFilter.year;
-        const quarter = dateFilter.quarter || 1;
-        const startMonth = (quarter - 1) * 3;
-        startDate = new Date(year, startMonth, 1);
-        endDate = new Date(year, startMonth + 3, 0);
-        break;
-      }
-      case 'year': {
-        const year = dateFilter.year;
-        startDate = new Date(year, 0, 1);
-        endDate = new Date(year, 11, 31);
-        break;
-      }
-      case 'custom': {
-        if (dateFilter.customRange) {
-          startDate = dateFilter.customRange.startDate;
-          endDate = dateFilter.customRange.endDate;
-        } else {
-          // Default to current month if no custom range
-          const now = new Date();
-          startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-          endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-        }
-        break;
-      }
-      default: {
-        // Default to current month
-        const now = new Date();
-        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-        endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-      }
-    }
-    
-    // Format dates for PostgreSQL compatibility - set time to beginning/end of day
-    const formatStartDate = (date) => {
-      // Set to beginning of day (00:00:00)
-      const d = new Date(date);
-      d.setHours(0, 0, 0, 0);
-      return d.toISOString();
-    };
-    
-    const formatEndDate = (date) => {
-      // Set to end of day (23:59:59)
-      const d = new Date(date);
-      d.setHours(23, 59, 59, 999);
-      return d.toISOString();
-    };
-    
-    return {
-      startDate: formatStartDate(startDate),
-      endDate: formatEndDate(endDate)
-    };
-  }, [dateFilter]);
-  
-  // Fetch budgets for the selected period
   const { data: budgets = [], isLoading, error } = useQuery({
-    queryKey: ['budgets', selectedPeriod],
-    queryFn: async () => {
-      console.log(`Fetching budgets for period: ${selectedPeriod} and user: ${userId}`);
-      const result = await budgetApi.getByPeriod(userId, selectedPeriod);
-      console.log(`Retrieved ${result.length} budgets for ${selectedPeriod}`);
-      // Log budget details 
-      result.forEach(budget => {
-        console.log(`Budget ${budget.id}: ${budget.name} - ${formatCurrency(Number(budget.amount))} - Categories: ${
-          budget.budget_categories?.map(bc => bc.category?.name || `Cat ID ${bc.category_id}`).join(', ') || 'None'
-        }`);
-      });
-      return result;
-    },
+    queryKey: ['budgets', selectedPeriod, userId],
+    queryFn: () => budgetApi.getByPeriod(userId, selectedPeriod),
+    enabled: !!userId,
   });
-  
-  // Fetch spending data for each budget with date filter
-  const spendingQueries = useQueries({
-    queries: budgets.map(budget => {
-      const { startDate, endDate } = getDateRangeForFilter();
-      return {
-        queryKey: ['budgetSpending', budget.id, startDate, endDate],
-        queryFn: async () => {
-          try {
-            console.log(`Fetching spending data for budget ${budget.id} from ${startDate} to ${endDate}`);
-            const { data, error } = await supabase.rpc('calculate_budget_spending_by_date', {
-              budget_id: budget.id,
-              p_start_date: startDate,
-              p_end_date: endDate
-            });
-            
-            if (error) {
-              console.error(`Error fetching spending for budget ${budget.id}:`, error);
-              throw error;
-            }
-            console.log(`Spending data for budget ${budget.id}:`, data);
-            return data;
-          } catch (e) {
-            console.error(`Exception in spending query for budget ${budget.id}:`, e);
-            return 0; // Return 0 as fallback
-          }
-        }
-      };
-    })
-  });
-
-  // Fetch category spending data for each budget with date filter
-  const categorySpendingQueries = useQueries({
-    queries: budgets.map(budget => {
-      const { startDate, endDate } = getDateRangeForFilter();
-      return {
-        queryKey: ['budgetCategorySpending', budget.id, startDate, endDate],
-        queryFn: async () => {
-          try {
-            console.log(`Fetching category spending for budget ${budget.id} from ${startDate} to ${endDate}`);
-            // Use the API method instead of direct RPC call for consistency
-            return await budgetApi.getBudgetCategorySpendingByDate(budget.id, startDate, endDate);
-          } catch (e) {
-            console.error(`Exception in category spending query for budget ${budget.id}:`, e);
-            return []; // Return empty array as fallback
-          }
-        }
-      };
-    })
-  });
-
-  // Period selection buttons
-  const periods = Object.values(PeriodEnum);
-
-  // Handle New Budget button click (trigger parent form directly)
-  const handleNewBudgetClick = () => {
-    // Check if onSubmit is a function
-    if (typeof onSubmit === 'function') {
-      console.log('Triggering parent new budget form');
-      // Signal to parent that we want to open the form
-      if (typeof window !== 'undefined') {
-        // Create a custom event to notify the parent
-        const event = new CustomEvent('openBudgetForm', { 
-          bubbles: true, 
-          detail: { source: 'BudgetTracker' } 
-        });
-        document.dispatchEvent(event);
-      }
-    } else {
-      // Fallback to local form if no parent handler
-      console.log('Using local form (fallback)');
-      setIsNewBudgetOpen(true);
-    }
-  };
-
-  // Handle budget deletion if onDelete is not provided
-  const handleDeleteBudget = (budgetId: number) => {
-    if (onDelete) {
-      onDelete(budgetId);
-    } else {
-      console.log('Delete budget:', budgetId);
-    }
-  };
-
-  const handleLocalBudgetSubmit = (formData: BudgetFormValues) => {
-    if (onSubmit && userId) {
-      const budgetToSubmit: CreateBudgetRequest = {
-        user_id: userId,
-        name: `${formData.categoryName || 'New'} Budget`,
-        amount: formData.amount,
-        period: formData.period,
-        start_date: new Date().toISOString(),
-        categories: [
-          {
-            category_id: formData.categoryId,
-            alert_threshold: formData.amount * 0.8,
-          },
-        ],
-      };
-      onSubmit(budgetToSubmit);
-      setIsNewBudgetOpen(false);
-    }
-  };
 
   return (
-    <Card className="animate-fade-up animate-delay-200 shadow-purple">
+    <Card className={cn("h-full flex flex-col", className)}>
       <CardHeader>
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex justify-between items-center">
           <div>
             <CardTitle>Budget Tracker</CardTitle>
-            <CardDescription>Track your spending against budget goals</CardDescription>
+            <CardDescription>Monitor your spending against your budgets.</CardDescription>
           </div>
-          <div className="flex gap-2 flex-wrap">
-            {periods.map((period) => (
-              <Button
-                key={period}
-                size="sm"
-                variant={selectedPeriod === period ? 'default' : 'outline'}
-                onClick={() => setSelectedPeriod(period)}
-                className="capitalize"
-              >
-                {period.toLowerCase()}
-              </Button>
-            ))}
-            <Button 
-              size="sm" 
-              className="gap-1 ml-2"
-              onClick={handleNewBudgetClick}
+          <Button size="sm" disabled>
+            <Plus className="mr-2 h-4 w-4" /> New Budget
+          </Button>
+        </div>
+        <div className="flex justify-center space-x-2 pt-4">
+          {Object.values(PeriodEnum).map((p) => (
+            <Button
+              key={p}
+              variant={selectedPeriod === p ? 'default' : 'outline'}
+              onClick={() => setSelectedPeriod(p)}
+              className="capitalize"
             >
-              <Plus className="h-4 w-4" />
-              New Budget
+              {p.toLowerCase()}
             </Button>
-          </div>
+          ))}
         </div>
       </CardHeader>
-      <CardContent>
-        {isLoading ? (
-          <div className="flex justify-center py-8">Loading budgets...</div>
-        ) : error ? (
-          <div className="text-center py-6 text-destructive">
-            Error loading budgets. Please try again.
+      <CardContent className="flex-grow">
+        {isLoading && <p>Loading budgets...</p>}
+        {error && (
+          <div className="text-destructive text-center">
+            <AlertTriangle className="mx-auto mb-2" />
+            <p>Error loading budgets.</p>
           </div>
-        ) : budgets.length === 0 ? (
-          <div className="text-center py-6 text-muted-foreground">
-            No budgets found for {selectedPeriod.toLowerCase()} period.
-            <div className="mt-2">
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={handleNewBudgetClick}
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Create your first budget
-              </Button>
-            </div>
+        )}
+        {!isLoading && !error && budgets.length === 0 && (
+          <div className="text-center text-muted-foreground pt-8">
+            <p>No budgets found for the {selectedPeriod.toLowerCase()} period.</p>
           </div>
-        ) : (
+        )}
+        {!isLoading && !error && budgets.length > 0 && (
           <div className="space-y-4">
-            {budgets.map((budget, index) => {
-              const spendingData = spendingQueries[index]?.data ?? 0;
-              const categorySpendingData = categorySpendingQueries[index]?.data ?? [];
-              const isLoadingSpending = spendingQueries[index]?.isLoading;
+            {budgets.map((budget: Budget) => {
+              const amount = Number(budget.amount);
+              // Placeholder for spending and progress
+              const spending = 0; // Replace with actual spending data later
+              const progress = 0;
 
               return (
-                <div key={budget.id} className="border rounded-lg p-4">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <h4 className="font-semibold">{budget.name}</h4>
-                      <p className="text-sm text-muted-foreground">
-                        {formatCurrency(spendingData)} spent of {formatCurrency(Number(budget.amount))}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                       {onEditBudget && (
-                        <Button variant="ghost" size="sm" onClick={() => onEditBudget(budget)}>
-                          Edit
-                        </Button>
-                      )}
-                      <Button variant="ghost" size="sm" className="text-destructive" onClick={() => handleDeleteBudget(budget.id)}>
-                        <Trash className="h-4 w-4" />
-                      </Button>
-                    </div>
+                <div key={budget.id} className="flex flex-col">
+                  <div className="flex justify-between items-center mb-1">
+                    <span className="font-medium">{budget.name}</span>
+                    <span className='font-semibold'>
+                      {formatCurrency(spending)} / {formatCurrency(amount)}
+                    </span>
                   </div>
-                  
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span>
-                        Spent: <span className="font-medium">{formatCurrency(spendingData)}</span>
-                      </span>
-                      <span>
-                        Budget: <span className="font-medium">{formatCurrency(Number(budget.amount))}</span>
-                      </span>
-                    </div>
-                    
-                    <Progress 
-                      value={Math.round((spendingData / Number(budget.amount)) * 100)} 
-                      className={cn("h-2", spendingData >= Number(budget.amount) ? "bg-finance-expense" : "bg-finance-income")}
-                    />
-                    
-                    <div className="text-right text-sm text-muted-foreground">
-                      Remaining: <span className="font-medium">{formatCurrency(Number(budget.amount) - spendingData)}</span>
-                    </div>
-                    
-                    {/* Show category breakdown if available */}
-                    {categorySpendingData.length > 0 && (
-                      <div className="mt-4">
-                        <p className="text-sm font-medium mb-2">Category Breakdown:</p>
-                        <div className="space-y-2">
-                          {categorySpendingData.map(item => {
-                            const catPercentage = Math.round((Number(item.total_spent) / Number(budget.amount)) * 100);
-                            return (
-                              <div key={item.category_id} className="text-xs">
-                                <div className="flex justify-between mb-1">
-                                  <span>{item.category_name}</span>
-                                  <span>{formatCurrency(Number(item.total_spent))} ({catPercentage}%)</span>
-                                </div>
-                                <Progress 
-                                  value={catPercentage} 
-                                  className="h-1" 
-                                />
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    )}
-                  </div>
+                  <Progress value={progress} />
                 </div>
               );
             })}
           </div>
         )}
-        <BudgetForm
-          open={isNewBudgetOpen}
-          onOpenChange={setIsNewBudgetOpen}
-          onSubmit={handleLocalBudgetSubmit}
-        />
       </CardContent>
     </Card>
   );
