@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Calendar, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
 import { format, addMonths, subMonths, getYear, getMonth, setMonth, setYear } from 'date-fns';
+import { DateRange } from 'react-day-picker';
 import { DateFilter as DateFilterType, DateFilterType as FilterType, useDashboard } from '@/context/DashboardContext';
 
 import {
@@ -76,7 +77,7 @@ const DateFilter = () => {
           newFilter = {
             type: 'custom',
             year: now.getFullYear(),
-            customRange: { startDate, endDate }
+            customRange: { from: startDate, to: endDate }
           };
         }
         break;
@@ -162,14 +163,14 @@ const DateFilter = () => {
   };
   
   // Handle date range selection
-  const handleDateRangeChange = (range: { from: Date | undefined; to: Date | undefined }) => {
-    if (range.from && range.to) {
+  const handleDateRangeChange = (range: DateRange | undefined) => {
+    if (range?.from && range.to) {
       setDateFilter({
         type: 'custom',
         year: new Date().getFullYear(), // This is required but not used for custom
         customRange: {
-          startDate: range.from,
-          endDate: range.to,
+          from: range.from,
+          to: range.to,
         },
       });
     }
@@ -220,8 +221,8 @@ const DateFilter = () => {
                 onValueChange={(value) => handleFilterTypeChange(value as FilterType)}
                 className="w-full"
               >
-                <TabsList className="w-full grid grid-cols-3">
-                  {availableFilterOptions.map(option => (
+                <TabsList className="grid w-full grid-cols-4">
+                  {filterOptions.map(option => (
                     <TabsTrigger key={option.type} value={option.type}>
                       {option.label}
                     </TabsTrigger>
@@ -303,15 +304,27 @@ const DateFilter = () => {
                     </div>
                   </div>
                 </TabsContent>
+
+                <TabsContent value="year" className="mt-4">
+                  <div className="px-1">
+                    <Select
+                      value={dateFilter.year.toString()}
+                      onValueChange={handleYearChange}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Year" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {yearOptions}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </TabsContent>
                 
                 <TabsContent value="custom" className="mt-4">
                    <DatePickerWithRange
-                      onUpdate={(range) => {
-                        if (range?.from && range?.to) {
-                          handleDateRangeChange({ from: range.from, to: range.to });
-                        }
-                      }}
-                      initialDateRange={dateFilter.customRange}
+                      date={dateFilter.customRange}
+                      onDateChange={handleDateRangeChange}
                     />
                 </TabsContent>
               </Tabs>

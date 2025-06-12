@@ -106,8 +106,8 @@ const TransactionList = () => {
       }
       case 'custom': {
         if (dateFilter.customRange) {
-          startDate = dateFilter.customRange.startDate;
-          endDate = dateFilter.customRange.endDate;
+          startDate = dateFilter.customRange.from;
+          endDate = dateFilter.customRange.to;
         } else {
           // Default to current month if no custom range
           const now = new Date();
