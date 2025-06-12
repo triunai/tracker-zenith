@@ -34,8 +34,11 @@ import {
   AlertDialogTrigger
 } from '@/components/ui/alert-dialog.tsx';
 import BudgetTracker from '@/components/Budgets/BudgetTracker';
-import BudgetAnalytics from '@/components/Budgets/BudgetAnalytics.tsx';
-import BudgetList from '@/components/Budgets/BudgetList.tsx';
+import { lazy, Suspense } from 'react';
+
+// Lazy load heavy components to reduce bundle size
+const BudgetAnalytics = lazy(() => import('@/components/Budgets/BudgetAnalytics.tsx'));
+const BudgetList = lazy(() => import('@/components/Budgets/BudgetList.tsx'));
 import { useDashboard } from '@/context/DashboardContext';
 import { supabase } from '@/lib/supabase/supabase';
 
@@ -336,13 +339,17 @@ const BudgetPage = () => {
         />
 
         {/* Budget Analytics Component */}
-        <BudgetAnalytics />
+        <Suspense fallback={<div className="flex items-center justify-center py-8"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div></div>}>
+          <BudgetAnalytics />
+        </Suspense>
 
         {/* Budget Management Component */}
-        <BudgetList 
-          onEditBudget={handleEditBudget}
-          onDeleteBudget={handleDeleteBudget}
-        />
+        <Suspense fallback={<div className="flex items-center justify-center py-8"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div></div>}>
+          <BudgetList 
+            onEditBudget={handleEditBudget}
+            onDeleteBudget={handleDeleteBudget}
+          />
+        </Suspense>
         
         {/* Budget Form Dialog */}
         <BudgetForm 
