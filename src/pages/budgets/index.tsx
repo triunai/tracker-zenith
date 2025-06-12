@@ -34,8 +34,8 @@ import {
   AlertDialogTrigger
 } from '@/components/ui/alert-dialog.tsx';
 import BudgetTracker from '@/components/Budgets/BudgetTracker';
-import BudgetAnalytics from '@/components/Budgets/BudgetAnalytics';
-import BudgetList from '@/components/Budgets/BudgetList';
+import BudgetAnalytics from '@/components/Budgets/BudgetAnalytics.tsx';
+import BudgetList from '@/components/Budgets/BudgetList.tsx';
 import { useDashboard } from '@/context/DashboardContext';
 import { supabase } from '@/lib/supabase/supabase';
 
