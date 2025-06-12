@@ -20,7 +20,9 @@ import BudgetPage from './pages/budgets/index';
 import PaymentMethodsPage from './pages/payment-methods';
 import Login from './pages/auth/Login';
 import Signup from './pages/auth/Signup';
-import Profile from './pages/Profile';
+import Profile from './pages/profile';
+import ForgetPassword from './pages/auth/ForgetPassword';
+import ReportsPage from './pages/reports';
 
 // Create a client
 const queryClient = new QueryClient();
@@ -128,6 +130,7 @@ function App() {
                   {/* Public Routes */}
                   <Route path="/login" element={<Login />} />
                   <Route path="/signup" element={<Signup />} />
+                  <Route path="/forget-password" element={<ForgetPassword />} />
 
                   {/* Protected Routes */}
                   <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
@@ -135,6 +138,7 @@ function App() {
                   <Route path="/budgets" element={<ProtectedRoute><BudgetPage /></ProtectedRoute>} />
                   <Route path="/payment-methods" element={<ProtectedRoute><PaymentMethodsPage /></ProtectedRoute>} />
                   <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+                  <Route path="/reports" element={<ProtectedRoute><ReportsPage /></ProtectedRoute>} />
 
                   {/* 404 Route */}
                   <Route path="*" element={<NotFound />} />
