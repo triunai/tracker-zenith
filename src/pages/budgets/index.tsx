@@ -459,7 +459,10 @@ const BudgetPage = () => {
         
 
         {/* Budget Tracker Component */}
-        <BudgetTracker />
+        <BudgetTracker 
+          onEditBudget={handleEditBudget}
+          onDeleteBudget={handleDeleteBudget}
+        />
 
         {/* Detailed Budget Grid - Using index.tsx structure with API data */}
         <Card>
@@ -620,7 +623,7 @@ const BudgetPage = () => {
                               />
                               {category?.name || budget.name}
                             </CardTitle>
-                             <span className="text-xs text-muted-foreground capitalize">{budget.period.toLowerCase()}</span>
+                             <span className="text-xs text-muted-foreground capitalize border border-muted-foreground/20 px-2 py-1 rounded">{budget.period.toLowerCase()}</span>
                           </CardHeader>
                           <CardContent>
                             <div className="text-lg font-bold">{formatCurrency(Number(budget.amount))}</div>
