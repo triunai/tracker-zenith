@@ -99,9 +99,9 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
     }
     // Default value
     return {
-      type: 'month',
-      month: new Date().getMonth(),
-      year: new Date().getFullYear(),
+    type: 'month',
+    month: new Date().getMonth(),
+    year: new Date().getFullYear(),
     };
   });
 
@@ -324,7 +324,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
   const handleSetDateFilter = (newFilter: DateFilter) => {
     setDateFilter(newFilter);
   };
-
+  
   const value: DashboardContextType = {
     isLoading,
     error,

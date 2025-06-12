@@ -316,7 +316,7 @@ const TransactionList = () => {
   // Call the mutation when delete is confirmed
   const handleDelete = () => {
     if (expenseToDelete !== null) {
-      deleteMutation.mutate(expenseToDelete);
+    deleteMutation.mutate(expenseToDelete);
     }
   };
   

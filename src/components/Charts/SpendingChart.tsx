@@ -140,7 +140,7 @@ const SpendingChart = () => {
   const handleDataTypeChange = (value: string) => {
     if (value === 'category' || value === 'payment') {
       setDataType(value);
-    }
+        }
   };
 
   const handleChartTypeChange = (value: string) => {

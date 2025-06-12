@@ -24,7 +24,7 @@ const Index = () => {
 
   const handleBudgetSubmit = () => {
     queryClient.invalidateQueries({ queryKey: ['budgets', userId] });
-    setIsNewBudgetOpen(false);
+      setIsNewBudgetOpen(false);
     setEditingBudget(null);
   };
 
@@ -36,12 +36,12 @@ const Index = () => {
   const handleOpenNewBudgetForm = () => {
     setEditingBudget(null);
     setIsNewBudgetOpen(true);
-  }
+    }
 
   useEffect(() => {
     const handleOpenBudgetFormEvent = (event: CustomEvent) => {
       if(event.detail.source === 'BudgetTracker'){
-        setIsNewBudgetOpen(true);
+      setIsNewBudgetOpen(true);
       }
     };
     document.addEventListener('openBudgetForm', handleOpenBudgetFormEvent as EventListener);
@@ -94,22 +94,22 @@ const Index = () => {
               </div>
               <div className="lg:col-span-3">
                 <BudgetTracker />
-              </div>
-            </div>
-
+          </div>
+        </div>
+        
             {/* Bottom Row */}
             <div className="lg:col-span-10">
-              <SpendingChart />
+          <SpendingChart />
             </div>
-          </div>
-
-          <BudgetForm
-            open={isNewBudgetOpen}
-            onOpenChange={setIsNewBudgetOpen}
-            onSubmit={handleBudgetSubmit}
-            initialData={editingBudget}
-          />
         </div>
+
+        <BudgetForm 
+          open={isNewBudgetOpen} 
+          onOpenChange={setIsNewBudgetOpen}
+          onSubmit={handleBudgetSubmit}
+            initialData={editingBudget}
+        />
+      </div>
     </Layout>
   );
 };
