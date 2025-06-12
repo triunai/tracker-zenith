@@ -77,7 +77,7 @@ const BudgetAnalytics = () => {
   const healthPercentage = totalBudgets > 0 ? Math.round((healthyBudgets / totalBudgets) * 100) : 100;
 
   return (
-    <Card>
+    <Card className="shadow-purple">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <TrendingUp className="h-5 w-5 text-finance-income" />

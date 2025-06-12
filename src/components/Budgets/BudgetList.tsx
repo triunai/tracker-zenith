@@ -109,7 +109,7 @@ const BudgetList: React.FC<BudgetListProps> = ({ onEditBudget, onDeleteBudget })
   }
 
   return (
-    <Card>
+    <Card className="shadow-purple">
       <CardHeader>
         <CardTitle>Budget Management</CardTitle>
         <p className="text-sm text-muted-foreground">
@@ -230,7 +230,7 @@ const BudgetList: React.FC<BudgetListProps> = ({ onEditBudget, onDeleteBudget })
             };
 
             return (
-              <Card key={budget.id}>
+              <Card key={budget.id} className="shadow-purple-sm hover:shadow-purple transition-shadow duration-200">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium flex items-center gap-2">
                     <div

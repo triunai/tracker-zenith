@@ -25,7 +25,7 @@ export const ExpenseCategories: React.FC<ExpenseCategoriesProps> = ({ dateRange 
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card>
+        <Card className="shadow-purple">
           <CardContent className="pt-6">
             <h3 className="text-lg font-medium mb-4">Expense Distribution</h3>
             <div className="h-80 flex items-center justify-center bg-muted/20 rounded-md">
@@ -34,7 +34,7 @@ export const ExpenseCategories: React.FC<ExpenseCategoriesProps> = ({ dateRange 
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="shadow-purple">
           <CardContent className="pt-6">
             <h3 className="text-lg font-medium mb-4">Category Breakdown</h3>
             <div className="space-y-4">
@@ -54,7 +54,7 @@ export const ExpenseCategories: React.FC<ExpenseCategoriesProps> = ({ dateRange 
         </Card>
       </div>
 
-      <Card>
+      <Card className="shadow-purple">
         <CardContent className="pt-6">
           <h3 className="text-lg font-medium mb-4">Category Trends</h3>
           <div className="h-60 flex items-center justify-center bg-muted/20 rounded-md">

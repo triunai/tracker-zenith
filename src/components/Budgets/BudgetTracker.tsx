@@ -63,7 +63,7 @@ const BudgetTracker: React.FC<BudgetTrackerProps> = ({
   const isSpendingLoading = spendingQueries.some(q => q.isLoading);
 
   return (
-    <Card className="h-full flex flex-col">
+    <Card className="h-full flex flex-col shadow-purple">
       <CardHeader>
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
           <div>
@@ -127,7 +127,7 @@ const BudgetTracker: React.FC<BudgetTrackerProps> = ({
               };
 
               return (
-                <Card key={budget.id} className="relative">
+                <Card key={budget.id} className="relative shadow-purple-sm hover:shadow-purple transition-shadow duration-200">
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-sm font-medium flex items-center gap-2">
                       <div
