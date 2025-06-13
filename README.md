@@ -658,16 +658,14 @@ npm run dev -- --force
 ## 📈 Roadmap
 
 ### **Short Term (1-3 months)**
-- [ ] Mobile app development (React Native)
-- [ ] Enhanced AI document processing
-- [ ] Multi-currency support
-- [ ] Advanced reporting features
+- [ ] Reports based on semantic search
+- [ ] Notification events based on data transactions
+- [ ] Better ui components and ux
+- [ ] Detailed budget tracking
 
 ### **Medium Term (3-6 months)**
-- [ ] Bank account integration
-- [ ] Automated transaction categorization
-- [ ] Receipt scanning via mobile camera
 - [ ] Financial goal tracking
+- [ ] ChatBot capable of tool calls and api calls
 
 ### **Long Term (6+ months)**
 - [ ] Investment portfolio tracking
@@ -684,9 +682,9 @@ npm run dev -- --force
 - **Discord**: Community chat server (link in repository)
 
 ### **Links**
-- **Live Demo**: [https://tracker-zenith.vercel.app](https://tracker-zenith.vercel.app)
-- **Documentation**: [https://docs.tracker-zenith.app](https://docs.tracker-zenith.app)
-- **API Reference**: [https://api.tracker-zenith.app/docs](https://api.tracker-zenith.app/docs)
+- **Live Demo**: [https://tracker-zenith.onrender.com/](https://tracker-zenith.onrender.com/)
+- **Documentation**: [https://tracker-zenith.onrender.com/](https://tracker-zenith.onrender.com/)
+- **API Reference**: [https://tracker-zenith.onrender.com/](https://tracker-zenith.onrender.com/)
 
 ## 📄 License
 
