@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { formatCurrency } from '@/lib/utils';
 import TransactionForm from './TransactionForm';
 import { 
@@ -39,7 +39,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog.tsx";
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 
 // Custom MYR currency formatter with error handling
 const formatMYR = (amount: number): string => {
@@ -57,12 +57,7 @@ const formatMYR = (amount: number): string => {
 };
 
 const TransactionList = () => {
-  // State management
-  const [expenses, setExpenses] = useState<Expense[]>([]);
-  const [categories, setCategories] = useState<ExpenseCategory[]>([]);
-  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  // UI State management
   const [expenseToEdit, setExpenseToEdit] = useState<Expense | null>(null);
   const [expenseToDelete, setExpenseToDelete] = useState<number | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -77,202 +72,74 @@ const TransactionList = () => {
   const { toast } = useToast();
   const { refreshData, dateFilter, dateRangeText, userId, startDate, endDate } = useDashboard();
   const queryClient = useQueryClient();
-  
-  // Date ranges are now provided by DashboardContext for consistency
-  
-  // Fetch data from API
-  const fetchTransactions = useCallback(async () => {
-    // Only fetch if we have a user ID
-    if (!userId) {
-      console.warn("💡 DIAGNOSTIC: fetchTransactions called with no userId");
-      setIsLoading(false);
-      return;
-    }
-    
-    try {
-      setIsLoading(true);
-      setError(null);
+
+  // 🎯 CRITICAL FIX: Use React Query for data fetching
+  const { 
+    data: expenses = [], 
+    isLoading, 
+    error: queryError,
+    refetch: refetchTransactions 
+  } = useQuery({
+    queryKey: ['expenses', userId, startDate, endDate],
+    queryFn: async () => {
+      if (!userId) {
+        console.warn("💡 DIAGNOSTIC: useQuery called with no userId");
+        return [];
+      }
       
-      // Use date ranges from DashboardContext for consistency
-      
-      // Add enhanced debugging information
-      console.log(`💡 DIAGNOSTIC: TransactionList fetchTransactions STARTING with filters:`, {
-        userId,
-        dateFilter: {
-          type: dateFilter.type,
-          year: dateFilter.year,
-          month: dateFilter.month,
-          quarter: dateFilter.quarter,
-          hasCustomRange: !!dateFilter.customRange
-        },
-        startDate,
-        endDate,
-        startDateObj: new Date(startDate),
-        endDateObj: new Date(endDate),
-        startDateFormatted: new Date(startDate).toLocaleString(),
-        endDateFormatted: new Date(endDate).toLocaleString(),
-        current_time: new Date().toISOString(),
-        current_component_state: {
-          transactionTypeFilter,
-          selectedCategory,
-          selectedPaymentMethod
-        }
-      });
-      
-      // Log for diagnostics
-      console.time("💡 DIAGNOSTIC: expenseApi.getAllByUser call duration");
-      console.log(`💡 DIAGNOSTIC: Calling expenseApi.getAllByUser with:`, {
-        userId, 
-        options: {
-          limit: 100, // Increased from 50 to ensure we capture all transactions
-          startDate: startDate,
-          startDateType: typeof startDate,
-          endDate: endDate,
-          endDateType: typeof endDate
-        }
-      });
+      console.log(`💡 DIAGNOSTIC: React Query fetching transactions for user ${userId} from ${startDate} to ${endDate}`);
       
       // Convert dates to ISO strings to match expected types in expenseApi
       const startDateIso = typeof startDate === 'string' ? startDate : new Date(startDate).toISOString();
       const endDateIso = typeof endDate === 'string' ? endDate : new Date(endDate).toISOString();
       
-      // Fetch expenses with pagination and date range - increased limit to ensure all transactions are captured
+      // Fetch expenses with date range
       const expenseData = await expenseApi.getAllByUser(userId, {
-        limit: 100, // Increased from 50 to ensure we capture all transactions
+        limit: 100,
         startDate: startDateIso, 
         endDate: endDateIso
       });
       
-      console.timeEnd("💡 DIAGNOSTIC: expenseApi.getAllByUser call duration");
-      
-      // TARGETED DEBUG: Look specifically for expense ID 52
-      const targetExpense = expenseData.find(e => e.id === 52);
-      if (targetExpense) {
-        console.log("🎯 TARGET FOUND: Expense ID 52 was returned from the API:", {
-          id: targetExpense.id,
-          date: targetExpense.date,
-          dateObj: new Date(targetExpense.date),
-          inDateRange: isDateInRange(targetExpense.date, startDateIso, endDateIso),
-          payment_method_id: targetExpense.payment_method_id,
-          description: targetExpense.description,
-          transaction_type: targetExpense.transaction_type,
-          items: targetExpense.expense_items?.map(item => ({
-            id: item.id,
-            amount: item.amount,
-            category_id: item.category_id,
-            description: item.description
-          })) || 'No items'
-        });
-      } else {
-        console.warn("🎯 TARGET MISSING: Expense ID 52 was NOT returned from the API");
-        console.log("Current date filter:", { startDateIso, endDateIso });
-        console.log("Try temporarily removing date filters to see if it appears");
-      }
-      
-      // Add more detailed logging about results
-      console.log(`💡 DIAGNOSTIC: TransactionList: Got ${expenseData.length} expenses from API`, {
-        hasSomeData: expenseData.length > 0,
-        uniqueCategories: [...new Set(expenseData.flatMap(e => e.expense_items?.map(i => i.category?.name)))],
-        uniquePaymentMethods: [...new Set(expenseData.map(e => e.payment_method?.method_name))]
-      });
-      
-      // Check for expenses with no valid expense_items
-      let validExpenses = expenseData.filter(expense => 
+      // Filter out expenses with no valid expense_items
+      const validExpenses = expenseData.filter(expense => 
         expense.expense_items && expense.expense_items.length > 0
       );
       
-      if (validExpenses.length !== expenseData.length) {
-        console.warn(`💡 DIAGNOSTIC: Found ${expenseData.length - validExpenses.length} expenses with no valid expense items`);
-        
-        // Log the expenses with no items for debugging
-        const invalidExpenses = expenseData.filter(expense => 
-          !expense.expense_items || expense.expense_items.length === 0
-        );
-        
-        invalidExpenses.forEach((expense, index) => {
-          if (index < 3) { // Just log the first 3 to avoid console spam
-            console.warn(`💡 DIAGNOSTIC: Expense with no items: ID=${expense.id}, Date=${expense.date}, Type=${expense.transaction_type}`);
-          }
-        });
-      }
-      
-      // TARGETED DEBUG: Check if expense ID 52 was filtered out due to no items
-      if (targetExpense && !validExpenses.some(e => e.id === 52)) {
-        console.warn("🎯 TARGET FILTERED: Expense ID 52 was filtered out because it has no valid expense_items");
-        console.log("Original expense:", targetExpense);
-      }
-      
       // Sort expenses by date (newest first)
-      validExpenses = validExpenses.sort((a, b) => 
+      return validExpenses.sort((a, b) => 
         new Date(b.date).getTime() - new Date(a.date).getTime()
       );
-      
-      console.log(`💡 DIAGNOSTIC: Setting ${validExpenses.length} valid expenses in state for date range: ${startDateIso} to ${endDateIso}`);
-      
-      // Log each expense date for debugging
-      if (validExpenses.length > 0) {
-        console.log("💡 DIAGNOSTIC: Transaction dates in result set:");
-        validExpenses.forEach((expense, index) => {
-          if (index < 10) { // Log more, but still limit to avoid spam
-            console.log(`  ${index}: ID=${expense.id}, Date=${expense.date} (${new Date(expense.date).toLocaleString()}), Type=${expense.transaction_type}, Description=${expense.description || 'No description'}, Items: ${expense.expense_items?.length || 0}`);
-          }
-        });
-      } else {
-        console.warn("💡 DIAGNOSTIC: No valid transactions found in the specified date range");
-        console.log("💡 DIAGNOSTIC: Checking dateFilter state:", dateFilter);
-      }
-      
-      setExpenses(validExpenses);
-      
-      // Fetch categories and payment methods for filtering
-      const [categoryData, paymentMethodData] = await Promise.all([
-        expenseApi.getCategories(),
-        expenseApi.getPaymentMethods()
-      ]);
+    },
+    enabled: !!userId, // Only run when userId is available
+    staleTime: 30 * 1000, // Data is fresh for 30 seconds
+    gcTime: 5 * 60 * 1000, // Keep in cache for 5 minutes
+  });
 
-      setCategories(categoryData);
-      setPaymentMethods(paymentMethodData);
-    } catch (e: unknown) {
-      const errorMessage = e instanceof Error ? e.message : String(e);
-      console.error(`Failed to fetch transactions: ${errorMessage}`, e);
-      setError(`Failed to fetch transactions: ${errorMessage}`);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [userId, startDate, endDate]);
+  // Fetch categories and payment methods for filtering
+  const { data: categories = [] } = useQuery({
+    queryKey: ['expenseCategories'],
+    queryFn: expenseApi.getCategories,
+    staleTime: 10 * 60 * 1000, // Categories don't change often
+  });
+
+  const { data: paymentMethods = [] } = useQuery({
+    queryKey: ['paymentMethods'],
+    queryFn: expenseApi.getPaymentMethods,
+    staleTime: 10 * 60 * 1000, // Payment methods don't change often
+  });
+
+  const error = queryError?.message ?? null;
   
-  // Helper function to check if a date is within a range - improved with better error handling
-  const isDateInRange = (dateStr: string, startDate: string, endDate: string) => {
-    if (!dateStr) return false;
-    
-    try {
-      const date = new Date(dateStr).getTime();
-      const start = new Date(startDate).getTime();
-      const end = new Date(endDate).getTime();
-      
-      const isInRange = date >= start && date <= end;
-      
-      if (!isInRange) {
-        console.log(`Date ${dateStr} (${new Date(dateStr).toLocaleString()}) is outside range: ${startDate} - ${endDate}`);
-      }
-      
-      return isInRange;
-    } catch (error) {
-      console.error(`Error checking if date ${dateStr} is in range:`, error);
-      return false; // Default to false on error
-    }
-  };
-  
+  // Set up real-time subscription for automatic updates
   useEffect(() => {
-    fetchTransactions();
-    
     // Only set up subscription if we have a user ID
     if (!userId) return;
     
     // Set up subscription to real-time updates
     const subscription = expenseApi.subscribeToExpenses(userId, (payload) => {
-      // Refetch data when changes occur
-      fetchTransactions();
+      console.log('🔄 Real-time update received, invalidating React Query cache...');
+      // Invalidate React Query cache to trigger refetch
+      queryClient.invalidateQueries({ queryKey: ['expenses', userId] });
       
       // Also refresh dashboard data
       refreshData();
@@ -281,7 +148,7 @@ const TransactionList = () => {
     return () => {
       subscription?.unsubscribe();
     };
-  }, [fetchTransactions, refreshData, userId]);
+  }, [userId, queryClient, refreshData]);
   
   // Open delete confirmation dialog
   const confirmDelete = (expenseId: number) => {
@@ -293,7 +160,12 @@ const TransactionList = () => {
   const deleteMutation = useMutation({
     mutationFn: (expenseId: number) => expenseApi.delete(expenseId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['transactions', userId] });
+      // 🎯 CRITICAL FIX: Use correct query key that matches our React Query setup
+      queryClient.invalidateQueries({ queryKey: ['expenses', userId] });
+      queryClient.invalidateQueries({ queryKey: ['dashboardSummary', userId] });
+      queryClient.invalidateQueries({ queryKey: ['spendingByCategory', userId] });
+      queryClient.invalidateQueries({ queryKey: ['spendingByPayment', userId] });
+      
       toast({
         title: 'Success',
         description: 'Transaction deleted successfully.',
@@ -439,7 +311,7 @@ const TransactionList = () => {
   // Handle transaction added event
   const handleTransactionAdded = () => {
     console.log('Transaction added, refreshing data...');
-    fetchTransactions();
+    refetchTransactions();
   };
   
   // Paginate transactions

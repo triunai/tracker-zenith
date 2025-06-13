@@ -9,6 +9,8 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useQueryClient } from '@tanstack/react-query';
+import { useDashboard } from '@/context/DashboardContext';
 
 interface ProcessedDocument {
   id: number;
@@ -29,6 +31,8 @@ interface ProcessedDocument {
 
 export const DocumentUploader = () => {
   const { user } = useAuth();
+  const { userId, refreshData } = useDashboard();
+  const queryClient = useQueryClient();
   const [uploading, setUploading] = useState(false);
   const [processedDocuments, setProcessedDocuments] = useState<ProcessedDocument[]>([]);
 
@@ -270,6 +274,24 @@ export const DocumentUploader = () => {
             : doc
         )
       );
+
+      // 🎯 CRITICAL FIX: Invalidate React Query caches to trigger UI updates
+      console.log('🔄 Invalidating React Query caches after transaction creation...');
+      
+      // Invalidate all transaction-related queries
+      queryClient.invalidateQueries({ queryKey: ['expenses', userId] });
+      queryClient.invalidateQueries({ queryKey: ['transactions', userId] });
+      queryClient.invalidateQueries({ queryKey: ['dashboardSummary', userId] });
+      queryClient.invalidateQueries({ queryKey: ['spendingByCategory', userId] });
+      queryClient.invalidateQueries({ queryKey: ['spendingByPayment', userId] });
+      
+      // Invalidate budget-related queries
+      queryClient.invalidateQueries({ queryKey: ['budgets'] });
+      queryClient.invalidateQueries({ queryKey: ['budgetSpending'] });
+      queryClient.invalidateQueries({ queryKey: ['budgetCategorySpending'] });
+      
+      // Also trigger dashboard refresh
+      refreshData();
 
       toast.success('Transaction Created!', {
         description: `Transaction for ${document.vendorName} added to your records`,
