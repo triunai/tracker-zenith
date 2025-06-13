@@ -1,6 +1,7 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { Mistral } from 'https://esm.sh/@mistralai/mistralai@1.7.2';
+import OpenAI from 'https://esm.sh/openai@4.25.0?target=deno';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -94,8 +95,8 @@ serve(async (req) => {
       .eq('isdeleted', false);
 
     // Step 6: Use AI to parse financial data
-    console.log('🧠 Parsing document with AI...');
-    const parsedData = await parseWithAI(ocrText, {
+    console.log('🧠 Parsing document with OpenRouter AI...');
+    const parsedData = await parseWithOpenRouter(ocrText, {
       expenseCategories: expenseCategories || [],
       incomeCategories: incomeCategories || [],
       paymentMethods: paymentMethods || []
@@ -383,7 +384,165 @@ interface ParseContext {
   paymentMethods: PaymentMethod[]
 }
 
-// AI Parsing Function using Mistral Chat API
+// AI Parsing Function using OpenRouter with GPT-4o-mini
+async function parseWithOpenRouter(ocrText: string, context: ParseContext) {
+  console.log('🤖 Parsing document with OpenRouter AI...');
+  
+  try {
+    // Get OpenRouter API key from environment
+    const openrouterApiKey = Deno.env.get('OPENROUTER_API_KEY');
+    if (!openrouterApiKey) {
+      throw new Error('OPENROUTER_API_KEY not found in environment variables');
+    }
+
+    // Initialize OpenAI client with OpenRouter configuration
+    const openai = new OpenAI({
+      baseURL: "https://openrouter.ai/api/v1",
+      apiKey: openrouterApiKey,
+      defaultHeaders: {
+        "HTTP-Referer": "https://tracker-zenith.vercel.app",
+        "X-Title": "FinanceTracker-DocumentProcessor"
+      }
+    });
+
+    // Create JSON schema for structured output
+    const schema = {
+      type: "object",
+      properties: {
+        vendor: { type: "string", description: "The name of the store or vendor" },
+        total: { type: "number", description: "The final grand total amount as a number" },
+        invoice_id: { type: "string", description: "Invoice or receipt number" },
+        order_id: { type: "string", description: "Order number if different from invoice" },
+        purchase_date: { type: "string", pattern: "^\\d{4}-\\d{2}-\\d{2}$", description: "Purchase date in YYYY-MM-DD format" },
+        purchase_time: { type: "string", pattern: "^\\d{2}:\\d{2}:\\d{2}$", description: "Purchase time in HH:MM:SS format" },
+        currency: { type: "string", enum: ["MYR", "USD", "EUR", "SGD"], description: "Currency code" },
+        tax_amount: { type: "number", description: "Total tax amount" },
+        subtotal: { type: "number", description: "Subtotal before tax" },
+        payment_method: { type: "string", description: "Payment method used" },
+        transaction_type: { type: "string", enum: ["expense", "income"], description: "Transaction type" },
+        suggested_category_id: { type: "integer", description: "Best matching category ID" },
+        suggested_category_type: { type: "string", enum: ["expense", "income"], description: "Category type" },
+        confidence_score: { type: "number", minimum: 0, maximum: 1, description: "Confidence level 0.0-1.0" },
+        suggested_payment_method_id: { type: "integer", description: "Suggested payment method ID" },
+        items: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              item: { type: "string", description: "Item name" },
+              quantity: { type: "number", description: "Quantity" },
+              price: { type: "number", description: "Total price for line item" },
+              unit_price: { type: "number", description: "Price per unit" },
+              description: { type: "string", description: "Item description" }
+            },
+            required: ["item", "quantity", "price"]
+          }
+        }
+      },
+      required: ["vendor", "total", "transaction_type", "suggested_category_id", "suggested_category_type", "confidence_score", "items"]
+    };
+
+    // Create enhanced prompt for AI parsing
+    const prompt = `Extract financial transaction data from this receipt/invoice text. Return valid JSON only.
+
+**IMPORTANT FORMATTING RULES:**
+- Vendor name: Use proper title case (e.g., "LEMON GRASS" becomes "Lemon Grass", "McDONALD'S" becomes "McDonald's")
+- Total amount: Extract only the final grand total as a number (e.g., "Total: RM 84.30" returns 84.30)
+- Date format: Always use YYYY-MM-DD format
+- Currency: Default to MYR for Malaysian businesses
+
+**Available Expense Categories:**
+${context.expenseCategories.map((cat) => `${cat.id}: ${cat.name} - ${cat.description}`).join('\n')}
+
+**Available Income Categories:**
+${context.incomeCategories.map((cat) => `${cat.id}: ${cat.name} - ${cat.description}`).join('\n')}
+
+**Available Payment Methods:**
+${context.paymentMethods.map((pm) => `${pm.id}: ${pm.method_name}`).join('\n')}
+
+**Raw Document Text:**
+---
+${ocrText}
+---
+
+Extract all transaction data carefully. Match vendor and items to the most appropriate available categories and payment methods.`;
+
+    // Call OpenRouter with structured output
+    console.log('🤖 Making OpenRouter API call with gpt-4o-mini...');
+    
+    const completion = await openai.chat.completions.create({
+      model: "openai/gpt-4o-mini",
+      messages: [
+        {
+          role: "system",
+          content: "You are a precise financial document parser. Extract data exactly as specified in the schema. Return only valid JSON."
+        },
+        {
+          role: "user",
+          content: prompt
+        }
+      ],
+      response_format: {
+        type: "json_schema",
+        json_schema: {
+          name: "financial_document",
+          strict: true,
+          schema: schema
+        }
+      },
+      temperature: 0.1,
+      max_tokens: 2000
+    });
+
+    const aiResponse = completion.choices[0]?.message?.content;
+    if (!aiResponse) {
+      throw new Error('No response from OpenRouter AI');
+    }
+
+    console.log('🤖 OpenRouter AI response received');
+
+    // Parse the JSON response
+    let parsedData;
+    try {
+      parsedData = JSON.parse(aiResponse);
+      
+      console.log('📊 PARSED DATA FROM OPENROUTER:', {
+        vendor: parsedData.vendor,
+        total: parsedData.total,
+        totalType: typeof parsedData.total,
+        currency: parsedData.currency,
+        confidence: parsedData.confidence_score
+      });
+      
+    } catch (parseError) {
+      console.error('Failed to parse OpenRouter AI response as JSON:', parseError);
+      throw new Error('Invalid JSON response from AI');
+    }
+
+    // Return in the expected format
+    return {
+      documentType: 'receipt',
+      vendorName: parsedData.vendor || 'Unknown Vendor',
+      transactionDate: parsedData.purchase_date || new Date().toISOString().split('T')[0],
+      totalAmount: parseFloat(parsedData.total) || 0,
+      currency: parsedData.currency || 'MYR',
+      transactionType: parsedData.transaction_type === 'income' ? 'income' : 'expense',
+      suggestedCategoryId: parseInt(parsedData.suggested_category_id) || context.expenseCategories[0]?.id || 1,
+      suggestedCategoryType: parsedData.suggested_category_type === 'income' ? 'income' : 'expense',
+      confidenceScore: parseFloat(parsedData.confidence_score) || 0.8,
+      suggestedPaymentMethodId: parsedData.suggested_payment_method_id ? parseInt(parsedData.suggested_payment_method_id) : null
+    };
+
+  } catch (error) {
+    console.error('❌ OpenRouter AI parsing error:', error);
+    
+    // Fallback to the existing parseWithAI function as backup
+    console.log('🔄 Falling back to Mistral AI parsing...');
+    return await parseWithAI(ocrText, context);
+  }
+}
+
+// AI Parsing Function using Mistral Chat API (kept as fallback)
 async function parseWithAI(ocrText: string, context: ParseContext) {
   console.log('🧠 Parsing document with Mistral AI...')
   

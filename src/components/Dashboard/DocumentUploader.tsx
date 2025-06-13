@@ -217,7 +217,7 @@ export const DocumentUploader = () => {
                                  functionResult.parsedData.currency || 'RM';
           
           toast.success('Document Processed Successfully!', {
-            description: `Found: ${functionResult.parsedData.vendorName} - ${currencySymbol} ${functionResult.parsedData.totalAmount}`,
+            description: `Found: ${functionResult.parsedData.vendorName} - ${currencySymbol} ${functionResult.parsedData.totalAmount.toFixed(2)}`,
           });
         } else {
           toast.success('File uploaded successfully!', {
@@ -430,7 +430,7 @@ export const DocumentUploader = () => {
                               <span className="text-xs font-medium">💰</span>
                               {document.currency === 'MYR' ? 'RM' : 
                                document.currency === 'USD' ? '$' : 
-                               document.currency || 'RM'} {document.totalAmount}
+                               document.currency || 'RM'} {document.totalAmount.toFixed(2)}
                             </div>
                           )}
                           {document.transactionDate && (
