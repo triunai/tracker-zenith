@@ -18,6 +18,7 @@ interface ProcessedDocument {
   vendorName?: string;
   transactionDate?: string;
   totalAmount?: number;
+  currency?: string;
   transactionType?: 'expense' | 'income';
   suggestedCategoryId?: number;
   suggestedCategoryType?: 'expense' | 'income';
@@ -197,6 +198,7 @@ export const DocumentUploader = () => {
                 vendorName: functionResult.parsedData.vendorName,
                 transactionDate: functionResult.parsedData.transactionDate,
                 totalAmount: functionResult.parsedData.totalAmount,
+                currency: functionResult.parsedData.currency,
                 transactionType: functionResult.parsedData.transactionType,
                 suggestedCategoryId: functionResult.parsedData.suggestedCategoryId,
                 suggestedCategoryType: functionResult.parsedData.suggestedCategoryType,
@@ -206,8 +208,12 @@ export const DocumentUploader = () => {
             )
           );
 
+          const currencySymbol = functionResult.parsedData.currency === 'MYR' ? 'RM' : 
+                                 functionResult.parsedData.currency === 'USD' ? '$' : 
+                                 functionResult.parsedData.currency || 'RM';
+          
           toast.success('Document Processed Successfully!', {
-            description: `Found: ${functionResult.parsedData.vendorName} - $${functionResult.parsedData.totalAmount}`,
+            description: `Found: ${functionResult.parsedData.vendorName} - ${currencySymbol} ${functionResult.parsedData.totalAmount}`,
           });
         } else {
           toast.success('File uploaded successfully!', {
@@ -399,8 +405,10 @@ export const DocumentUploader = () => {
                           )}
                           {document.totalAmount && (
                             <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                              <DollarSign className="h-3 w-3" />
-                              ${document.totalAmount}
+                              <span className="text-xs font-medium">💰</span>
+                              {document.currency === 'MYR' ? 'RM' : 
+                               document.currency === 'USD' ? '$' : 
+                               document.currency || 'RM'} {document.totalAmount}
                             </div>
                           )}
                           {document.transactionDate && (
