@@ -173,7 +173,7 @@ export const DocumentUploader = () => {
         const { data: functionResult, error: functionError } = await supabase.functions.invoke('process-document', {
           body: {
             documentId,
-            filePath
+            fileName: filePath  // Fix: send as fileName instead of filePath
           }
         });
 
@@ -184,9 +184,36 @@ export const DocumentUploader = () => {
           throw new Error(`Document processing failed: ${functionError.message}`);
         }
 
-        toast.success('File uploaded successfully!', {
-          description: 'AI is now processing your document...',
-        });
+        // Update document with parsed data from Edge Function
+        if (functionResult?.success && functionResult?.parsedData) {
+          console.log('✅ Updating document with parsed data:', functionResult.parsedData);
+          
+          setProcessedDocuments(prev => 
+            prev.map(doc => 
+              doc.id === documentId ? {
+                ...doc,
+                status: 'parsed',
+                documentType: functionResult.parsedData.documentType,
+                vendorName: functionResult.parsedData.vendorName,
+                transactionDate: functionResult.parsedData.transactionDate,
+                totalAmount: functionResult.parsedData.totalAmount,
+                transactionType: functionResult.parsedData.transactionType,
+                suggestedCategoryId: functionResult.parsedData.suggestedCategoryId,
+                suggestedCategoryType: functionResult.parsedData.suggestedCategoryType,
+                aiConfidenceScore: functionResult.parsedData.confidenceScore,
+                suggestedPaymentMethodId: functionResult.parsedData.suggestedPaymentMethodId
+              } : doc
+            )
+          );
+
+          toast.success('Document Processed Successfully!', {
+            description: `Found: ${functionResult.parsedData.vendorName} - $${functionResult.parsedData.totalAmount}`,
+          });
+        } else {
+          toast.success('File uploaded successfully!', {
+            description: 'AI is now processing your document...',
+          });
+        }
 
       } catch (error) {
         console.error('💥 Upload error caught:', error);
