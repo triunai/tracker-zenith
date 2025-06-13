@@ -187,6 +187,8 @@ User Action → Form Validation → API Call → Database Update → Real-time S
 - Responsive design with centered layout
 - Integration with Supabase Auth
 
+## 🗺️ Application Routes & Pages
+
 ### **📄 Application Pages**
 **Route Structure**:
 ```
@@ -206,6 +208,370 @@ User Action → Form Validation → API Call → Database Update → Real-time S
 - **`transactions/index.tsx`**: Transaction list with document uploader
 - **`payment-methods/index.tsx`**: Payment method CRUD operations
 - **`profile/index.tsx`**: User profile settings and information
+
+### **🗺️ Detailed Route Information**
+
+#### **🏠 Dashboard (`/` - `src/pages/Index.tsx`)**
+**Purpose**: Main application hub providing comprehensive financial overview
+**Features**:
+- **Welcome Message**: Personalized greeting with user's display name
+- **Date Filter**: Dynamic date range selection (month, quarter, year, custom)
+- **Quick Actions**: 
+  - Add Income (with PlusCircle icon)
+  - Add Expense (with MinusCircle icon)  
+  - Add New Budget
+- **Dashboard Summary**: Real-time financial metrics and trends
+- **Transaction List**: Recent transactions with filtering capabilities
+- **Budget Tracker**: Active budgets with progress indicators
+- **Spending Chart**: Visual analytics of spending patterns
+
+**Key Components**:
+- `DashboardSummary` - Financial overview cards
+- `TransactionList` - Recent transaction display
+- `BudgetTracker` - Budget progress monitoring
+- `SpendingChart` - Data visualization
+- `DateFilter` - Date range selection
+- `TransactionForm` - Quick transaction entry
+
+#### **💰 Budget Management (`/budgets` - `src/pages/budgets/index.tsx`)**
+**Purpose**: Comprehensive budget creation, monitoring, and analytics
+**Features**:
+- **Budget Creation**: Multi-step form with category selection
+- **Budget List**: All user budgets with edit/delete actions
+- **Budget Analytics**: Performance metrics and health scores
+- **Period Support**: Daily, weekly, monthly, quarterly, yearly budgets
+- **Category Allocation**: Assign specific categories to budgets
+- **Alert Thresholds**: Configurable spending alerts
+- **Progress Tracking**: Real-time spending vs budget comparison
+
+**Key Components**:
+- `BudgetForm` - Create/edit budget dialog
+- `BudgetList` - Budget management table
+- `BudgetTracker` - Progress visualization
+- `BudgetAnalytics` - Performance insights
+
+#### **💳 Transaction Management (`/transactions` - `src/pages/transactions/index.tsx`)**
+**Purpose**: Complete transaction lifecycle management with AI document processing
+**Layout**: Split-screen design (70% transactions, 30% document uploader)
+**Features**:
+- **Transaction List**: Comprehensive transaction table with advanced filtering
+- **Document Uploader**: AI-powered receipt processing with OCR and intelligent parsing
+- **Date Filtering**: Transaction date range selection
+- **Real-time Updates**: Live transaction synchronization
+
+**AI Processing Workflow**:
+1. **Upload** → Secure file storage
+2. **OCR** → Text extraction via Mistral AI
+3. **Parse** → Data extraction via OpenRouter GPT-4o-mini
+4. **Review** → User verification with confidence scores
+5. **Create** → Automatic transaction generation
+
+#### **💳 Payment Methods (`/payment-methods` - `src/pages/payment-methods/index.tsx`)**
+**Purpose**: Manage payment methods for expense categorization
+**Features**:
+- **CRUD Operations**: Create, read, update, delete payment methods
+- **Inline Editing**: Edit payment method names directly in the list
+- **Validation**: Prevent duplicate payment method names
+- **Usage Tracking**: See which payment methods are actively used
+
+#### **👤 User Profile (`/profile` - `src/pages/profile/index.tsx`)**
+**Purpose**: User account management and profile customization
+**Features**:
+- **Profile Information**: Display and edit user details
+- **Display Name**: Customizable user display name
+- **Avatar URL**: Profile picture management
+- **Account Details**: Email (read-only), creation date
+- **Back Navigation**: Return to previous page
+
+#### **📊 Reports & Analytics (`/reports` - `src/pages/reports/index.tsx`)**
+**Purpose**: Advanced financial reporting and data visualization
+**Features**:
+- **Custom Report Builder**: Create tailored financial reports
+- **Expense Categories**: Detailed category-wise spending analysis
+- **Income vs Expense Summary**: Comparative financial overview
+- **Audit Trail**: Transaction history and changes
+
+#### **🔐 Authentication Pages (`/auth/*`)**
+
+**Login Page (`/auth/login` - `src/pages/auth/Login.tsx`)**
+- **Purpose**: User authentication entry point
+- **Features**: Email/password login with validation
+- **Components**: `LoginForm` with error handling
+- **Layout**: Centered card design with welcome message
+
+**Signup Page (`/auth/signup` - `src/pages/auth/Signup.tsx`)**
+- **Purpose**: New user registration
+- **Features**: Account creation with email verification
+- **Components**: `SignupForm` with validation
+- **Layout**: Centered card design with account creation flow
+
+**Forget Password (`/auth/forget-password` - `src/pages/auth/ForgetPassword.tsx`)**
+- **Purpose**: Password reset functionality
+- **Features**: 
+  - Email-based password reset
+  - Success confirmation with visual feedback
+  - Link back to login page
+- **State Management**: Form submission state with success/error handling
+- **UI/UX**: Clean card-based layout with green success indicator
+
+#### **❌ Not Found Page (`/404` - `src/pages/NotFound.tsx`)**
+**Purpose**: Handle invalid routes gracefully
+**Features**:
+- **Error Logging**: Console logging of attempted routes
+- **User-Friendly Message**: Clear 404 error display
+- **Navigation**: Link back to home page
+- **Responsive Design**: Centered layout with proper styling
+
+### **🔒 Route Protection**
+
+**Protected Routes** (Require Authentication):
+- `/` (Dashboard)
+- `/budgets`
+- `/transactions` 
+- `/payment-methods`
+- `/profile`
+- `/reports`
+
+**Public Routes**:
+- `/auth/login`
+- `/auth/signup`
+- `/auth/forget-password`
+- `/404`
+
+**Route Guards**:
+- `ProtectedRoute` component wraps authenticated pages
+- Automatic redirect to login for unauthenticated users
+- Session persistence across browser refreshes
+
+### **📱 Page Details**
+
+#### **🏠 Dashboard (`/` - `src/pages/Index.tsx`)**
+**Purpose**: Main application hub providing comprehensive financial overview
+**Features**:
+- **Welcome Message**: Personalized greeting with user's display name
+- **Date Filter**: Dynamic date range selection (month, quarter, year, custom)
+- **Quick Actions**: 
+  - Add Income (with PlusCircle icon)
+  - Add Expense (with MinusCircle icon)  
+  - Add New Budget
+- **Dashboard Summary**: Real-time financial metrics and trends
+- **Transaction List**: Recent transactions with filtering capabilities
+- **Budget Tracker**: Active budgets with progress indicators
+- **Spending Chart**: Visual analytics of spending patterns
+
+**Key Components**:
+- `DashboardSummary` - Financial overview cards
+- `TransactionList` - Recent transaction display
+- `BudgetTracker` - Budget progress monitoring
+- `SpendingChart` - Data visualization
+- `DateFilter` - Date range selection
+- `TransactionForm` - Quick transaction entry
+
+**State Management**:
+- Uses `DashboardContext` for date filtering and financial data
+- React Query for data fetching and caching
+- Real-time updates via Supabase subscriptions
+
+---
+
+#### **💰 Budget Management (`/budgets` - `src/pages/budgets/index.tsx`)**
+**Purpose**: Comprehensive budget creation, monitoring, and analytics
+**Features**:
+- **Budget Creation**: Multi-step form with category selection
+- **Budget List**: All user budgets with edit/delete actions
+- **Budget Analytics**: Performance metrics and health scores
+- **Period Support**: Daily, weekly, monthly, quarterly, yearly budgets
+- **Category Allocation**: Assign specific categories to budgets
+- **Alert Thresholds**: Configurable spending alerts
+- **Progress Tracking**: Real-time spending vs budget comparison
+
+**Key Components**:
+- `BudgetForm` - Create/edit budget dialog
+- `BudgetList` - Budget management table
+- `BudgetTracker` - Progress visualization
+- `BudgetAnalytics` - Performance insights
+
+**CRUD Operations**:
+- ✅ Create new budgets with category assignments
+- ✅ Update budget amounts and periods
+- ✅ Delete budgets with confirmation dialog
+- ✅ Real-time spending calculations
+
+---
+
+#### **💳 Transaction Management (`/transactions` - `src/pages/transactions/index.tsx`)**
+**Purpose**: Complete transaction lifecycle management with AI document processing
+**Layout**: Split-screen design (70% transactions, 30% document uploader)
+**Features**:
+- **Transaction List**: Comprehensive transaction table with:
+  - Advanced filtering (category, payment method, date, type)
+  - Inline editing capabilities
+  - Bulk operations support
+  - Pagination and search
+- **Document Uploader**: AI-powered receipt processing:
+  - Drag-and-drop file upload
+  - OCR text extraction via Mistral AI
+  - Intelligent data parsing with OpenRouter
+  - Automatic transaction creation
+  - Confidence scoring and manual review
+
+**Key Components**:
+- `TransactionList` - Main transaction management interface
+- `DocumentUploader` - AI document processing system
+- `DateFilter` - Transaction date filtering
+
+**AI Processing Workflow**:
+1. **Upload** → Secure file storage
+2. **OCR** → Text extraction via Mistral AI
+3. **Parse** → Data extraction via OpenRouter GPT-4o-mini
+4. **Review** → User verification with confidence scores
+5. **Create** → Automatic transaction generation
+
+---
+
+#### **💳 Payment Methods (`/payment-methods` - `src/pages/payment-methods/index.tsx`)**
+**Purpose**: Manage payment methods for expense categorization
+**Features**:
+- **CRUD Operations**: Create, read, update, delete payment methods
+- **Inline Editing**: Edit payment method names directly in the list
+- **Validation**: Prevent duplicate payment method names
+- **Usage Tracking**: See which payment methods are actively used
+
+**Key Components**:
+- Form for adding new payment methods
+- Editable list with inline editing capabilities
+- Confirmation dialogs for destructive actions
+
+**Data Management**:
+- Real-time updates with React Query
+- Optimistic UI updates for better UX
+- Error handling with toast notifications
+
+---
+
+#### **👤 User Profile (`/profile` - `src/pages/profile/index.tsx`)**
+**Purpose**: User account management and profile customization
+**Features**:
+- **Profile Information**: Display and edit user details
+- **Display Name**: Customizable user display name
+- **Avatar URL**: Profile picture management
+- **Account Details**: Email (read-only), creation date
+- **Back Navigation**: Return to previous page
+
+**Form Fields**:
+- **Email**: Read-only, managed by Supabase Auth
+- **Display Name**: Editable text field
+- **Avatar URL**: Optional profile picture URL
+
+**Security**:
+- Protected route requiring authentication
+- Profile updates via Supabase Auth
+- Form validation and error handling
+
+---
+
+#### **📊 Reports & Analytics (`/reports` - `src/pages/reports/index.tsx`)**
+**Purpose**: Advanced financial reporting and data visualization
+**Features**:
+- **Custom Report Builder**: Create tailored financial reports
+- **Expense Categories**: Detailed category-wise spending analysis
+- **Income vs Expense Summary**: Comparative financial overview
+- **Audit Trail**: Transaction history and changes
+- **Export Capabilities**: Download reports in various formats
+
+**Key Components**:
+- `ReportsDashboard` - Main reporting interface
+- `CustomReportBuilder` - Report customization tools
+- `ExpenseCategories` - Category analysis
+- `IncomeExpenseSummary` - Financial overview
+- `AuditTrail` - Transaction history
+
+---
+
+#### **🔐 Authentication Pages (`/auth/*`)**
+
+**Login Page (`/auth/login` - `src/pages/auth/Login.tsx`)**
+- **Purpose**: User authentication entry point
+- **Features**: Email/password login with validation
+- **Components**: `LoginForm` with error handling
+- **Layout**: Centered card design with welcome message
+
+**Signup Page (`/auth/signup` - `src/pages/auth/Signup.tsx`)**
+- **Purpose**: New user registration
+- **Features**: Account creation with email verification
+- **Components**: `SignupForm` with validation
+- **Layout**: Centered card design with account creation flow
+
+**Forget Password (`/auth/forget-password` - `src/pages/auth/ForgetPassword.tsx`)**
+- **Purpose**: Password reset functionality
+- **Features**: 
+  - Email-based password reset
+  - Success confirmation with visual feedback
+  - Link back to login page
+- **State Management**: Form submission state with success/error handling
+- **UI/UX**: 
+  - Clean card-based layout
+  - Green success indicator with checkmark icon
+  - Responsive design with proper spacing
+
+---
+
+#### **❌ Not Found Page (`/404` - `src/pages/NotFound.tsx`)**
+**Purpose**: Handle invalid routes gracefully
+**Features**:
+- **Error Logging**: Console logging of attempted routes
+- **User-Friendly Message**: Clear 404 error display
+- **Navigation**: Link back to home page
+- **Responsive Design**: Centered layout with proper styling
+
+**Error Handling**:
+- Automatic logging of invalid route attempts
+- Clean, professional error page design
+- Easy navigation back to the application
+
+---
+
+### **🔒 Route Protection**
+
+**Protected Routes** (Require Authentication):
+- `/` (Dashboard)
+- `/budgets`
+- `/transactions` 
+- `/payment-methods`
+- `/profile`
+- `/reports`
+
+**Public Routes**:
+- `/auth/login`
+- `/auth/signup`
+- `/auth/forget-password`
+- `/404`
+
+**Route Guards**:
+- `ProtectedRoute` component wraps authenticated pages
+- Automatic redirect to login for unauthenticated users
+- Session persistence across browser refreshes
+
+### **🧭 Navigation Flow**
+
+```mermaid
+graph TD
+    A[Landing] --> B{Authenticated?}
+    B -->|No| C[/auth/login]
+    B -->|Yes| D[/ Dashboard]
+    C --> E[Login Success]
+    E --> D
+    D --> F[/budgets]
+    D --> G[/transactions]
+    D --> H[/payment-methods]
+    D --> I[/profile]
+    D --> J[/reports]
+    F --> K[Budget Management]
+    G --> L[Transaction Management]
+    H --> M[Payment Method Config]
+    I --> N[Profile Settings]
+    J --> O[Financial Reports]
+```
 
 ## 🔗 Data Flow & State Management
 

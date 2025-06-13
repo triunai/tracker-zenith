@@ -405,35 +405,69 @@ async function parseWithOpenRouter(ocrText: string, context: ParseContext) {
       }
     });
 
-    // Create JSON schema for structured output
+    // Create JSON schema for structured output (simplified for OpenRouter compatibility)
     const schema = {
       type: "object",
+      additionalProperties: false,
       properties: {
-        vendor: { type: "string", description: "The name of the store or vendor" },
-        total: { type: "number", description: "The final grand total amount as a number" },
-        invoice_id: { type: "string", description: "Invoice or receipt number" },
-        order_id: { type: "string", description: "Order number if different from invoice" },
-        purchase_date: { type: "string", pattern: "^\\d{4}-\\d{2}-\\d{2}$", description: "Purchase date in YYYY-MM-DD format" },
-        purchase_time: { type: "string", pattern: "^\\d{2}:\\d{2}:\\d{2}$", description: "Purchase time in HH:MM:SS format" },
-        currency: { type: "string", enum: ["MYR", "USD", "EUR", "SGD"], description: "Currency code" },
-        tax_amount: { type: "number", description: "Total tax amount" },
-        subtotal: { type: "number", description: "Subtotal before tax" },
-        payment_method: { type: "string", description: "Payment method used" },
-        transaction_type: { type: "string", enum: ["expense", "income"], description: "Transaction type" },
-        suggested_category_id: { type: "integer", description: "Best matching category ID" },
-        suggested_category_type: { type: "string", enum: ["expense", "income"], description: "Category type" },
-        confidence_score: { type: "number", minimum: 0, maximum: 1, description: "Confidence level 0.0-1.0" },
-        suggested_payment_method_id: { type: "integer", description: "Suggested payment method ID" },
+        vendor: { 
+          type: "string", 
+          description: "The name of the store or vendor" 
+        },
+        total: { 
+          type: "number", 
+          description: "The final grand total amount as a number" 
+        },
+        invoice_id: { 
+          type: "string", 
+          description: "Invoice or receipt number" 
+        },
+        purchase_date: { 
+          type: "string", 
+          description: "Purchase date in YYYY-MM-DD format" 
+        },
+        currency: { 
+          type: "string", 
+          description: "Currency code like MYR, USD, EUR" 
+        },
+        transaction_type: { 
+          type: "string", 
+          enum: ["expense", "income"], 
+          description: "Transaction type" 
+        },
+        suggested_category_id: { 
+          type: "integer", 
+          description: "Best matching category ID" 
+        },
+        suggested_category_type: { 
+          type: "string", 
+          enum: ["expense", "income"], 
+          description: "Category type" 
+        },
+        confidence_score: { 
+          type: "number", 
+          minimum: 0, 
+          maximum: 1, 
+          description: "Confidence level 0.0-1.0" 
+        },
         items: {
           type: "array",
           items: {
             type: "object",
+            additionalProperties: false,
             properties: {
-              item: { type: "string", description: "Item name" },
-              quantity: { type: "number", description: "Quantity" },
-              price: { type: "number", description: "Total price for line item" },
-              unit_price: { type: "number", description: "Price per unit" },
-              description: { type: "string", description: "Item description" }
+              item: { 
+                type: "string", 
+                description: "Item name" 
+              },
+              quantity: { 
+                type: "number", 
+                description: "Quantity" 
+              },
+              price: { 
+                type: "number", 
+                description: "Total price for line item" 
+              }
             },
             required: ["item", "quantity", "price"]
           }
@@ -446,7 +480,15 @@ async function parseWithOpenRouter(ocrText: string, context: ParseContext) {
     const prompt = `Extract financial transaction data from this receipt/invoice text. Return valid JSON only.
 
 **IMPORTANT FORMATTING RULES:**
-- Vendor name: Use proper title case (e.g., "LEMON GRASS" becomes "Lemon Grass", "McDONALD'S" becomes "McDonald's")
+- Vendor name: Create a descriptive transaction title that includes the activity + business name in proper title case
+  Examples: 
+  • "LEMON GRASS" → "Dining at Lemon Grass"
+  • "McDONALD'S" → "Eating at McDonald's" 
+  • "SHELL" → "Fuel at Shell"
+  • "STARBUCKS" → "Coffee at Starbucks"
+  • "GROCERY STORE" → "Shopping at Grocery Store"
+  • "CINEMA" → "Movies at Cinema"
+  • "HOSPITAL" → "Medical at Hospital"
 - Total amount: Extract only the final grand total as a number (e.g., "Total: RM 84.30" returns 84.30)
 - Date format: Always use YYYY-MM-DD format
 - Currency: Default to MYR for Malaysian businesses
@@ -465,7 +507,7 @@ ${context.paymentMethods.map((pm) => `${pm.id}: ${pm.method_name}`).join('\n')}
 ${ocrText}
 ---
 
-Extract all transaction data carefully. Match vendor and items to the most appropriate available categories and payment methods.`;
+Extract all transaction data carefully. Create meaningful transaction descriptions and match to the most appropriate available categories and payment methods.`;
 
     // Call OpenRouter with structured output
     console.log('🤖 Making OpenRouter API call with gpt-4o-mini...');
