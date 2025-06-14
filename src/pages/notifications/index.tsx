@@ -739,7 +739,7 @@ const NotificationsPage: React.FC = () => {
                         </div>
                         <div className="text-xs text-muted-foreground bg-muted p-2 rounded">
                           Subject: 🚨 Budget Alert - Groceries Budget Exceeded<br/>
-                          Your Groceries budget has exceeded the limit. You've spent $547.23 of your $500.00 budget (109.4%).
+                          Your Groceries budget has exceeded the limit. You've spent RM547.23 of your RM500.00 budget (109.4%).
                         </div>
                       </CardContent>
                     </Card>
@@ -757,7 +757,7 @@ const NotificationsPage: React.FC = () => {
                         </div>
                         <div className="text-xs text-muted-foreground bg-muted p-2 rounded">
                           Subject: 💸 Unusual Spending Alert - Entertainment<br/>
-                          We detected unusual spending in Entertainment: $89.99 (2.3x your average of $39.12).
+                          We detected unusual spending in Entertainment: RM89.99 (2.3x your average of RM39.12).
                         </div>
                       </CardContent>
                     </Card>
@@ -775,7 +775,7 @@ const NotificationsPage: React.FC = () => {
                         </div>
                         <div className="text-xs text-muted-foreground bg-muted p-2 rounded">
                           Subject: 🏪 New Merchant Alert<br/>
-                          New merchant detected: "EXOTIC RESTAURANT BANGKOK" - $67.45 in Dining category.
+                          New merchant detected: "EXOTIC RESTAURANT BANGKOK" - RM67.45 in Dining category.
                         </div>
                       </CardContent>
                     </Card>
