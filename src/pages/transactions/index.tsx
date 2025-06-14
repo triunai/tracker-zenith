@@ -1,12 +1,35 @@
-import React from 'react';
+import React, { useState } from 'react';
 import Layout from '@/components/Layout/Layout';
 import TransactionList from '@/components/Transactions/TransactionList';
-import { DocumentUploader } from '@/components/Dashboard/DocumentUploader.tsx';
+import { DocumentUploader } from '@/components/Documents/DocumentUploader';
+import { ProcessedDocuments } from '@/components/Documents/ProcessedDocuments';
 import DateFilter from '@/components/Dashboard/DateFilter';
 import { useDashboard } from '@/context/DashboardContext';
+import { Document } from '@/interfaces/document-interface';
 
 const TransactionsPage = () => {
   const { dateRangeText } = useDashboard();
+  const [processedDocuments, setProcessedDocuments] = useState<Document[]>([]);
+
+  console.log('🔧 TransactionsPage rendered');
+
+  const handleDocumentProcessed = (document: Document) => {
+    console.log('📄 handleDocumentProcessed called with:', document);
+    setProcessedDocuments(prev => {
+      const existingIndex = prev.findIndex(doc => doc.id === document.id);
+      if (existingIndex >= 0) {
+        // Update existing document
+        const updated = [...prev];
+        updated[existingIndex] = document;
+        console.log('📄 Updated existing document at index:', existingIndex);
+        return updated;
+      } else {
+        // Add new document
+        console.log('📄 Adding new document to list');
+        return [...prev, document];
+      }
+    });
+  };
 
   return (
     <Layout>
@@ -26,13 +49,27 @@ const TransactionsPage = () => {
           </div>
         </div>
 
-        {/* Main Content */}
-        <div className="flex items-start gap-8">
-          <div className="flex-grow" style={{ flexBasis: '70%' }}>
-            <TransactionList />
+        {/* Main Content - New Layout */}
+        <div className="space-y-6">
+          {/* Document Upload Section - Full Width */}
+          <div className="w-full animate-in fade-in-0 duration-500">
+            <DocumentUploader onDocumentProcessed={handleDocumentProcessed} />
           </div>
-          <div className="flex-shrink-0" style={{ flexBasis: '30%' }}>
-            <DocumentUploader />
+
+          {/* Content Grid Layout */}
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+            {/* Transaction List - Takes 2/3 of the space on large screens */}
+            <div className="xl:col-span-2 animate-in slide-in-from-left-5 duration-700">
+              <TransactionList />
+            </div>
+            
+            {/* AI Processing Results - Takes 1/3 of the space on large screens, full width on smaller screens */}
+            <div className="xl:col-span-1 animate-in slide-in-from-right-5 duration-700">
+              <ProcessedDocuments 
+                documents={processedDocuments} 
+                onDocumentUpdate={handleDocumentProcessed}
+              />
+            </div>
           </div>
         </div>
       </div>
