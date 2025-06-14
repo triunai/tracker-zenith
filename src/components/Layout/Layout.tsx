@@ -49,12 +49,12 @@ const navItems: NavItem[] = [
     href: '/budgets' 
   },
   { 
-    label: 'Reports', 
+    label: 'Reports ( Demo )', 
     icon: <PieChart size={20} />, 
     href: '/reports' 
   },
   { 
-    label: 'Notifications', 
+    label: 'Notifications ( Demo )', 
     icon: <Bell size={20} />, 
     href: '/notifications' 
   },
