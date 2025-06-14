@@ -14,10 +14,6 @@ interface DocumentUploaderProps {
 }
 
 export const DocumentUploader = ({ onDocumentProcessed }: DocumentUploaderProps) => {
-  console.log('🔧 DocumentUploader rendered with props:', {
-    onDocumentProcessedType: typeof onDocumentProcessed,
-    onDocumentProcessedExists: !!onDocumentProcessed
-  });
   const { user } = useAuth();
   const [uploading, setUploading] = useState(false);
 
@@ -110,16 +106,7 @@ export const DocumentUploader = ({ onDocumentProcessed }: DocumentUploaderProps)
           isdeleted: false
         };
 
-        console.log('🔍 STEP 3.1: Checking onDocumentProcessed function...', {
-          onDocumentProcessedType: typeof onDocumentProcessed,
-          onDocumentProcessedExists: !!onDocumentProcessed
-        });
-
-        if (typeof onDocumentProcessed === 'function') {
-          onDocumentProcessed(newDocument);
-        } else {
-          console.error('❌ onDocumentProcessed is not a function!', { onDocumentProcessed });
-        }
+        onDocumentProcessed(newDocument);
 
         console.log('🔍 STEP 4: Triggering Edge Function processing...');
 
@@ -167,11 +154,7 @@ export const DocumentUploader = ({ onDocumentProcessed }: DocumentUploaderProps)
             isdeleted: false
           };
 
-          if (typeof onDocumentProcessed === 'function') {
-            onDocumentProcessed(updatedDocument);
-          } else {
-            console.error('❌ onDocumentProcessed is not a function in update step!', { onDocumentProcessed });
-          }
+          onDocumentProcessed(updatedDocument);
 
           const currencySymbol = functionResult.parsedData.currency === 'MYR' ? 'RM' : 
                                  functionResult.parsedData.currency === 'USD' ? '$' : 

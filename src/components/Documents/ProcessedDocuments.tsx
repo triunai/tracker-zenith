@@ -1,5 +1,5 @@
 import React from 'react';
-import { CheckCircle, AlertCircle, Clock, DollarSign, Calendar, Building2, Loader2, Sparkles, Brain, Zap } from 'lucide-react';
+import { CheckCircle, AlertCircle, Clock, DollarSign, Calendar, Building2, Loader2, Sparkles, Brain, Zap, X, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -13,11 +13,21 @@ import { Document } from '@/interfaces/document-interface';
 interface ProcessedDocumentsProps {
   documents: Document[];
   onDocumentUpdate: (document: Document) => void;
+  onDocumentRemove?: (documentId: number) => void;
 }
 
-export const ProcessedDocuments = ({ documents, onDocumentUpdate }: ProcessedDocumentsProps) => {
+export const ProcessedDocuments = ({ documents, onDocumentUpdate, onDocumentRemove }: ProcessedDocumentsProps) => {
   const { userId, refreshData } = useDashboard();
   const queryClient = useQueryClient();
+
+  const handleRemoveDocument = (documentId: number) => {
+    if (onDocumentRemove) {
+      onDocumentRemove(documentId);
+      toast.success('Document removed', {
+        description: 'Document has been removed from the list',
+      });
+    }
+  };
 
   const handleCreateTransaction = async (document: Document) => {
     try {
@@ -99,13 +109,13 @@ export const ProcessedDocuments = ({ documents, onDocumentUpdate }: ProcessedDoc
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'uploaded': return 'bg-blue-50 text-blue-700 border-blue-200';
+      case 'uploaded': return 'bg-blue-100 text-blue-800 border-blue-300 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-700';
       case 'processing': 
-      case 'ocr_completed': return 'bg-purple-50 text-purple-700 border-purple-200';
-      case 'parsed': return 'bg-green-50 text-green-700 border-green-200';
-      case 'transaction_created': return 'bg-emerald-50 text-emerald-700 border-emerald-200';
-      case 'failed': return 'bg-red-50 text-red-700 border-red-200';
-      default: return 'bg-gray-50 text-gray-700 border-gray-200';
+      case 'ocr_completed': return 'bg-purple-100 text-purple-800 border-purple-300 dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-700';
+      case 'parsed': return 'bg-green-100 text-green-800 border-green-300 dark:bg-green-900/30 dark:text-green-300 dark:border-green-700';
+      case 'transaction_created': return 'bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-700';
+      case 'failed': return 'bg-red-100 text-red-800 border-red-300 dark:bg-red-900/30 dark:text-red-300 dark:border-red-700';
+      default: return 'bg-muted text-muted-foreground border-border';
     }
   };
 
@@ -161,91 +171,111 @@ export const ProcessedDocuments = ({ documents, onDocumentUpdate }: ProcessedDoc
                 "relative overflow-hidden rounded-xl border transition-all duration-300",
                 "bg-gradient-to-r from-background to-muted/20",
                 "hover:shadow-md hover:scale-[1.01]",
-                document.status === 'parsed' && "ring-2 ring-green-200 bg-gradient-to-r from-green-50/50 to-background",
-                document.status === 'transaction_created' && "ring-2 ring-emerald-200 bg-gradient-to-r from-emerald-50/50 to-background"
+                document.status === 'parsed' && "ring-2 ring-green-200 dark:ring-green-800 bg-gradient-to-r from-green-50/50 dark:from-green-950/20 to-background",
+                document.status === 'transaction_created' && "ring-2 ring-emerald-200 dark:ring-emerald-800 bg-gradient-to-r from-emerald-50/50 dark:from-emerald-950/20 to-background"
               )}
             >
               <div className="p-4">
-                <div className="flex items-start justify-between gap-4">
+                <div className="flex items-start justify-between gap-3">
                   <div className="flex items-start gap-3 flex-1 min-w-0">
                     <div className="flex-shrink-0 mt-1">
                       {getStatusIcon(document.status)}
                     </div>
                     
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-2">
+                    <div className="flex-1 min-w-0 space-y-2">
+                      {/* Header with filename and status */}
+                      <div className="flex items-center gap-2">
                         <h3 className="font-medium text-sm truncate text-foreground">
                           {document.original_filename}
                         </h3>
                         <Badge 
                           variant="outline" 
-                          className={cn("text-xs font-medium", getStatusColor(document.status))}
+                          className={cn("text-xs font-medium shrink-0", getStatusColor(document.status))}
                         >
                           {getStatusText(document.status)}
                         </Badge>
-                        {document.ai_confidence_score && (
-                          <Badge variant="outline" className="text-xs bg-purple-50 text-purple-700 border-purple-200">
+                      </div>
+                      
+                      {/* AI Confidence Score - Only show if available */}
+                      {document.ai_confidence_score && (
+                        <div className="flex items-center gap-1">
+                          <Badge variant="outline" className="text-xs bg-purple-100 text-purple-800 border-purple-300 dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-700">
                             <Brain className="h-3 w-3 mr-1" />
                             {Math.round(document.ai_confidence_score * 100)}%
                           </Badge>
-                        )}
-                      </div>
+                        </div>
+                      )}
                       
+                      {/* Parsed Data - Compact Layout */}
                       {document.status === 'parsed' && (
-                        <div className="space-y-3">
-                          <div className="flex flex-wrap items-center gap-3">
+                        <div className="space-y-2">
+                          {/* Main Info Row */}
+                          <div className="flex items-center gap-2 text-sm">
                             {document.vendor_name && (
-                              <div className="flex items-center gap-1.5 px-2 py-1 bg-blue-50 rounded-md">
-                                <Building2 className="h-3 w-3 text-blue-600" />
-                                <span className="text-xs font-medium text-blue-700">{document.vendor_name}</span>
-                              </div>
+                              <span className="font-medium text-foreground truncate">
+                                {document.vendor_name}
+                              </span>
                             )}
                             {document.total_amount && (
-                              <div className="flex items-center gap-1.5 px-2 py-1 bg-green-50 rounded-md">
-                                <DollarSign className="h-3 w-3 text-green-600" />
-                                <span className="text-xs font-medium text-green-700">
-                                  {formatCurrency(document.total_amount, document.currency)}
-                                </span>
-                              </div>
-                            )}
-                            {document.transaction_date && (
-                              <div className="flex items-center gap-1.5 px-2 py-1 bg-purple-50 rounded-md">
-                                <Calendar className="h-3 w-3 text-purple-600" />
-                                <span className="text-xs font-medium text-purple-700">{document.transaction_date}</span>
-                              </div>
+                              <span className="font-bold text-green-600 dark:text-green-400 shrink-0">
+                                {formatCurrency(document.total_amount, document.currency)}
+                              </span>
                             )}
                           </div>
                           
-                          <div>
-                            <Badge 
-                              variant={document.transaction_type === 'income' ? 'default' : 'secondary'}
-                              className={cn(
-                                "text-xs font-medium",
-                                document.transaction_type === 'income' 
-                                  ? "bg-green-100 text-green-800 border-green-200" 
-                                  : "bg-orange-100 text-orange-800 border-orange-200"
-                              )}
-                            >
-                              {document.transaction_type}
-                            </Badge>
+                          {/* Secondary Info Row */}
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                            {document.transaction_date && (
+                              <span className="flex items-center gap-1">
+                                <Calendar className="h-3 w-3" />
+                                {document.transaction_date}
+                              </span>
+                            )}
+                            {document.transaction_type && (
+                              <Badge 
+                                variant="outline"
+                                                                 className={cn(
+                                   "text-xs",
+                                   document.transaction_type === 'income' 
+                                     ? "bg-green-100 text-green-800 border-green-300 dark:bg-green-900/30 dark:text-green-300 dark:border-green-700" 
+                                     : "bg-red-100 text-red-800 border-red-300 dark:bg-red-900/30 dark:text-red-300 dark:border-red-700"
+                                 )}
+                              >
+                                {document.transaction_type}
+                              </Badge>
+                            )}
                           </div>
                         </div>
                       )}
                       
+                      {/* Processing State */}
                       {document.status === 'processing' && (
-                        <div className="flex items-center gap-2 text-purple-600">
+                        <div className="flex items-center gap-2 text-purple-600 dark:text-purple-400">
                           <Loader2 className="h-3 w-3 animate-spin" />
                           <span className="text-xs">AI is analyzing your document...</span>
                         </div>
                       )}
                       
+                      {/* Error State */}
                       {document.status === 'failed' && document.processing_error && (
-                        <p className="text-xs text-red-600 mt-1">{document.processing_error}</p>
+                        <p className="text-xs text-red-600 dark:text-red-400 mt-1">{document.processing_error}</p>
                       )}
                     </div>
                   </div>
                   
-                  <div className="flex-shrink-0">
+                  {/* Action Buttons */}
+                  <div className="flex items-start gap-2 shrink-0">
+                    {/* Remove Button - Always show */}
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => handleRemoveDocument(document.id)}
+                      className="h-8 w-8 p-0 text-muted-foreground hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                    
+                    {/* Status-specific Actions */}
                     {document.status === 'parsed' && (
                       <Button
                         size="sm"
@@ -257,13 +287,13 @@ export const ProcessedDocuments = ({ documents, onDocumentUpdate }: ProcessedDoc
                       </Button>
                     )}
                     {document.status === 'transaction_created' && (
-                      <div className="flex items-center gap-1 text-emerald-600">
+                      <div className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 px-2">
                         <CheckCircle className="h-4 w-4" />
                         <span className="text-xs font-medium">Complete</span>
                       </div>
                     )}
                     {document.status === 'processing' && (
-                      <div className="flex items-center gap-1 text-purple-600">
+                      <div className="flex items-center gap-1 text-purple-600 dark:text-purple-400 px-2">
                         <Loader2 className="h-4 w-4 animate-spin" />
                         <span className="text-xs">Processing</span>
                       </div>

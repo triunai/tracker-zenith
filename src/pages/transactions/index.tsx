@@ -11,24 +11,23 @@ const TransactionsPage = () => {
   const { dateRangeText } = useDashboard();
   const [processedDocuments, setProcessedDocuments] = useState<Document[]>([]);
 
-  console.log('🔧 TransactionsPage rendered');
-
   const handleDocumentProcessed = (document: Document) => {
-    console.log('📄 handleDocumentProcessed called with:', document);
     setProcessedDocuments(prev => {
       const existingIndex = prev.findIndex(doc => doc.id === document.id);
       if (existingIndex >= 0) {
         // Update existing document
         const updated = [...prev];
         updated[existingIndex] = document;
-        console.log('📄 Updated existing document at index:', existingIndex);
         return updated;
       } else {
         // Add new document
-        console.log('📄 Adding new document to list');
         return [...prev, document];
       }
     });
+  };
+
+  const handleDocumentRemove = (documentId: number) => {
+    setProcessedDocuments(prev => prev.filter(doc => doc.id !== documentId));
   };
 
   return (
@@ -68,6 +67,7 @@ const TransactionsPage = () => {
               <ProcessedDocuments 
                 documents={processedDocuments} 
                 onDocumentUpdate={handleDocumentProcessed}
+                onDocumentRemove={handleDocumentRemove}
               />
             </div>
           </div>
