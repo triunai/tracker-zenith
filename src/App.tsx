@@ -23,6 +23,7 @@ import Signup from './pages/auth/Signup';
 import Profile from './pages/profile';
 import ForgetPassword from './pages/auth/ForgetPassword';
 import ReportsPage from './pages/reports';
+import NotificationsPage from './pages/notifications';
 
 // Create a client
 const queryClient = new QueryClient();
@@ -139,6 +140,7 @@ function App() {
                   <Route path="/payment-methods" element={<ProtectedRoute><PaymentMethodsPage /></ProtectedRoute>} />
                   <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
                   <Route path="/reports" element={<ProtectedRoute><ReportsPage /></ProtectedRoute>} />
+                  <Route path="/notifications" element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>} />
 
                   {/* 404 Route */}
                   <Route path="*" element={<NotFound />} />

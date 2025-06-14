@@ -7,6 +7,7 @@ import {
   CreditCard, 
   PieChart, 
   Wallet,
+  Bell,
   Settings,
   LogOut,
   Menu,
@@ -19,6 +20,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { ThemeToggle } from '@/components/ui/theme-toggle.tsx';
 import { useAuth } from '@/lib/auth';
 import { useToast } from '@/components/ui/use-toast.ts';
+import { NotificationBadge } from '@/components/ui/notification-badge';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -50,6 +52,11 @@ const navItems: NavItem[] = [
     label: 'Reports', 
     icon: <PieChart size={20} />, 
     href: '/reports' 
+  },
+  { 
+    label: 'Notifications', 
+    icon: <Bell size={20} />, 
+    href: '/notifications' 
   },
 ];
 
@@ -88,10 +95,10 @@ const Layout = ({ children }: LayoutProps) => {
         variant: "default",
       });
       navigate('/login');
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: "Logout failed",
-        description: error.message || "An error occurred during logout.",
+        description: error instanceof Error ? error.message : "An error occurred during logout.",
         variant: "destructive",
       });
     }
@@ -157,7 +164,12 @@ const Layout = ({ children }: LayoutProps) => {
                       onClick={() => isMobile && setSidebarOpen(false)}
                       title={!sidebarOpen && !isMobile ? item.label : undefined}
                     >
-                      {item.icon}
+                      <div className="relative">
+                        {item.icon}
+                        {item.label === 'Notifications' && (
+                          <NotificationBadge count={2} />
+                        )}
+                      </div>
                       {(sidebarOpen || isMobile) && <span>{item.label}</span>}
                     </Link>
                   </li>
