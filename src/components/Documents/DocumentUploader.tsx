@@ -4,6 +4,7 @@ import { useAuth } from '@/lib/auth/hooks/useAuth';
 import { supabase } from '@/lib/supabase/supabase';
 import { v4 as uuidv4 } from 'uuid';
 import { toast } from 'sonner';
+import { toastNotifications } from '@/components/ui/toast-notifications';
 import { FilePlus2, Loader2, Upload, FileText, Image, FileIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -107,6 +108,11 @@ export const DocumentUploader = ({ onDocumentProcessed }: DocumentUploaderProps)
         };
 
         onDocumentProcessed(newDocument);
+        
+        // Test toast - simple success
+        toast.success('Document uploaded successfully!', {
+          description: 'AI is now processing your document...',
+        });
 
         console.log('🔍 STEP 4: Triggering Edge Function processing...');
 
@@ -160,9 +166,12 @@ export const DocumentUploader = ({ onDocumentProcessed }: DocumentUploaderProps)
                                  functionResult.parsedData.currency === 'USD' ? '$' : 
                                  functionResult.parsedData.currency || 'RM';
           
-          toast.success('Document Processed Successfully!', {
-            description: `Found: ${functionResult.parsedData.vendorName} - ${currencySymbol} ${functionResult.parsedData.totalAmount.toFixed(2)}`,
-          });
+          // Show document ready toast
+          toastNotifications.documentReady(
+            functionResult.parsedData.vendorName || 'Document',
+            `${currencySymbol} ${functionResult.parsedData.totalAmount?.toFixed(2) || '0.00'}`,
+            Math.round((functionResult.parsedData.confidenceScore || 0) * 100)
+          );
         } else {
           toast.success('File uploaded successfully!', {
             description: 'AI is now processing your document...',

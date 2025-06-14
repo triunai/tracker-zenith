@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { supabase } from '@/lib/supabase/supabase';
 import { toast } from 'sonner';
+import { toastNotifications } from '@/components/ui/toast-notifications';
 import { useQueryClient } from '@tanstack/react-query';
 import { useDashboard } from '@/context/DashboardContext';
 import { cn } from '@/lib/utils';
@@ -23,9 +24,7 @@ export const ProcessedDocuments = ({ documents, onDocumentUpdate, onDocumentRemo
   const handleRemoveDocument = (documentId: number) => {
     if (onDocumentRemove) {
       onDocumentRemove(documentId);
-      toast.success('Document removed', {
-        description: 'Document has been removed from the list',
-      });
+      toastNotifications.documentRemoved();
     }
   };
 
@@ -65,15 +64,20 @@ export const ProcessedDocuments = ({ documents, onDocumentUpdate, onDocumentRemo
       
       refreshData();
 
-      toast.success('Transaction Created!', {
-        description: `Transaction for ${document.vendor_name} added to your records`,
-      });
+      const currencySymbol = document.currency === 'MYR' ? 'RM' : 
+                         document.currency === 'USD' ? '$' : 
+                         document.currency || 'RM';
+      
+      toastNotifications.transactionCreated(
+        document.vendor_name || 'Transaction',
+        `${currencySymbol} ${document.total_amount?.toFixed(2) || '0.00'}`
+      );
 
     } catch (error) {
       console.error('Error creating transaction:', error);
-      toast.error('Failed to create transaction', {
-        description: error instanceof Error ? error.message : 'Unknown error'
-      });
+      toastNotifications.transactionError(
+        error instanceof Error ? error.message : 'Unknown error'
+      );
     }
   };
 
@@ -183,50 +187,42 @@ export const ProcessedDocuments = ({ documents, onDocumentUpdate, onDocumentRemo
                     </div>
                     
                     <div className="flex-1 min-w-0 space-y-2">
-                      {/* Header with filename and status */}
-                      <div className="flex items-center gap-2">
-                        <h3 className="font-medium text-sm truncate text-foreground">
+                      {/* Header with filename and AI confidence */}
+                      <div className="flex items-center justify-between gap-2">
+                        <h3 className="font-medium text-sm truncate text-foreground flex-1">
                           {document.original_filename}
                         </h3>
-                        <Badge 
-                          variant="outline" 
-                          className={cn("text-xs font-medium shrink-0", getStatusColor(document.status))}
-                        >
-                          {getStatusText(document.status)}
-                        </Badge>
-                      </div>
-                      
-                      {/* AI Confidence Score - Only show if available */}
-                      {document.ai_confidence_score && (
-                        <div className="flex items-center gap-1">
-                          <Badge variant="outline" className="text-xs bg-purple-100 text-purple-800 border-purple-300 dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-700">
+                        
+                        {/* AI Confidence Score - Right side */}
+                        {document.ai_confidence_score && (
+                          <Badge variant="outline" className="text-xs bg-purple-100 text-purple-800 border-purple-300 dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-700 shrink-0">
                             <Brain className="h-3 w-3 mr-1" />
                             {Math.round(document.ai_confidence_score * 100)}%
                           </Badge>
-                        </div>
-                      )}
+                        )}
+                      </div>
                       
-                      {/* Parsed Data - Compact Layout */}
+                                            {/* Parsed Data - Clean Layout */}
                       {document.status === 'parsed' && (
-                        <div className="space-y-2">
-                          {/* Main Info Row */}
-                          <div className="flex items-center gap-2 text-sm">
-                            {document.vendor_name && (
-                              <span className="font-medium text-foreground truncate">
-                                {document.vendor_name}
-                              </span>
-                            )}
-                            {document.total_amount && (
-                              <span className="font-bold text-green-600 dark:text-green-400 shrink-0">
-                                {formatCurrency(document.total_amount, document.currency)}
-                              </span>
-                            )}
-                          </div>
+                        <div className="space-y-2.5">
+                          {/* Vendor Name */}
+                          {document.vendor_name && (
+                            <div className="font-medium text-foreground text-sm truncate">
+                              {document.vendor_name}
+                            </div>
+                          )}
                           
-                          {/* Secondary Info Row */}
-                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          {/* Amount - Prominent Display */}
+                          {document.total_amount && (
+                            <div className="font-bold text-lg text-green-600 dark:text-green-400">
+                              {formatCurrency(document.total_amount, document.currency)}
+                            </div>
+                          )}
+                          
+                          {/* Date and Type Row - Well Spaced */}
+                          <div className="flex items-center gap-3 text-xs">
                             {document.transaction_date && (
-                              <span className="flex items-center gap-1">
+                              <span className="flex items-center gap-1.5 text-muted-foreground">
                                 <Calendar className="h-3 w-3" />
                                 {document.transaction_date}
                               </span>
@@ -234,12 +230,12 @@ export const ProcessedDocuments = ({ documents, onDocumentUpdate, onDocumentRemo
                             {document.transaction_type && (
                               <Badge 
                                 variant="outline"
-                                                                 className={cn(
-                                   "text-xs",
-                                   document.transaction_type === 'income' 
-                                     ? "bg-green-100 text-green-800 border-green-300 dark:bg-green-900/30 dark:text-green-300 dark:border-green-700" 
-                                     : "bg-red-100 text-red-800 border-red-300 dark:bg-red-900/30 dark:text-red-300 dark:border-red-700"
-                                 )}
+                                className={cn(
+                                  "text-xs px-2 py-0.5",
+                                  document.transaction_type === 'income' 
+                                    ? "bg-green-100 text-green-800 border-green-300 dark:bg-green-900/30 dark:text-green-300 dark:border-green-700" 
+                                    : "bg-red-100 text-red-800 border-red-300 dark:bg-red-900/30 dark:text-red-300 dark:border-red-700"
+                                )}
                               >
                                 {document.transaction_type}
                               </Badge>
