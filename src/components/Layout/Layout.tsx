@@ -8,15 +8,20 @@ import {
   PieChart, 
   Wallet,
   Bell,
+  Settings,
   LogOut,
   Menu,
-  UserCircle
+  X,
+  UserCircle,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { ThemeToggle } from '@/components/ui/theme-toggle.tsx';
 import { useAuth } from '@/lib/auth';
 import { useToast } from '@/components/ui/use-toast.ts';
 import { NotificationBadge } from '@/components/ui/notification-badge';
-import { Sidebar } from '@/components/ui/sidebar.tsx';
+import { useDrag } from '@use-gesture/react';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -60,17 +65,39 @@ const Layout = ({ children }: LayoutProps) => {
   const location = useLocation();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
-  const [sidebarOpen, setSidebarOpen] = React.useState(!isMobile);
+  const [sidebarOpen, setSidebarOpen] = React.useState(() => {
+    if (typeof window === 'undefined') {
+      return true;
+    }
+    const isMobileView = window.innerWidth < 768;
+    if (isMobileView) {
+      return false;
+    }
+    const storedState = localStorage.getItem('sidebar-collapsed');
+    return storedState ? storedState === 'false' : true;
+  });
   const { user, profile, signOut } = useAuth();
   const { toast } = useToast();
   
   const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
 
+  const bind = useDrag(({ last, movement: [mx] }) => {
+    if (isMobile && last) {
+      if (mx > 100 && !sidebarOpen) {
+        setSidebarOpen(true);
+      } else if (mx < -100 && sidebarOpen) {
+        setSidebarOpen(false);
+      }
+    }
+  }, {
+    filterTaps: true,
+    axis: 'x',
+    from: () => [0, 0],
+    enabled: isMobile,
+  });
+
   React.useEffect(() => {
-    if (!isMobile) {
-      const storedSidebarState = localStorage.getItem('sidebar-collapsed');
-      setSidebarOpen(storedSidebarState ? storedSidebarState === 'false' : true);
-    } else {
+    if (isMobile) {
       setSidebarOpen(false);
     }
   }, [isMobile]);
@@ -100,19 +127,27 @@ const Layout = ({ children }: LayoutProps) => {
   };
   
   return (
-    <div className="flex min-h-screen bg-background">
+    <div className="flex min-h-screen bg-background" {...bind()}>
       {isMobile && (
         <Button 
           variant="ghost" 
           size="icon" 
-          className="fixed top-4 left-4 z-50" 
+          className="fixed top-4 left-4 z-50 md:hidden bg-background/80 backdrop-blur-sm border shadow-sm" 
           onClick={toggleSidebar}
         >
-          <Menu size={20} />
+          {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
         </Button>
       )}
       
-      <Sidebar open={sidebarOpen} onOpenChange={setSidebarOpen}>
+      <div 
+        className={cn(
+          "fixed top-0 left-0 z-40 h-screen transition-all duration-300 ease-in-out",
+          "border-r bg-card shadow-soft",
+          isMobile 
+            ? (sidebarOpen ? "w-64 translate-x-0" : "w-64 -translate-x-full") 
+            : (sidebarOpen ? "w-64" : "w-20")
+        )}
+      >
         <div className="flex flex-col h-full">
           <div>
             <div className={cn(
@@ -146,11 +181,7 @@ const Layout = ({ children }: LayoutProps) => {
                           : "text-foreground hover:bg-secondary",
                         !sidebarOpen && !isMobile && "justify-center px-2"
                       )}
-                      onClick={() => {
-                        if (isMobile) {
-                          setSidebarOpen(false);
-                        }
-                      }}
+                      onClick={() => isMobile && setSidebarOpen(false)}
                       title={!sidebarOpen && !isMobile ? item.label : undefined}
                     >
                       <div className="relative">
@@ -167,40 +198,86 @@ const Layout = ({ children }: LayoutProps) => {
             </ul>
           </nav>
           
-          <div className="mt-auto p-3">
-            <div className="border-t -mx-3 pt-3">
-              <div className={cn(
-                "flex items-center gap-3 px-3 py-2",
-                !sidebarOpen && !isMobile && "justify-center px-2"
-              )}>
-                <UserCircle size={36} className="text-muted-foreground" />
-                {(sidebarOpen || isMobile) && (
-                  <div className="flex-grow">
-                    <p className="font-semibold text-sm">{user?.email}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {profile?.display_name || 'User'}
-                    </p>
-                  </div>
-                )}
-              </div>
+          <div className={cn(
+            "border-t mt-auto",
+            sidebarOpen || isMobile ? "p-4" : "p-2"
+          )}>
+            <div className="flex justify-between mb-3">
+              <ThemeToggle />
+              
+              {!isMobile && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={toggleSidebar}
+                  className="transition-all"
+                  title={sidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
+                >
+                  {sidebarOpen ? <ChevronLeft size={18} /> : <ChevronRight size={18} />}
+                </Button>
+              )}
             </div>
             
-            <Button 
-              variant="ghost" 
-              className={cn(
-                "w-full justify-start mt-2",
-                !sidebarOpen && !isMobile && "justify-center px-2"
-              )}
-              onClick={handleLogout}
-            >
-              <LogOut size={20} className={cn(sidebarOpen || isMobile ? "mr-3" : "mr-0")} />
-              {(sidebarOpen || isMobile) && 'Logout'}
-            </Button>
+            {(sidebarOpen || isMobile) ? (
+              <Link to="/profile" className="flex items-center mb-4 px-2 py-3 rounded-md hover:bg-secondary transition-colors cursor-pointer">
+                <div className="w-8 h-8 bg-primary/20 rounded-full flex items-center justify-center text-primary mr-3">
+                  <UserCircle size={20} />
+                </div>
+                <div>
+                  <p className="text-sm font-medium">{profile?.display_name || 'User'}</p>
+                  <p className="text-xs text-muted-foreground">{user?.email || 'user@example.com'}</p>
+                </div>
+              </Link>
+            ) : (
+              <Link to="/profile" className="flex justify-center mb-4">
+                <div className="w-10 h-10 bg-primary/20 rounded-full flex items-center justify-center text-primary">
+                  <UserCircle size={24} />
+                </div>
+              </Link>
+            )}
+            
+            <div className={cn(
+              "flex",
+              sidebarOpen || isMobile ? "gap-2" : "flex-col gap-2"
+            )}>
+              <Button 
+                size="sm" 
+                variant="outline" 
+                className={cn(
+                  "gap-1",
+                  sidebarOpen || isMobile ? "w-full" : "w-full justify-center px-0"
+                )} 
+                asChild
+              >
+                <Link to="/profile">
+                  <Settings size={14} />
+                  {(sidebarOpen || isMobile) && <span>Profile</span>}
+                </Link>
+              </Button>
+              <Button 
+                size="sm" 
+                variant="ghost" 
+                className={cn(
+                  "gap-1",
+                  sidebarOpen || isMobile ? "w-full" : "w-full justify-center px-0"
+                )}
+                onClick={handleLogout}
+              >
+                <LogOut size={14} />
+                {(sidebarOpen || isMobile) && <span>Logout</span>}
+              </Button>
+            </div>
           </div>
         </div>
-      </Sidebar>
+      </div>
       
-      <main className={cn(
+      <main 
+        onClick={() => {
+          if (sidebarOpen && !isMobile) {
+            setSidebarOpen(false);
+          }
+        }}
+        className={cn(
         "flex-1 p-6 md:p-10 transition-all duration-300",
         isMobile 
           ? "ml-0" 
@@ -213,7 +290,7 @@ const Layout = ({ children }: LayoutProps) => {
       
       {isMobile && sidebarOpen && (
         <div 
-          className="fixed inset-0 bg-black/50 z-30"
+          className="fixed inset-0 bg-black/60 z-30"
           onClick={() => setSidebarOpen(false)}
         ></div>
       )}
