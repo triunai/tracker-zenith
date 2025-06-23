@@ -111,7 +111,7 @@ const Layout = ({ children }: LayoutProps) => {
         <Button 
           variant="ghost" 
           size="icon" 
-          className="fixed top-4 left-4 z-50" 
+          className="fixed top-4 left-4 z-50 md:hidden bg-background/80 backdrop-blur-sm border shadow-sm" 
           onClick={toggleSidebar}
         >
           {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
@@ -257,10 +257,11 @@ const Layout = ({ children }: LayoutProps) => {
       
       {/* Main content */}
       <div className={cn(
-        "flex-1 p-6 md:p-10 transition-all duration-300",
+        "flex-1 transition-all duration-300",
         isMobile 
-          ? "ml-0" 
-          : (sidebarOpen ? "ml-64" : "ml-20")
+          ? "pt-16 px-4 pb-6" // Add top padding for hamburger button on mobile
+          : "p-6 md:p-10",
+        !isMobile && (sidebarOpen ? "ml-64" : "ml-20")
       )}>
         <div className="max-w-6xl mx-auto">
           {children}
