@@ -88,19 +88,19 @@ const BudgetAnalytics = () => {
         </p>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
           {/* Total Budgets */}
-          <div className="bg-muted/30 p-4 rounded-lg border border-muted">
+          <div className="bg-muted/30 p-3 sm:p-4 rounded-lg border border-muted">
             <div className="flex items-center gap-2 mb-2">
               <Target className="h-4 w-4 text-muted-foreground" />
               <span className="text-xs text-muted-foreground">Active</span>
             </div>
-            <div className="text-2xl font-bold">{totalBudgets}</div>
+            <div className="text-xl sm:text-2xl font-bold">{totalBudgets}</div>
             <div className="text-xs text-muted-foreground">Budgets</div>
           </div>
 
           {/* Budget Health */}
-          <div className="bg-muted/30 p-4 rounded-lg border border-muted">
+          <div className="bg-muted/30 p-3 sm:p-4 rounded-lg border border-muted">
             <div className="flex items-center gap-2 mb-2">
               {healthPercentage >= 80 ? (
                 <TrendingUp className="h-4 w-4 text-finance-income" />
@@ -109,24 +109,24 @@ const BudgetAnalytics = () => {
               )}
               <span className="text-xs text-muted-foreground">Health</span>
             </div>
-            <div className={`text-2xl font-bold ${healthPercentage >= 80 ? 'text-finance-income' : 'text-finance-expense'}`}>
+            <div className={`text-xl sm:text-2xl font-bold ${healthPercentage >= 80 ? 'text-finance-income' : 'text-finance-expense'}`}>
               {healthPercentage}%
             </div>
             <div className="text-xs text-muted-foreground">On Track</div>
           </div>
 
           {/* Total Allocated */}
-          <div className="bg-muted/30 p-4 rounded-lg border border-muted">
+          <div className="bg-muted/30 p-3 sm:p-4 rounded-lg border border-muted">
             <div className="flex items-center gap-2 mb-2">
               <div className="h-4 w-4 rounded-full bg-finance-income"></div>
               <span className="text-xs text-muted-foreground">Allocated</span>
             </div>
-            <div className="text-2xl font-bold text-finance-income">{formatCurrency(totalBudgetAmount)}</div>
+            <div className="text-xl sm:text-2xl font-bold text-finance-income break-words">{formatCurrency(totalBudgetAmount)}</div>
             <div className="text-xs text-muted-foreground">Total Budget</div>
           </div>
 
           {/* Remaining */}
-          <div className="bg-muted/30 p-4 rounded-lg border border-muted">
+          <div className="bg-muted/30 p-3 sm:p-4 rounded-lg border border-muted">
             <div className="flex items-center gap-2 mb-2">
               {overBudgetCount > 0 ? (
                 <AlertTriangle className="h-4 w-4 text-finance-expense" />
@@ -135,7 +135,7 @@ const BudgetAnalytics = () => {
               )}
               <span className="text-xs text-muted-foreground">Available</span>
             </div>
-            <div className={`text-2xl font-bold ${totalRemaining < 0 ? 'text-finance-expense' : ''}`}>
+            <div className={`text-xl sm:text-2xl font-bold ${totalRemaining < 0 ? 'text-finance-expense' : ''} break-words`}>
               {formatCurrency(totalRemaining)}
             </div>
             <div className="text-xs text-muted-foreground">Remaining</div>
@@ -143,17 +143,17 @@ const BudgetAnalytics = () => {
         </div>
 
         {/* Summary insights */}
-        <div className="mt-6 p-4 bg-muted/20 rounded-lg">
+        <div className="mt-4 sm:mt-6 p-3 sm:p-4 bg-muted/20 rounded-lg">
           <h4 className="font-medium mb-2">Quick Insights</h4>
-          <div className="space-y-1 text-sm text-muted-foreground">
-            <p>• You've spent <strong className="text-finance-expense">{formatCurrency(totalSpent)}</strong> ({avgSpendingPercentage}%) of your total budget</p>
+          <ul className="space-y-1.5 text-sm text-muted-foreground list-disc list-inside">
+            <li>You've spent <strong className="text-finance-expense">{formatCurrency(totalSpent)}</strong> ({avgSpendingPercentage}%) of your total budget.</li>
             {overBudgetCount > 0 ? (
-              <p>• <strong className="text-finance-expense">{overBudgetCount}</strong> budget(s) are over limit - consider reviewing</p>
+              <li><strong className="text-finance-expense">{overBudgetCount}</strong> budget(s) are over limit.</li>
             ) : (
-              <p>• <strong className="text-finance-income">All budgets</strong> are within their limits</p>
+              <li><strong className="text-finance-income">All budgets</strong> are within their limits.</li>
             )}
-            <p>• Budget health score: <strong className={healthPercentage >= 80 ? 'text-finance-income' : 'text-finance-expense'}>{healthPercentage}%</strong></p>
-          </div>
+            <li>Budget health score: <strong className={healthPercentage >= 80 ? 'text-finance-income' : 'text-finance-expense'}>{healthPercentage}%</strong></li>
+          </ul>
         </div>
       </CardContent>
     </Card>

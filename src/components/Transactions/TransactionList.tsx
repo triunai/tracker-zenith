@@ -40,6 +40,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog.tsx";
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 // Custom MYR currency formatter with error handling
 const formatMYR = (amount: number): string => {
@@ -72,6 +73,7 @@ const TransactionList = () => {
   const { toast } = useToast();
   const { refreshData, dateFilter, dateRangeText, userId, startDate, endDate } = useDashboard();
   const queryClient = useQueryClient();
+  const isMobile = useIsMobile();
 
   // 🎯 CRITICAL FIX: Use React Query for data fetching
   const { 
@@ -328,10 +330,12 @@ const TransactionList = () => {
   return (
     <>
     <Card className="h-full shadow-purple">
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <div>
-          <CardTitle className="text-xl font-bold">Transactions</CardTitle>
-          <CardDescription>View and manage your transactions for {dateRangeText}</CardDescription>
+      <CardHeader className="flex flex-row items-start justify-between gap-4 pb-4">
+        <div className="flex-1 min-w-0">
+          <CardTitle className="text-lg sm:text-xl font-bold">Transactions</CardTitle>
+          <CardDescription className="text-sm text-muted-foreground mt-1">
+             {isMobile ? `For ${dateRangeText}`: `View and manage your transactions for ${dateRangeText}`}
+          </CardDescription>
         </div>
         <TransactionForm 
           key={expenseToEdit ? `edit-${expenseToEdit.id}` : 'add'}
@@ -343,7 +347,7 @@ const TransactionList = () => {
       
       <CardContent>
         {/* Transaction Type Filter */}
-        <div className="mb-6" onClick={(e) => e.stopPropagation()}>
+        <div className="mb-4" onClick={(e) => e.stopPropagation()}>
           <Tabs 
             defaultValue="all" 
             value={transactionTypeFilter} 
@@ -351,7 +355,7 @@ const TransactionList = () => {
             className="w-full"
           >
             <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="all">All Transactions</TabsTrigger>
+              <TabsTrigger value="all">{isMobile ? 'All' : 'All Transactions'}</TabsTrigger>
               <TabsTrigger value="expense">Expenses</TabsTrigger>
               <TabsTrigger value="income">Income</TabsTrigger>
             </TabsList>
@@ -359,24 +363,24 @@ const TransactionList = () => {
         </div>
         
         {/* Filters */}
-        <div className="space-y-4 mb-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
+        <div className="space-y-3 mb-4">
+          <div className="space-y-3 sm:space-y-0 sm:grid sm:grid-cols-1 md:grid-cols-3 sm:gap-4">
+            <div className="col-span-full md:col-span-1">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" size={16} />
                 <Input
                   className="pl-9"
-                  placeholder="Search transactions..."
+                  placeholder={isMobile ? "Search..." : "Search transactions..."}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
               </div>
             </div>
             
-            <div>
+            <div className="grid grid-cols-2 gap-2 sm:gap-4 md:grid-cols-2 md:col-span-2">
               <Select value={selectedCategory} onValueChange={setSelectedCategory}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Filter by category" />
+                  <SelectValue placeholder={isMobile ? "Category" : "Filter by category"} />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Categories</SelectItem>
@@ -387,12 +391,10 @@ const TransactionList = () => {
                   ))}
                 </SelectContent>
               </Select>
-            </div>
-            
-            <div>
+              
               <Select value={selectedPaymentMethod} onValueChange={setSelectedPaymentMethod}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Filter by payment" />
+                  <SelectValue placeholder={isMobile ? "Payment" : "Filter by payment"} />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Payment Methods</SelectItem>
@@ -447,82 +449,154 @@ const TransactionList = () => {
               const category = firstItem?.category;
               
               return (
-                <div key={expense.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 border rounded-md hover:bg-muted/50 transition-colors hover:shadow-purple-sm">
-                  <div className="flex items-start gap-3 mb-2 sm:mb-0">
-                    <div className="hidden sm:flex h-10 w-10 rounded-full items-center justify-center bg-primary/10">
-                      {expense.transaction_type === 'income' ? (
-                        <ArrowDownCircle className="h-5 w-5 text-green-500" />
-                      ) : (
-                        <CreditCard className="h-5 w-5 text-primary" />
-                      )}
-                    </div>
-                    
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <h3 className="font-medium">
-                          {firstItem?.description || expense.description || 'Unnamed Transaction'}
-                        </h3>
-                        {category && (
-                          <Badge variant="outline" className="text-xs">
-                            {category.name}
-                          </Badge>
-                        )}
-                        {/* Only show the Income badge, not the Expense badge */}
-                        {expense.transaction_type === 'income' && (
-                          <Badge variant="outline" className="text-xs text-green-500">
-                            Income
-                          </Badge>
-                        )}
-                      </div>
-                      
-                      <div className="flex items-center text-sm text-muted-foreground gap-3 mt-1">
-                        <div className="flex items-center gap-1">
-                          <CalendarIcon className="h-3 w-3" />
-                          <span>{format(new Date(expense.date), 'MMM d, yyyy')}</span>
+                <div key={expense.id} className="border rounded-md hover:bg-muted/50 transition-colors hover:shadow-purple-sm overflow-hidden">
+                  <div className="p-3 sm:p-4">
+                    {/* Mobile Layout */}
+                    {isMobile ? (
+                      <div className="space-y-3">
+                        {/* Header Row - Amount and Actions */}
+                        <div className="flex items-center justify-between">
+                          <div className={`text-lg font-bold ${expense.transaction_type === 'income' ? 'text-green-500' : 'text-destructive'}`}>
+                            {expense.transaction_type === 'income' ? '+' : '-'}{formatMYR(totalAmount)}
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Button 
+                              variant="ghost" 
+                              size="icon"
+                              className="h-8 w-8 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors"
+                              onClick={() => setExpenseToEdit(expense)}
+                            >
+                              <Edit className="h-3 w-3" />
+                              <span className="sr-only">Edit</span>
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="h-8 w-8 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors"
+                              onClick={() => confirmDelete(expense.id)}
+                            >
+                              <Trash2 className="h-3 w-3" />
+                              <span className="sr-only">Delete</span>
+                            </Button>
+                          </div>
                         </div>
                         
-                        {expense.payment_method && (
-                          <div>
-                            <span>{expense.payment_method.method_name}</span>
+                        {/* Transaction Info */}
+                        <div className="space-y-2">
+                          <div className="flex items-start justify-between">
+                            <h3 className="font-medium text-sm leading-tight flex-1 pr-2">
+                              {firstItem?.description || expense.description || 'Unnamed Transaction'}
+                            </h3>
+                            <div className="flex flex-wrap gap-1 justify-end">
+                              {category && (
+                                <Badge variant="outline" className="text-xs">
+                                  {category.name}
+                                </Badge>
+                              )}
+                              {expense.transaction_type === 'income' && (
+                                <Badge variant="outline" className="text-xs text-green-500">
+                                  Income
+                                </Badge>
+                              )}
+                            </div>
                           </div>
-                        )}
+                          
+                          <div className="flex items-center justify-between text-xs text-muted-foreground">
+                            <div className="flex items-center gap-1">
+                              <CalendarIcon className="h-3 w-3" />
+                              <span>{format(new Date(expense.date), 'MMM d')}</span>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              {expense.payment_method && (
+                                <span>{expense.payment_method.method_name}</span>
+                              )}
+                              {expense.expense_items && expense.expense_items.length > 1 && (
+                                <span>{expense.expense_items.length} items</span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      /* Desktop Layout - Existing */
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-start gap-3">
+                          <div className="flex h-10 w-10 rounded-full items-center justify-center bg-primary/10">
+                            {expense.transaction_type === 'income' ? (
+                              <ArrowDownCircle className="h-5 w-5 text-green-500" />
+                            ) : (
+                              <CreditCard className="h-5 w-5 text-primary" />
+                            )}
+                          </div>
+                          
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <h3 className="font-medium">
+                                {firstItem?.description || expense.description || 'Unnamed Transaction'}
+                              </h3>
+                              {category && (
+                                <Badge variant="outline" className="text-xs">
+                                  {category.name}
+                                </Badge>
+                              )}
+                              {expense.transaction_type === 'income' && (
+                                <Badge variant="outline" className="text-xs text-green-500">
+                                  Income
+                                </Badge>
+                              )}
+                            </div>
+                            
+                            <div className="flex items-center text-sm text-muted-foreground gap-3 mt-1">
+                              <div className="flex items-center gap-1">
+                                <CalendarIcon className="h-3 w-3" />
+                                <span>{format(new Date(expense.date), 'MMM d, yyyy')}</span>
+                              </div>
+                              
+                              {expense.payment_method && (
+                                <div>
+                                  <span>{expense.payment_method.method_name}</span>
+                                </div>
+                              )}
+                              
+                              {expense.expense_items && expense.expense_items.length > 1 && (
+                                <div>
+                                  <span>{expense.expense_items.length} items</span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
                         
-                        {expense.expense_items && expense.expense_items.length > 1 && (
-                          <div>
-                            <span>{expense.expense_items.length} items</span>
+                        <div className="flex items-center gap-3">
+                          <div className="text-right">
+                            <div className={`font-medium ${expense.transaction_type === 'income' ? 'text-green-500' : 'text-destructive'}`}>
+                              {expense.transaction_type === 'income' ? '+' : '-'}{formatMYR(totalAmount)}
+                            </div>
                           </div>
-                        )}
+                          
+                          <div className="flex items-center gap-1">
+                            <Button 
+                              variant="ghost" 
+                              size="icon"
+                              className="text-gray-500 hover:text-blue-800 hover:bg-blue-100 rounded-full transition-colors"
+                              onClick={() => setExpenseToEdit(expense)}
+                            >
+                              <Edit className="h-4 w-4" />
+                              <span className="sr-only">Edit Transaction</span>
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="text-gray-500 hover:text-red-600 hover:bg-red-100 rounded-full transition-colors"
+                              onClick={() => confirmDelete(expense.id)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                              <span className="sr-only">Delete Transaction</span>
+                            </Button>
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
-                    <div className="text-right">
-                      <div className={`font-medium ${expense.transaction_type === 'income' ? 'text-green-500' : 'text-destructive'}`}>
-                        {expense.transaction_type === 'income' ? '+' : '-'}{formatMYR(totalAmount)}
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-center gap-1">
-                      <Button 
-                        variant="ghost" 
-                        size="icon"
-                        className="text-gray-500 hover:text-blue-800 hover:bg-blue-100 rounded-full transition-colors"
-                        onClick={() => setExpenseToEdit(expense)}
-                      >
-                        <Edit className="h-4 w-4" />
-                        <span className="sr-only">Edit Transaction</span>
-                      </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        className="text-gray-500 hover:text-red-600 hover:bg-red-100 rounded-full transition-colors"
-                        onClick={() => confirmDelete(expense.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                        <span className="sr-only">Delete Transaction</span>
-                      </Button>
-                    </div>
+                    )}
                   </div>
                 </div>
               );
