@@ -21,6 +21,7 @@ import { ThemeToggle } from '@/components/ui/theme-toggle.tsx';
 import { useAuth } from '@/lib/auth';
 import { useToast } from '@/components/ui/use-toast.ts';
 import { NotificationBadge } from '@/components/ui/notification-badge';
+import { useDrag } from '@use-gesture/react';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -70,6 +71,24 @@ const Layout = ({ children }: LayoutProps) => {
   
   const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
 
+  // Gesture to open/close sidebar on mobile
+  const bind = useDrag(({ down, movement: [mx], direction: [xDir], velocity: [vx], initial: [ix] }) => {
+    if (isMobile) {
+      if (mx > 100 && xDir > 0 && !sidebarOpen) { // Swipe right to open
+        setSidebarOpen(true);
+      } else if (mx < -100 && xDir < 0 && sidebarOpen) { // Swipe left to close
+        setSidebarOpen(false);
+      }
+    }
+  }, {
+    filterTaps: true,
+    axis: 'x',
+    from: () => [0, 0],
+    // Only trigger when dragging from the edge of the screen
+    enabled: isMobile,
+    bounds: { left: -100, right: 100 },
+  });
+
   // Store sidebar state in localStorage
   React.useEffect(() => {
     if (!isMobile) {
@@ -105,7 +124,7 @@ const Layout = ({ children }: LayoutProps) => {
   };
   
   return (
-    <div className="flex min-h-screen bg-background">
+    <div className="flex min-h-screen bg-background" {...bind()}>
       {/* Mobile sidebar toggle */}
       {isMobile && (
         <Button 
@@ -130,23 +149,25 @@ const Layout = ({ children }: LayoutProps) => {
       >
         <div className="flex flex-col h-full">
           {/* App logo / title */}
-          <div className={cn(
-            "p-6 mb-2 flex items-center",
-            !sidebarOpen && !isMobile && "justify-center p-4"
-          )}>
-            <h1 className={cn(
-              "font-bold flex items-center",
-              sidebarOpen || isMobile ? "text-xl" : "text-base"
+          <div>
+            <div className={cn(
+              "p-6 mb-2 flex items-center",
+              !sidebarOpen && !isMobile && "justify-center p-4"
             )}>
-              <span className="bg-primary text-primary-foreground rounded-md w-8 h-8 flex items-center justify-center mr-2">
-                F
-              </span>
-              {(sidebarOpen || isMobile) && "Finance Zen"}
-            </h1>
+              <h1 className={cn(
+                "font-bold flex items-center",
+                sidebarOpen || isMobile ? "text-xl" : "text-base"
+              )}>
+                <span className="bg-primary text-primary-foreground rounded-md w-8 h-8 flex items-center justify-center mr-2">
+                  F
+                </span>
+                {(sidebarOpen || isMobile) && "Finance Zen"}
+              </h1>
+            </div>
           </div>
           
           {/* Navigation */}
-          <nav className="flex-1 px-3">
+          <nav className="flex-grow px-3">
             <ul className="space-y-1.5">
               {navItems.map((item) => {
                 const isActive = location.pathname === item.href;

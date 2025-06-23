@@ -29,6 +29,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { supabase } from '@/lib/supabase/supabase';
 import { useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 // Colors for the chart
 const CATEGORY_COLORS = [
@@ -133,6 +134,7 @@ const SpendingChart = () => {
   const [dataType, setDataType] = useState<'category' | 'payment'>('category');
   const [chartType, setChartType] = useState<'pie' | 'bar'>('pie');
   const { userId, dateRangeText, startDate, endDate } = useDashboard();
+  const isMobile = useIsMobile();
   
   // Date ranges are now provided by DashboardContext for consistency
 
@@ -275,18 +277,20 @@ const SpendingChart = () => {
   
   return (
     <Card className="shadow-purple">
-      <CardHeader className="pb-2">
-        <div className="flex items-center justify-between">
-          <div>
+      <CardHeader className="pb-4">
+        <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex-1">
             <CardTitle>Spending Analysis</CardTitle>
-            <CardDescription>Breakdown of your expenses for {dateRangeText}</CardDescription>
+            <CardDescription className="mt-1">
+              {isMobile ? `For ${dateRangeText}` : `Breakdown of your expenses for ${dateRangeText}`}
+            </CardDescription>
           </div>
-          <div className="flex flex-col sm:flex-row gap-2">
+          <div className="flex w-full sm:w-auto flex-col sm:flex-row gap-2">
             <Tabs 
               defaultValue="category" 
               value={dataType} 
               onValueChange={handleDataTypeChange}
-              className="w-[240px]"
+              className="w-full sm:w-auto"
             >
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="category">By Category</TabsTrigger>
@@ -298,7 +302,7 @@ const SpendingChart = () => {
               defaultValue="pie" 
               value={chartType} 
               onValueChange={handleChartTypeChange}
-              className="w-[240px]"
+              className="w-full sm:w-auto"
             >
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="pie">Pie Chart</TabsTrigger>

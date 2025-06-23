@@ -145,21 +145,21 @@ export const toastNotifications = {
   documentUploaded: (filename: string) =>
     showToast('document', {
       title: '📄 Document Uploaded',
-      description: `${filename} is being processed by AI...`,
+      description: `${filename.length > 25 ? filename.substring(0, 25) + '...' : filename} is being processed...`,
       duration: 4000,
     }),
 
   documentProcessing: (filename: string) =>
     showToast('info', {
       title: '🧠 AI Processing',
-      description: `Analyzing ${filename}...`,
+      description: `Analyzing ${filename.length > 20 ? filename.substring(0, 20) + '...' : filename}...`,
       duration: 3000,
     }),
 
   documentError: (error: string) =>
     showToast('error', {
       title: '❌ Processing Failed',
-      description: error,
+      description: error.length > 60 ? error.substring(0, 60) + '...' : error,
       duration: 6000,
     }),
 
@@ -167,35 +167,47 @@ export const toastNotifications = {
   transactionCreated: (vendorName: string, amount: string) =>
     showToast('transaction', {
       title: '💰 Transaction Created!',
-      description: `${vendorName} • ${amount} added to your records`,
+      description: `${vendorName} • ${amount} added successfully`,
       duration: 4000,
     }),
 
   transactionError: (error: string) =>
     showToast('error', {
       title: '❌ Transaction Failed',
-      description: error,
+      description: error.length > 50 ? error.substring(0, 50) + '...' : error,
       duration: 5000,
     }),
 
   // Generic toasts
   success: (title: string, description?: string) =>
-    showToast('success', { title, description }),
+    showToast('success', { 
+      title, 
+      description: description && description.length > 60 ? description.substring(0, 60) + '...' : description 
+    }),
 
   error: (title: string, description?: string) =>
-    showToast('error', { title, description }),
+    showToast('error', { 
+      title, 
+      description: description && description.length > 60 ? description.substring(0, 60) + '...' : description 
+    }),
 
   warning: (title: string, description?: string) =>
-    showToast('warning', { title, description }),
+    showToast('warning', { 
+      title, 
+      description: description && description.length > 60 ? description.substring(0, 60) + '...' : description 
+    }),
 
   info: (title: string, description?: string) =>
-    showToast('info', { title, description }),
+    showToast('info', { 
+      title, 
+      description: description && description.length > 60 ? description.substring(0, 60) + '...' : description 
+    }),
 
   // Document removal
   documentRemoved: () =>
     showToast('remove', {
       title: 'Document Removed',
-      description: 'Document has been removed from the list',
+      description: 'Document removed from list',
       duration: 3000,
     }),
 }; 

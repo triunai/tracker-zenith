@@ -86,22 +86,21 @@ const Index = () => {
           
           {/* Main Content */}
           <DashboardSummary />
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-10">
-            {/* Top Row: Make items stretch to the same height */}
-            <div className="grid auto-rows-fr grid-cols-1 gap-4 lg:col-span-10 lg:grid-cols-10">
-              <div className="lg:col-span-7">
-                <TransactionList />
-              </div>
-              <div className="lg:col-span-3">
-                <BudgetTracker />
-          </div>
-        </div>
-        
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-10 lg:items-start">
+            {/* Left Column */}
+            <div className="lg:col-span-7">
+              <TransactionList />
+            </div>
+            {/* Right Column */}
+            <div className="lg:col-span-3 h-full">
+              <BudgetTracker />
+            </div>
+            
             {/* Bottom Row */}
             <div className="lg:col-span-10">
-          <SpendingChart />
+              <SpendingChart />
             </div>
-        </div>
+          </div>
 
         <BudgetForm 
           open={isNewBudgetOpen} 

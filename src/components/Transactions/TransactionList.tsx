@@ -330,10 +330,12 @@ const TransactionList = () => {
   return (
     <>
     <Card className="h-full shadow-purple">
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <div>
-          <CardTitle className="text-xl font-bold">Transactions</CardTitle>
-          <CardDescription>View and manage your transactions for {dateRangeText}</CardDescription>
+      <CardHeader className="flex flex-row items-start justify-between gap-4 pb-4">
+        <div className="flex-1 min-w-0">
+          <CardTitle className="text-lg sm:text-xl font-bold">Transactions</CardTitle>
+          <CardDescription className="text-sm text-muted-foreground mt-1">
+             {isMobile ? `For ${dateRangeText}`: `View and manage your transactions for ${dateRangeText}`}
+          </CardDescription>
         </div>
         <TransactionForm 
           key={expenseToEdit ? `edit-${expenseToEdit.id}` : 'add'}
@@ -345,7 +347,7 @@ const TransactionList = () => {
       
       <CardContent>
         {/* Transaction Type Filter */}
-        <div className="mb-6" onClick={(e) => e.stopPropagation()}>
+        <div className="mb-4" onClick={(e) => e.stopPropagation()}>
           <Tabs 
             defaultValue="all" 
             value={transactionTypeFilter} 
@@ -353,7 +355,7 @@ const TransactionList = () => {
             className="w-full"
           >
             <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="all">All Transactions</TabsTrigger>
+              <TabsTrigger value="all">{isMobile ? 'All' : 'All Transactions'}</TabsTrigger>
               <TabsTrigger value="expense">Expenses</TabsTrigger>
               <TabsTrigger value="income">Income</TabsTrigger>
             </TabsList>

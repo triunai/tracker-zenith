@@ -228,7 +228,8 @@ export const DocumentUploader = ({ onDocumentProcessed }: DocumentUploaderProps)
         <div
           {...getRootProps()}
           className={cn(
-            'relative group w-full h-32 rounded-xl flex flex-col items-center justify-center',
+            'relative group w-full rounded-xl flex flex-col items-center justify-center',
+            'h-24 sm:h-32', // Responsive height - smaller on mobile
             'border-2 border-dashed transition-all duration-300 ease-in-out cursor-pointer',
             'bg-gradient-to-br from-background to-muted/20',
             isDragActive 
@@ -238,22 +239,28 @@ export const DocumentUploader = ({ onDocumentProcessed }: DocumentUploaderProps)
           )}
         >
           <input {...getInputProps()} />
-          <div className="flex flex-col items-center justify-center text-center p-4">
+          <div className="flex flex-col items-center justify-center text-center p-3 sm:p-4">
             {getFileIcon()}
             {uploading ? (
-              <div className="mt-3">
-                <p className="text-sm font-medium text-primary">Processing...</p>
-                <p className="text-xs text-muted-foreground mt-1">AI is analyzing your document</p>
+              <div className="mt-2 sm:mt-3">
+                <p className="text-xs sm:text-sm font-medium text-primary">Processing...</p>
+                <p className="text-xs text-muted-foreground mt-1 hidden sm:block">AI is analyzing your document</p>
               </div>
             ) : (
-              <div className="mt-3">
-                <p className="text-sm font-medium text-foreground group-hover:text-primary transition-colors">
-                  {isDragActive ? 'Drop your file here' : 'Drop files or click to browse'}
+              <div className="mt-2 sm:mt-3">
+                <p className="text-xs sm:text-sm font-medium text-foreground group-hover:text-primary transition-colors">
+                  {isDragActive ? 'Drop your file here' : (
+                    <>
+                      <span className="hidden sm:inline">Drop files or click to browse</span>
+                      <span className="sm:hidden">Tap to upload</span>
+                    </>
+                  )}
                 </p>
-                <div className="flex items-center justify-center gap-4 mt-2">
+                <div className="flex items-center justify-center gap-3 sm:gap-4 mt-1 sm:mt-2">
                   <div className="flex items-center gap-1 text-xs text-muted-foreground">
                     <Image className="h-3 w-3" />
-                    <span>PNG, JPG</span>
+                    <span className="hidden sm:inline">PNG, JPG</span>
+                    <span className="sm:hidden">IMG</span>
                   </div>
                   <div className="flex items-center gap-1 text-xs text-muted-foreground">
                     <FileIcon className="h-3 w-3" />
