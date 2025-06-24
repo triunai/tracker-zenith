@@ -1,0 +1,175 @@
+import React, { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { supabase } from '@/lib/supabase/supabase';
+
+interface SearchResult {
+  id: number;
+  table_name: string;
+  content: string;
+  fts_rank: number;
+  semantic_rank: number;
+  rrf_rank: number;
+  metadata: Record<string, unknown>;
+}
+
+export function HybridSearchTest() {
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState<SearchResult[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const testSearch = async () => {
+    if (!query.trim()) return;
+    
+    setLoading(true);
+    setError(null);
+    
+    try {
+      // Get current user
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError || !user) {
+        throw new Error('Not authenticated');
+      }
+
+      // Call the hybrid search RPC
+      const { data, error: searchError } = await supabase.rpc('zenith_hybrid_search', {
+        p_user_id: user.id,
+        p_query_text: query,
+        p_match_limit: 10
+      });
+
+      if (searchError) {
+        throw searchError;
+      }
+
+      setResults(data || []);
+    } catch (err) {
+      console.error('Search error:', err);
+      setError(err instanceof Error ? err.message : 'Search failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const testDatabaseStructure = async () => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      // Test if the basic structure exists
+      const { data, error } = await supabase
+        .from('expense')
+        .select('id, description, fts, embedding')
+        .limit(1);
+
+      if (error) {
+        throw error;
+      }
+
+      console.log('✅ Database structure test passed:', data);
+      setError(null);
+      alert('✅ Database structure looks good! Check console for details.');
+    } catch (err) {
+      console.error('Database structure test failed:', err);
+      setError(err instanceof Error ? err.message : 'Database test failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Card className="w-full max-w-4xl mx-auto">
+      <CardHeader>
+        <CardTitle>🧪 Hybrid Search Test - Step 1</CardTitle>
+        <p className="text-sm text-gray-600">
+          Test your FTS (Full-Text Search) foundation before we add embeddings
+        </p>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {/* Database Structure Test */}
+        <div className="border rounded p-4 bg-muted/50">
+          <h3 className="font-semibold mb-2">1. Test Database Structure</h3>
+          <Button 
+            onClick={testDatabaseStructure}
+            disabled={loading}
+            variant="outline"
+          >
+            {loading ? 'Testing...' : 'Test DB Structure'}
+          </Button>
+        </div>
+
+        {/* Search Test */}
+        <div className="border rounded p-4">
+          <h3 className="font-semibold mb-2">2. Test FTS Search</h3>
+          <div className="flex gap-2 mb-4">
+            <Input
+              placeholder="Search your expenses (e.g., 'coffee', 'restaurant', 'subscription')"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && testSearch()}
+            />
+            <Button 
+              onClick={testSearch}
+              disabled={loading || !query.trim()}
+            >
+              {loading ? 'Searching...' : 'Search'}
+            </Button>
+          </div>
+
+          {error && (
+            <div className="bg-destructive/10 border border-destructive/20 rounded p-3 mb-4">
+              <p className="text-destructive text-sm">❌ Error: {error}</p>
+            </div>
+          )}
+
+          {results.length > 0 && (
+            <div className="space-y-2">
+              <h4 className="font-semibold">Results ({results.length}):</h4>
+              {results.map((result, index) => (
+                <div key={index} className="border rounded p-3 bg-card">
+                  <div className="flex justify-between items-start mb-2">
+                    <span className="font-medium">
+                      {result.table_name} #{result.id}
+                    </span>
+                    <span className="text-sm text-muted-foreground">
+                      FTS Score: {result.fts_rank.toFixed(3)}
+                    </span>
+                  </div>
+                  <p className="text-sm text-foreground mb-2">{result.content}</p>
+                  <details className="text-xs text-muted-foreground">
+                    <summary>Metadata</summary>
+                    <pre className="mt-1 p-2 bg-muted rounded">
+                      {JSON.stringify(result.metadata, null, 2)}
+                    </pre>
+                  </details>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {results.length === 0 && !loading && !error && query && (
+            <div className="bg-yellow-500/10 border border-yellow-500/20 rounded p-3">
+              <p className="text-yellow-700 dark:text-yellow-400 text-sm">
+                🔍 No results found. Try different keywords or add some expenses first.
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* Test Instructions */}
+        <div className="border rounded p-4 bg-blue-500/10">
+          <h3 className="font-semibold mb-2">💡 What to Test:</h3>
+          <ul className="text-sm space-y-1 text-muted-foreground">
+            <li>• First, click "Test DB Structure" to verify the migration worked</li>
+            <li>• Then search for keywords that exist in your expense descriptions</li>
+            <li>• Try partial matches: "coffee" should find "Coffee Shop", "Starbucks Coffee", etc.</li>
+                         <li>• Check that FTS Score {'>'} 0 (higher = better match)</li>
+            <li>• Note: Semantic search (embeddings) comes in Step 2!</li>
+          </ul>
+        </div>
+      </CardContent>
+    </Card>
+  );
+} 
