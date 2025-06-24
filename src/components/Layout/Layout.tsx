@@ -14,7 +14,8 @@ import {
   X,
   UserCircle,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Search
 } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { ThemeToggle } from '@/components/ui/theme-toggle.tsx';
@@ -56,6 +57,11 @@ const navItems: NavItem[] = [
     label: 'Reports', 
     icon: <PieChart size={20} />, 
     href: '/reports' 
+  },
+  { 
+    label: 'Smart Search', 
+    icon: <Search size={20} />, 
+    href: '/test-search' 
   },
   { 
     label: 'Notifications', 

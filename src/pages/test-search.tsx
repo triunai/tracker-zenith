@@ -9,10 +9,10 @@ const TestSearchPage = () => {
         <div className="space-y-4">
           <div>
             <h2 className="text-3xl font-bold tracking-tight">
-              🧪 Hybrid Search Testing
+              🔍 Smart Search
             </h2>
             <p className="text-muted-foreground">
-              Test the Step 1 FTS implementation before adding embeddings
+              Search your expenses using natural language - try "coffee expenses last month" or "birthday gifts"
             </p>
           </div>
         </div>

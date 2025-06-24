@@ -82,30 +82,31 @@ export function HybridSearchTest() {
   return (
     <Card className="w-full max-w-4xl mx-auto">
       <CardHeader>
-        <CardTitle>🧪 Hybrid Search Test - Step 1</CardTitle>
-        <p className="text-sm text-gray-600">
-          Test your FTS (Full-Text Search) foundation before we add embeddings
+        <CardTitle>🔍 Smart Search</CardTitle>
+        <p className="text-sm text-muted-foreground">
+          Search your expenses using natural language - finds both exact matches and related concepts
         </p>
       </CardHeader>
       <CardContent className="space-y-4">
         {/* Database Structure Test */}
         <div className="border rounded p-4 bg-muted/50">
-          <h3 className="font-semibold mb-2">1. Test Database Structure</h3>
+          <h3 className="font-semibold mb-2">System Check</h3>
           <Button 
             onClick={testDatabaseStructure}
             disabled={loading}
             variant="outline"
+            size="sm"
           >
-            {loading ? 'Testing...' : 'Test DB Structure'}
+            {loading ? 'Checking...' : 'Verify Search System'}
           </Button>
         </div>
 
         {/* Search Test */}
         <div className="border rounded p-4">
-          <h3 className="font-semibold mb-2">2. Test FTS Search</h3>
+          <h3 className="font-semibold mb-2">Search Your Expenses</h3>
           <div className="flex gap-2 mb-4">
             <Input
-              placeholder="Search your expenses (e.g., 'coffee', 'restaurant', 'subscription')"
+              placeholder="Try: 'coffee expenses', 'birthday gifts', 'rental payments', 'shopping last month'"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && testSearch()}
@@ -126,7 +127,7 @@ export function HybridSearchTest() {
 
           {results.length > 0 && (
             <div className="space-y-2">
-              <h4 className="font-semibold">Results ({results.length}):</h4>
+              <h4 className="font-semibold">Found {results.length} result{results.length !== 1 ? 's' : ''}:</h4>
               {results.map((result, index) => (
                 <div key={index} className="border rounded p-4 bg-card">
                   {/* Header */}
@@ -138,7 +139,7 @@ export function HybridSearchTest() {
                       <span className="font-medium">#{result.id}</span>
                     </div>
                     <span className="text-sm text-muted-foreground">
-                      Score: {result.fts_rank.toFixed(3)}
+                      Relevance: {(result.fts_rank * 100).toFixed(0)}%
                     </span>
                   </div>
 
@@ -195,9 +196,9 @@ export function HybridSearchTest() {
                         <p className="text-xs text-muted-foreground mb-1">Categories:</p>
                         <div className="flex flex-wrap gap-1">
                           {result.metadata.categories.map((cat: any, catIndex: number) => (
-                                                         <span key={catIndex} className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-purple-500/10 text-purple-700 dark:text-purple-400">
-                               {cat.name} (RM {Number(cat.amount).toFixed(2)})
-                             </span>
+                            <span key={catIndex} className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-purple-500/10 text-purple-700 dark:text-purple-400">
+                              {cat.name} (RM {Number(cat.amount).toFixed(2)})
+                            </span>
                           ))}
                         </div>
                       </div>
@@ -213,7 +214,7 @@ export function HybridSearchTest() {
 
                   {/* Raw Metadata Toggle */}
                   <details className="mt-3 text-xs text-muted-foreground">
-                    <summary className="cursor-pointer hover:text-foreground">Raw Metadata</summary>
+                    <summary className="cursor-pointer hover:text-foreground">Technical Details</summary>
                     <pre className="mt-1 p-2 bg-muted rounded overflow-x-auto">
                       {JSON.stringify(result.metadata, null, 2)}
                     </pre>
@@ -226,21 +227,21 @@ export function HybridSearchTest() {
           {results.length === 0 && !loading && !error && query && (
             <div className="bg-yellow-500/10 border border-yellow-500/20 rounded p-3">
               <p className="text-yellow-700 dark:text-yellow-400 text-sm">
-                🔍 No results found. Try different keywords or add some expenses first.
+                🔍 No results found. Try different keywords or check your expense history.
               </p>
             </div>
           )}
         </div>
 
-        {/* Test Instructions */}
+        {/* Search Tips */}
         <div className="border rounded p-4 bg-blue-500/10">
-          <h3 className="font-semibold mb-2">💡 What to Test:</h3>
+          <h3 className="font-semibold mb-2">💡 Search Tips:</h3>
           <ul className="text-sm space-y-1 text-muted-foreground">
-            <li>• First, click "Test DB Structure" to verify the migration worked</li>
-            <li>• Then search for keywords that exist in your expense descriptions</li>
-            <li>• Try partial matches: "coffee" should find "Coffee Shop", "Starbucks Coffee", etc.</li>
-                         <li>• Check that FTS Score {'>'} 0 (higher = better match)</li>
-            <li>• Note: Semantic search (embeddings) comes in Step 2!</li>
+            <li>• Search finds both exact matches and related concepts</li>
+            <li>• Try categories: "food", "transport", "entertainment", "utilities"</li>
+            <li>• Search by merchant: "Starbucks", "Grab", "Shopee"</li>
+            <li>• Use descriptive terms: "birthday gifts", "monthly subscriptions"</li>
+            <li>• The system understands synonyms and context</li>
           </ul>
         </div>
       </CardContent>
