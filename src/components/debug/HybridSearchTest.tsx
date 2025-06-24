@@ -128,19 +128,93 @@ export function HybridSearchTest() {
             <div className="space-y-2">
               <h4 className="font-semibold">Results ({results.length}):</h4>
               {results.map((result, index) => (
-                <div key={index} className="border rounded p-3 bg-card">
-                  <div className="flex justify-between items-start mb-2">
-                    <span className="font-medium">
-                      {result.table_name} #{result.id}
-                    </span>
+                <div key={index} className="border rounded p-4 bg-card">
+                  {/* Header */}
+                  <div className="flex justify-between items-start mb-3">
+                    <div className="flex items-center gap-2">
+                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-500/10 text-blue-700 dark:text-blue-400">
+                        {(result.metadata as any).type || result.table_name}
+                      </span>
+                      <span className="font-medium">#{result.id}</span>
+                    </div>
                     <span className="text-sm text-muted-foreground">
-                      FTS Score: {result.fts_rank.toFixed(3)}
+                      Score: {result.fts_rank.toFixed(3)}
                     </span>
                   </div>
-                  <p className="text-sm text-foreground mb-2">{result.content}</p>
-                  <details className="text-xs text-muted-foreground">
-                    <summary>Metadata</summary>
-                    <pre className="mt-1 p-2 bg-muted rounded">
+
+                  {/* Content */}
+                  <p className="text-sm font-medium text-foreground mb-2">{result.content}</p>
+
+                  {/* Rich Metadata Display */}
+                  <div className="space-y-2 text-sm">
+                    {/* Amount & Date */}
+                    <div className="flex flex-wrap gap-4">
+                      {(result.metadata as any).amount && (
+                        <span className="text-green-600 dark:text-green-400 font-medium">
+                          RM {Number((result.metadata as any).amount).toFixed(2)}
+                        </span>
+                      )}
+                      {(result.metadata as any).total_amount && (
+                        <span className="text-green-600 dark:text-green-400 font-medium">
+                          Total: RM {Number((result.metadata as any).total_amount).toFixed(2)}
+                        </span>
+                      )}
+                      {((result.metadata as any).date || (result.metadata as any).expense_date) && (
+                        <span className="text-muted-foreground">
+                          {new Date((result.metadata as any).date || (result.metadata as any).expense_date).toLocaleDateString()}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Category & Payment Method */}
+                    <div className="flex flex-wrap gap-2">
+                      {result.metadata.category_name && (
+                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-purple-500/10 text-purple-700 dark:text-purple-400">
+                          {result.metadata.category_name}
+                        </span>
+                      )}
+                      {result.metadata.payment_method_name && result.metadata.payment_method_name !== 'Unknown' && (
+                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-orange-500/10 text-orange-700 dark:text-orange-400">
+                          {result.metadata.payment_method_name}
+                        </span>
+                      )}
+                      {result.metadata.transaction_type && (
+                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs ${
+                          result.metadata.transaction_type === 'income' 
+                            ? 'bg-green-500/10 text-green-700 dark:text-green-400'
+                            : 'bg-red-500/10 text-red-700 dark:text-red-400'
+                        }`}>
+                          {result.metadata.transaction_type}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Categories Array for Expenses */}
+                    {result.metadata.categories && result.metadata.categories.length > 0 && (
+                      <div>
+                        <p className="text-xs text-muted-foreground mb-1">Categories:</p>
+                        <div className="flex flex-wrap gap-1">
+                          {result.metadata.categories.map((cat: any, catIndex: number) => (
+                                                         <span key={catIndex} className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-purple-500/10 text-purple-700 dark:text-purple-400">
+                               {cat.name} (RM {Number(cat.amount).toFixed(2)})
+                             </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Description for items */}
+                    {result.metadata.expense_description && result.metadata.type === 'expense_item' && (
+                      <p className="text-xs text-muted-foreground">
+                        Expense: {result.metadata.expense_description}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Raw Metadata Toggle */}
+                  <details className="mt-3 text-xs text-muted-foreground">
+                    <summary className="cursor-pointer hover:text-foreground">Raw Metadata</summary>
+                    <pre className="mt-1 p-2 bg-muted rounded overflow-x-auto">
                       {JSON.stringify(result.metadata, null, 2)}
                     </pre>
                   </details>
