@@ -22,13 +22,19 @@ serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const openaiApiKey = Deno.env.get('OPENAI_API_KEY');
+    
+    if (!openaiApiKey) {
+      throw new Error('OPENAI_API_KEY environment variable is required');
+    }
+    
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     console.log('🚀 Starting batch embedding processing (expense-only MVP)...');
 
-    // Get pending embedding jobs (expense only, up to 50 at a time)
+    // Get pending embedding jobs (expense only, up to 10 at a time to avoid timeout)
     const { data: jobs, error: jobsError } = await supabase.rpc('get_pending_embedding_jobs', {
-      p_limit: 50
+      p_limit: 10
     });
 
     if (jobsError) {
@@ -71,46 +77,74 @@ serve(async (req) => {
           p_status: 'processing'
         });
 
-        // Generate embedding using Supabase AI inference
-        const { data: embeddingData, error: embeddingError } = await supabase.rpc('embed', {
-          model: 'gte-small',
-          input: job.content
+        // Generate embedding using OpenAI API (text-embedding-3-small, 384 dimensions)
+        const response = await fetch('https://api.openai.com/v1/embeddings', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${openaiApiKey}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            input: job.content,
+            model: 'text-embedding-3-small',
+            dimensions: 384
+          })
         });
 
-        if (embeddingError) {
-          console.error(`❌ Embedding error for job ${job.id}:`, embeddingError);
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error(`❌ OpenAI API error for job ${job.id}:`, errorText);
           
           await supabase.rpc('update_embedding_job_status', {
             p_job_id: job.id,
             p_status: 'failed',
-            p_error_message: `Embedding generation failed: ${embeddingError.message}`
+            p_error_message: `OpenAI API error: ${response.status} ${errorText}`
           });
           
-          errors.push(`Job ${job.id}: ${embeddingError.message}`);
+          errors.push(`Job ${job.id}: OpenAI API error ${response.status}`);
           errorCount++;
           continue;
         }
 
-        if (!embeddingData || !Array.isArray(embeddingData) || embeddingData.length !== 384) {
+        const embeddingData = await response.json();
+        
+        if (!embeddingData.data || !embeddingData.data[0] || !embeddingData.data[0].embedding) {
+          console.error(`❌ Invalid embedding response for job ${job.id}:`, embeddingData);
+          
+          await supabase.rpc('update_embedding_job_status', {
+            p_job_id: job.id,
+            p_status: 'failed',
+            p_error_message: 'Invalid embedding response from OpenAI'
+          });
+          
+          errors.push(`Job ${job.id}: Invalid OpenAI response`);
+          errorCount++;
+          continue;
+        }
+
+        // Extract embedding from response
+        const embedding = embeddingData.data[0].embedding;
+        
+        if (!embedding || !Array.isArray(embedding) || embedding.length !== 384) {
           console.error(`❌ Invalid embedding dimensions for job ${job.id}:`, {
-            isArray: Array.isArray(embeddingData),
-            length: embeddingData?.length,
+            isArray: Array.isArray(embedding),
+            length: embedding?.length,
             expected: 384
           });
           
           await supabase.rpc('update_embedding_job_status', {
             p_job_id: job.id,
             p_status: 'failed',
-            p_error_message: `Invalid embedding dimensions: ${embeddingData?.length || 'unknown'} (expected 384)`
+            p_error_message: `Invalid embedding dimensions: ${embedding?.length || 'unknown'} (expected 384)`
           });
           
-          errors.push(`Job ${job.id}: Wrong dimensions (${embeddingData?.length || 'unknown'})`);
+          errors.push(`Job ${job.id}: Wrong dimensions (${embedding?.length || 'unknown'})`);
           errorCount++;
           continue;
         }
 
         // Update the expense record with the embedding (expense-only MVP)
-        const embeddingVector = `[${embeddingData.join(',')}]`;
+        const embeddingVector = `[${embedding.join(',')}]`;
         
         await supabase.rpc('update_record_embedding', {
           p_table_name: job.table_name,
@@ -150,6 +184,7 @@ serve(async (req) => {
         successful: successCount,
         failed: errorCount,
         mvp_mode: 'expense_only',
+        embedding_provider: 'openai_text_embedding_3_small',
         errors: errors.length > 0 ? errors : undefined
       }),
       {
