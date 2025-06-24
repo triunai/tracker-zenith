@@ -19,9 +19,12 @@ import {
 import { useIsMobile } from '@/hooks/use-mobile';
 import { ThemeToggle } from '@/components/ui/theme-toggle.tsx';
 import { useAuth } from '@/lib/auth';
-import { useToast } from '@/components/ui/use-toast.ts';
+import { toast } from 'sonner';
 import { NotificationBadge } from '@/components/ui/notification-badge';
 import { useDrag } from '@use-gesture/react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { getUnreadNotificationCount } from '@/lib/api/notificationsApi';
+import { supabase } from '@/lib/supabase/supabase';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -77,7 +80,64 @@ const Layout = ({ children }: LayoutProps) => {
     return storedState ? storedState === 'false' : true;
   });
   const { user, profile, signOut } = useAuth();
-  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  const { data: unreadCount } = useQuery({
+    queryKey: ['unread-notifications-count'],
+    queryFn: getUnreadNotificationCount,
+    enabled: !!user,
+    staleTime: 1000 * 60 * 5, // 5 minutes
+  });
+
+  React.useEffect(() => {
+    if (!user) {
+      return;
+    }
+
+    // Define a handler for the notification payload
+    const handleNewNotification = (payload: any) => {
+      console.log('Real-time notification received!', payload);
+
+      // Invalidate queries to refetch data
+      queryClient.invalidateQueries({ queryKey: ['unread-notifications-count'] });
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+
+      // Show a toast for the new notification
+      if (payload.eventType === 'INSERT') {
+        const newRecord = payload.new as { title: string; message?: string };
+        toast.info(newRecord.title, {
+          description: newRecord.message,
+        });
+      }
+    };
+
+    // Set up the real-time subscription
+    const channel = supabase.channel('realtime-notifications')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'notifications',
+          filter: `user_id=eq.${user.id}`,
+        },
+        handleNewNotification
+      )
+      .subscribe((status, err) => {
+        // Add subscription status logging for easier debugging
+        if (status === 'SUBSCRIBED') {
+          console.log('Successfully subscribed to notifications channel!');
+        }
+        if (status === 'CHANNEL_ERROR') {
+          console.error('Channel error:', err);
+        }
+      });
+
+    // Cleanup function to remove the channel subscription when the component unmounts
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user, queryClient]);
   
   const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
 
@@ -111,18 +171,10 @@ const Layout = ({ children }: LayoutProps) => {
   const handleLogout = async () => {
     try {
       await signOut();
-      toast({
-        title: "Logged out",
-        description: "You have been successfully logged out.",
-        variant: "default",
-      });
+      toast.success("Logged out");
       navigate('/login');
     } catch (error: unknown) {
-      toast({
-        title: "Logout failed",
-        description: error instanceof Error ? error.message : "An error occurred during logout.",
-        variant: "destructive",
-      });
+      toast.error(error instanceof Error ? error.message : "An error occurred during logout.");
     }
   };
   
@@ -187,7 +239,7 @@ const Layout = ({ children }: LayoutProps) => {
                       <div className="relative">
                         {item.icon}
                         {item.label === 'Notifications' && (
-                          <NotificationBadge count={2} />
+                          <NotificationBadge count={unreadCount ?? 0} />
                         )}
                       </div>
                       {(sidebarOpen || isMobile) && <span>{item.label}</span>}

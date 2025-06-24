@@ -32,6 +32,7 @@ import {
 import { Input } from '@/components/ui/input.tsx';
 import { Button } from '@/components/ui/button.tsx';
 import { Loader2 } from 'lucide-react';
+import { Slider } from '@/components/ui/slider';
 
 // Form validation schema
 const budgetFormSchema = z.object({
@@ -45,6 +46,7 @@ const budgetFormSchema = z.object({
   period: z.nativeEnum(PeriodEnum, {
     required_error: "Please select a period",
   }),
+  alert_threshold: z.number().min(50).max(100).optional(),
 });
 
 type BudgetFormValues = z.infer<typeof budgetFormSchema>;
@@ -66,17 +68,19 @@ const BudgetForm = ({ open, onOpenChange, onSubmit, initialData, categories = []
       period: PeriodEnum.MONTHLY,
       amount: 0,
       categoryId: undefined,
+      alert_threshold: 80,
     },
   });
 
   useEffect(() => {
     if (isEditing && initialData) {
-      const firstCategoryId = initialData.budget_categories?.[0]?.category_id;
+      const firstCategory = initialData.budget_categories?.[0];
 
       form.reset({
-        categoryId: firstCategoryId,
+        categoryId: firstCategory?.category_id,
         amount: Number(initialData.amount) || 0,
         period: initialData.period,
+        alert_threshold: firstCategory?.alert_threshold ?? 80,
         categoryName: undefined,
       });
     } else {
@@ -84,6 +88,7 @@ const BudgetForm = ({ open, onOpenChange, onSubmit, initialData, categories = []
         period: PeriodEnum.MONTHLY,
         amount: 0,
         categoryId: undefined,
+        alert_threshold: 80,
         categoryName: undefined,
       });
     }
@@ -201,20 +206,48 @@ const BudgetForm = ({ open, onOpenChange, onSubmit, initialData, categories = []
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Budget Period</FormLabel>
-                  <div className="flex flex-wrap gap-2">
-                    {Object.values(PeriodEnum).map((period) => (
-                      <Button
-                        key={period}
-                        type="button"
-                        size="sm"
-                        variant={field.value === period ? 'default' : 'outline'}
-                        onClick={() => field.onChange(period)}
-                        className="capitalize"
-                      >
-                        {period.toLowerCase()}
-                      </Button>
-                    ))}
-                  </div>
+                  <Select 
+                    onValueChange={field.onChange} 
+                    defaultValue={field.value}
+                    disabled={form.formState.isSubmitting}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a period" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value={PeriodEnum.WEEKLY}>Weekly</SelectItem>
+                      <SelectItem value={PeriodEnum.MONTHLY}>Monthly</SelectItem>
+                      <SelectItem value={PeriodEnum.YEARLY}>Yearly</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="alert_threshold"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>
+                    Alert Threshold
+                    <span className="text-muted-foreground ml-2">
+                      ({field.value}%)
+                    </span>
+                  </FormLabel>
+                  <FormControl>
+                    <Slider
+                      min={50}
+                      max={100}
+                      step={5}
+                      value={[field.value ?? 80]}
+                      onValueChange={(value) => field.onChange(value[0])}
+                      disabled={form.formState.isSubmitting}
+                    />
+                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
