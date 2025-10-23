@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import Layout from '@/components/Layout/Layout';
+import PageHeader from '@/components/Layout/PageHeader';
 import { paymentMethodApi } from '@/lib/api/paymentMethodApi';
 import { PaymentMethod, CreatePaymentMethodRequest } from '@/interfaces/payment-method-interface';
 import { Button } from '@/components/ui/button.tsx';
@@ -112,12 +114,14 @@ const PaymentMethodsPage = () => {
   }
 
   return (
-    <div className="container mx-auto py-8">
-      <Card>
-        <CardHeader>
-          <CardTitle>Payment Methods</CardTitle>
-          <CardDescription>Manage your payment methods for expense tracking</CardDescription>
-        </CardHeader>
+    <Layout>
+      <PageHeader title="Payment Methods" showBack={true} />
+      <div className="container mx-auto py-8 lg:pt-8 pt-20">
+        <Card>
+          <CardHeader>
+            <CardTitle>Payment Methods</CardTitle>
+            <CardDescription>Manage your payment methods for expense tracking</CardDescription>
+          </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="flex items-end gap-4 mb-6">
             <div className="grid w-full max-w-sm items-center gap-1.5">
@@ -181,7 +185,8 @@ const PaymentMethodsPage = () => {
           )}
         </CardContent>
       </Card>
-    </div>
+      </div>
+    </Layout>
   );
 };
 

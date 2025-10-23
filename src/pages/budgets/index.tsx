@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient, useQueries } from '@tanstack/react-query';
 import Layout from '@/components/Layout/Layout';
+import PageHeader from '@/components/Layout/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card.tsx';
 import { Button } from '@/components/ui/button.tsx';
 import { Edit, Plus, AlertTriangle, Trash } from 'lucide-react';
@@ -258,7 +259,8 @@ const BudgetPage = () => {
 
   return (
     <Layout>
-      <div className="container mx-auto space-y-6">
+      <PageHeader title="Budgets" showBack={true} />
+      <div className="container mx-auto space-y-6 lg:pt-0 pt-20">
         {/* Alert Dialog for Delete Confirmation */}
         <AlertDialog open={budgetToDelete !== null} onOpenChange={(open) => {
           if (!open) setBudgetToDelete(null);

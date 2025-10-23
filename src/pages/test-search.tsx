@@ -1,13 +1,15 @@
 import React from 'react';
 import Layout from '@/components/Layout/Layout';
+import PageHeader from '@/components/Layout/PageHeader';
 import { HybridSearchTest } from '@/components/debug/HybridSearchTest';
 
 const TestSearchPage = () => {
   return (
     <Layout>
-      <div className="flex-1 space-y-4 p-4 pt-6 md:p-8">
+      <PageHeader title="Smart Search" showBack={true} />
+      <div className="flex-1 space-y-4 p-4 pt-6 md:p-8 lg:pt-6 pt-20">
         <div className="space-y-4">
-          <div>
+          <div className="lg:block hidden">
             <h2 className="text-3xl font-bold tracking-tight">
               🔍 Smart Search
             </h2>

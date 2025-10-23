@@ -4,23 +4,30 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/lib/auth/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { useDashboard } from '@/context/DashboardContext';
+import { useScanner } from '@/context/ScannerContext';
 import DashboardSummary from '@/components/Dashboard/DashboardSummary';
 import SpendingChart from '@/components/Charts/SpendingChart';
 import TransactionList from '@/components/Transactions/TransactionList';
 import BudgetTracker from '@/components/Budgets/BudgetTracker';
 import BudgetForm from '@/components/Budgets/BudgetForm';
 import { Budget } from '@/interfaces/budget-interface';
+import { Document } from '@/interfaces/document-interface';
 import DateFilter from '@/components/Dashboard/DateFilter';
 import TransactionForm from '@/components/Transactions/TransactionForm';
-import { PlusCircle, MinusCircle } from 'lucide-react';
+import { DocumentUploader } from '@/components/Documents/DocumentUploader';
+import { ProcessedDocuments } from '@/components/Documents/ProcessedDocuments';
+import { PlusCircle, MinusCircle, X, Loader2 } from 'lucide-react';
 
 const Index = () => {
   const { userId, dateRangeText } = useDashboard();
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const { isOpen: isScannerOpen, closeScanner, isLoading: isScannerLoading } = useScanner();
   
   const [isNewBudgetOpen, setIsNewBudgetOpen] = useState(false);
   const [editingBudget, setEditingBudget] = useState<Budget | null>(null);
+  const [processedDocuments, setProcessedDocuments] = useState<Document[]>([]);
+  const [showProcessedDocuments, setShowProcessedDocuments] = useState(false);
 
   const handleBudgetSubmit = () => {
     queryClient.invalidateQueries({ queryKey: ['budgets', userId] });
@@ -36,7 +43,16 @@ const Index = () => {
   const handleOpenNewBudgetForm = () => {
     setEditingBudget(null);
     setIsNewBudgetOpen(true);
-    }
+  };
+
+  const handleDocumentProcessed = (document: Document) => {
+    console.log('[Index] Document processed:', document);
+    setProcessedDocuments((prev) => [document, ...prev]);
+    closeScanner();
+    setShowProcessedDocuments(true);
+    // Invalidate queries to refresh the transaction list
+    queryClient.invalidateQueries({ queryKey: ['expenses', userId] });
+  };
 
   useEffect(() => {
     const handleOpenBudgetFormEvent = (event: CustomEvent) => {
@@ -65,22 +81,9 @@ const Index = () => {
               </p>
             </div>
 
-            {/* Action Buttons */}
+            {/* Date Filter */}
             <div className="flex flex-wrap items-center justify-between gap-2">
               <DateFilter />
-              <div className="flex flex-wrap items-center gap-2">
-                <TransactionForm
-                  initialType="income"
-                  buttonText="Add Income"
-                  buttonIcon={<PlusCircle className="h-4 w-4 md:mr-1" />}
-                />
-                <TransactionForm
-                  initialType="expense"
-                  buttonText="Add Expense"
-                  buttonIcon={<MinusCircle className="h-4 w-4 md:mr-1" />}
-                />
-                <Button onClick={handleOpenNewBudgetForm}>Add New Budget</Button>
-              </div>
             </div>
           </div>
           
@@ -106,9 +109,74 @@ const Index = () => {
           open={isNewBudgetOpen} 
           onOpenChange={setIsNewBudgetOpen}
           onSubmit={handleBudgetSubmit}
-            initialData={editingBudget}
+          initialData={editingBudget}
         />
       </div>
+
+      {/* Scanner Overlay - Full Screen */}
+      {isScannerOpen && (
+        <div className="fixed inset-0 z-[60] bg-background/40 backdrop-blur-xl lg:hidden supports-[backdrop-filter]:bg-background/30">
+          <div className="flex flex-col h-full">
+            <div className="flex items-center justify-between p-4 border-b">
+              <h2 className="text-xl font-bold">
+                {isScannerLoading ? 'Processing...' : 'Scan Receipt'}
+              </h2>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={closeScanner}
+                className="h-10 w-10"
+                disabled={isScannerLoading}
+              >
+                <X className="h-6 w-6" />
+              </Button>
+            </div>
+            <div className="flex-1 flex items-center justify-center p-4">
+              {isScannerLoading ? (
+                <div className="flex flex-col items-center gap-4">
+                  <Loader2 className="h-12 w-12 animate-spin text-primary" />
+                  <p className="text-lg font-medium">Processing document...</p>
+                  <p className="text-sm text-muted-foreground">AI is analyzing your receipt</p>
+                </div>
+              ) : (
+                <DocumentUploader 
+                  onDocumentProcessed={handleDocumentProcessed}
+                  autoOpen={true}
+                />
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Processed Documents Overlay */}
+      {showProcessedDocuments && processedDocuments.length > 0 && (
+        <div className="fixed inset-0 z-[60] bg-background/40 backdrop-blur-xl lg:hidden supports-[backdrop-filter]:bg-background/30">
+          <div className="flex flex-col h-full">
+            <div className="flex items-center justify-between p-4 border-b">
+              <h2 className="text-xl font-bold">Processed Documents</h2>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setShowProcessedDocuments(false)}
+                className="h-10 w-10"
+              >
+                <X className="h-6 w-6" />
+              </Button>
+            </div>
+            <div className="flex-1 overflow-auto p-4">
+              <ProcessedDocuments
+                documents={processedDocuments}
+                onDocumentUpdate={(doc) => {
+                  setProcessedDocuments((prev) => 
+                    prev.map((d) => (d.id === doc.id ? doc : d))
+                  );
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </Layout>
   );
 };

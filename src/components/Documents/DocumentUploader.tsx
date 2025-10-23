@@ -1,10 +1,11 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useState, useEffect, useRef } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { useAuth } from '@/lib/auth/hooks/useAuth';
 import { supabase } from '@/lib/supabase/supabase';
 import { v4 as uuidv4 } from 'uuid';
 import { toast } from 'sonner';
 import { toastNotifications } from '@/components/ui/toast-notifications';
+import { useScanner } from '@/context/ScannerContext';
 import { FilePlus2, Loader2, Upload, FileText, Image, FileIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -12,11 +13,14 @@ import { Document } from '@/interfaces/document-interface';
 
 interface DocumentUploaderProps {
   onDocumentProcessed: (document: Document) => void;
+  autoOpen?: boolean;
 }
 
-export const DocumentUploader = ({ onDocumentProcessed }: DocumentUploaderProps) => {
+export const DocumentUploader = ({ onDocumentProcessed, autoOpen = false }: DocumentUploaderProps) => {
   const { user } = useAuth();
+  const { setIsLoading } = useScanner();
   const [uploading, setUploading] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const onDrop = useCallback(
     async (acceptedFiles: File[]) => {
@@ -49,6 +53,7 @@ export const DocumentUploader = ({ onDocumentProcessed }: DocumentUploaderProps)
 
       console.log('🔄 Setting uploading to true...');
       setUploading(true);
+      setIsLoading(true);
 
       try {
         console.log('🔍 STEP 1: Starting file upload...', {
@@ -186,9 +191,10 @@ export const DocumentUploader = ({ onDocumentProcessed }: DocumentUploaderProps)
       } finally {
         console.log('🏁 Upload process finished, setting uploading to false');
         setUploading(false);
+        setIsLoading(false);
       }
     },
-    [user, onDocumentProcessed]
+    [user, onDocumentProcessed, setIsLoading]
   );
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
@@ -205,6 +211,18 @@ export const DocumentUploader = ({ onDocumentProcessed }: DocumentUploaderProps)
       });
     },
   });
+
+  // Auto-open file picker if autoOpen is true
+  useEffect(() => {
+    if (autoOpen && inputRef.current && !uploading) {
+      console.log('[DocumentUploader] Auto-opening file picker');
+      // Small delay to ensure the component is fully rendered
+      const timer = setTimeout(() => {
+        inputRef.current?.click();
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [autoOpen, uploading]);
 
   const getFileIcon = () => {
     if (uploading) {
@@ -238,7 +256,7 @@ export const DocumentUploader = ({ onDocumentProcessed }: DocumentUploaderProps)
             uploading && 'pointer-events-none opacity-75'
           )}
         >
-          <input {...getInputProps()} />
+          <input {...getInputProps()} ref={inputRef} />
           <div className="flex flex-col items-center justify-center text-center p-3 sm:p-4">
             {getFileIcon()}
             {uploading ? (
