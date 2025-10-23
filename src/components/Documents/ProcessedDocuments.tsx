@@ -1,5 +1,5 @@
-import React from 'react';
-import { CheckCircle, AlertCircle, Clock, DollarSign, Calendar, Building2, Loader2, Sparkles, Brain, Zap, X, Trash2 } from 'lucide-react';
+import React, { useState } from 'react';
+import { CheckCircle, AlertCircle, Clock, DollarSign, Calendar, Building2, Loader2, Sparkles, Brain, Zap, X, Trash2, Edit2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,6 +11,7 @@ import { useDashboard } from '@/context/DashboardContext';
 import { cn } from '@/lib/utils';
 import { Document } from '@/interfaces/document-interface';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { EditDocumentDialog } from './EditDocumentDialog';
 
 interface ProcessedDocumentsProps {
   documents: Document[];
@@ -22,6 +23,7 @@ export const ProcessedDocuments = ({ documents, onDocumentUpdate, onDocumentRemo
   const { userId, refreshData } = useDashboard();
   const queryClient = useQueryClient();
   const isMobile = useIsMobile();
+  const [editingDocument, setEditingDocument] = useState<Document | null>(null);
 
   const handleRemoveDocument = (documentId: number) => {
     if (onDocumentRemove) {
@@ -250,15 +252,26 @@ export const ProcessedDocuments = ({ documents, onDocumentUpdate, onDocumentRemo
                           )}
                         </div>
                         
-                        {/* Action Button */}
-                        <Button
-                          size="sm"
-                          onClick={() => handleCreateTransaction(document)}
-                          className="w-full bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-white shadow-sm hover:shadow-md transition-all duration-200"
-                        >
-                          <Sparkles className="h-3 w-3 mr-1" />
-                          Create Transaction
-                        </Button>
+                        {/* Action Buttons */}
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setEditingDocument(document)}
+                            className="flex-1"
+                          >
+                            <Edit2 className="h-3 w-3 mr-1" />
+                            Edit
+                          </Button>
+                          <Button
+                            size="sm"
+                            onClick={() => handleCreateTransaction(document)}
+                            className="flex-1 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-white shadow-sm hover:shadow-md transition-all duration-200"
+                          >
+                            <Sparkles className="h-3 w-3 mr-1" />
+                            Create
+                          </Button>
+                        </div>
                       </div>
                     )}
                     
@@ -378,14 +391,24 @@ export const ProcessedDocuments = ({ documents, onDocumentUpdate, onDocumentRemo
                       
                       {/* Status-specific Actions */}
                       {document.status === 'parsed' && (
-                        <Button
-                          size="sm"
-                          onClick={() => handleCreateTransaction(document)}
-                          className="bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-white shadow-sm hover:shadow-md transition-all duration-200"
-                        >
-                          <Sparkles className="h-3 w-3 mr-1" />
-                          Create Transaction
-                        </Button>
+                        <>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setEditingDocument(document)}
+                          >
+                            <Edit2 className="h-3 w-3 mr-1" />
+                            Edit
+                          </Button>
+                          <Button
+                            size="sm"
+                            onClick={() => handleCreateTransaction(document)}
+                            className="bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-white shadow-sm hover:shadow-md transition-all duration-200"
+                          >
+                            <Sparkles className="h-3 w-3 mr-1" />
+                            Create Transaction
+                          </Button>
+                        </>
                       )}
                       {document.status === 'transaction_created' && (
                         <div className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 px-2">
@@ -409,6 +432,17 @@ export const ProcessedDocuments = ({ documents, onDocumentUpdate, onDocumentRemo
           ))}
         </div>
       </CardContent>
+
+      {/* Edit Document Dialog */}
+      <EditDocumentDialog
+        open={!!editingDocument}
+        onOpenChange={(open) => !open && setEditingDocument(null)}
+        document={editingDocument}
+        onSave={(updated) => {
+          onDocumentUpdate(updated);
+          setEditingDocument(null);
+        }}
+      />
     </Card>
   );
 };

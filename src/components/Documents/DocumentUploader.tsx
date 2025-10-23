@@ -255,6 +255,13 @@ export const DocumentUploader = ({ onDocumentProcessed, autoOpen = false }: Docu
               : 'border-border hover:border-primary/60 hover:bg-primary/5',
             uploading && 'pointer-events-none opacity-75'
           )}
+          onClick={(e) => {
+            // Ensure input is always clickable, even after cancel
+            if (!uploading && inputRef.current) {
+              e.stopPropagation();
+              inputRef.current.click();
+            }
+          }}
         >
           <input {...getInputProps()} ref={inputRef} />
           <div className="flex flex-col items-center justify-center text-center p-3 sm:p-4">

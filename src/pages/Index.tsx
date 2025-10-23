@@ -124,9 +124,20 @@ const Index = () => {
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={closeScanner}
+                onClick={() => {
+                  if (isScannerLoading) {
+                    // Show confirmation when processing
+                    const confirmed = window.confirm(
+                      'AI is still processing your document. Close anyway?\n\n(Processing will continue in the background)'
+                    );
+                    if (confirmed) {
+                      closeScanner();
+                    }
+                  } else {
+                    closeScanner();
+                  }
+                }}
                 className="h-10 w-10"
-                disabled={isScannerLoading}
               >
                 <X className="h-6 w-6" />
               </Button>
@@ -170,6 +181,11 @@ const Index = () => {
                 onDocumentUpdate={(doc) => {
                   setProcessedDocuments((prev) => 
                     prev.map((d) => (d.id === doc.id ? doc : d))
+                  );
+                }}
+                onDocumentRemove={(documentId) => {
+                  setProcessedDocuments((prev) => 
+                    prev.filter((d) => d.id !== documentId)
                   );
                 }}
               />
