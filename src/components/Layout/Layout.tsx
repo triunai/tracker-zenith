@@ -26,6 +26,7 @@ import { useDrag } from '@use-gesture/react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getUnreadNotificationCount } from '@/lib/api/notificationsApi';
 import { supabase } from '@/lib/supabase/supabase';
+import MobileBottomNav from './MobileBottomNav';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -78,7 +79,7 @@ const Layout = ({ children }: LayoutProps) => {
     if (typeof window === 'undefined') {
       return true;
     }
-    const isMobileView = window.innerWidth < 768;
+    const isMobileView = window.innerWidth < 1024; // Desktop shows sidebar at >= 1024px
     if (isMobileView) {
       return false;
     }
@@ -186,26 +187,15 @@ const Layout = ({ children }: LayoutProps) => {
   
   return (
     <div className="flex min-h-screen bg-background" {...bind()}>
-      {isMobile && (
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          className="fixed top-4 left-4 z-50 md:hidden bg-background/80 backdrop-blur-sm border shadow-sm" 
-          onClick={toggleSidebar}
+      {/* Desktop Sidebar - Only show on desktop */}
+      {!isMobile && (
+        <div 
+          className={cn(
+            "fixed top-0 left-0 z-40 h-screen transition-all duration-300 ease-in-out",
+            "border-r bg-card shadow-soft",
+            sidebarOpen ? "w-64" : "w-20"
+          )}
         >
-          {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
-        </Button>
-      )}
-      
-      <div 
-        className={cn(
-          "fixed top-0 left-0 z-40 h-screen transition-all duration-300 ease-in-out",
-          "border-r bg-card shadow-soft",
-          isMobile 
-            ? (sidebarOpen ? "w-64 translate-x-0" : "w-64 -translate-x-full") 
-            : (sidebarOpen ? "w-64" : "w-20")
-        )}
-      >
         <div className="flex flex-col h-full">
           <div>
             <div className={cn(
@@ -327,7 +317,8 @@ const Layout = ({ children }: LayoutProps) => {
             </div>
           </div>
         </div>
-      </div>
+        </div>
+      )}
       
       <main 
         onClick={() => {
@@ -336,22 +327,19 @@ const Layout = ({ children }: LayoutProps) => {
           }
         }}
         className={cn(
-        "flex-1 p-6 md:p-10 transition-all duration-300",
-        isMobile 
-          ? "ml-0" 
-          : (sidebarOpen ? "ml-64" : "ml-20")
-      )}>
+          "flex-1 transition-all duration-300",
+          isMobile 
+            ? "ml-0 p-4 pb-24" // Extra bottom padding for mobile nav
+            : (sidebarOpen ? "ml-64 p-6 md:p-10" : "ml-20 p-6 md:p-10")
+        )}
+      >
         <div className="max-w-6xl mx-auto">
           {children}
         </div>
       </main>
       
-      {isMobile && sidebarOpen && (
-        <div 
-          className="fixed inset-0 bg-black/60 z-30"
-          onClick={() => setSidebarOpen(false)}
-        ></div>
-      )}
+      {/* Mobile Bottom Navigation */}
+      {isMobile && <MobileBottomNav />}
     </div>
   );
 };

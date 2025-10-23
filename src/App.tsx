@@ -9,6 +9,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip.tsx";
 import { ThemeProvider } from '@/components/theme-provider';
 import { DashboardProvider } from '@/context/DashboardContext';
+import { ScannerProvider } from '@/context/ScannerContext';
 import { AuthProvider, initTokenManager } from '@/lib/auth';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 
@@ -127,8 +128,9 @@ function App() {
         <TooltipProvider>
           <AuthProvider>
             <Router>
-              <DashboardProvider>
-                <Routes>
+              <ScannerProvider>
+                <DashboardProvider>
+                  <Routes>
                   {/* Public Routes */}
                   <Route path="/login" element={<Login />} />
                   <Route path="/signup" element={<Signup />} />
@@ -146,9 +148,10 @@ function App() {
 
                   {/* 404 Route */}
                   <Route path="*" element={<NotFound />} />
-                </Routes>
-                <Toaster />
-              </DashboardProvider>
+                  </Routes>
+                  <Toaster />
+                </DashboardProvider>
+              </ScannerProvider>
             </Router>
           </AuthProvider>
         </TooltipProvider>

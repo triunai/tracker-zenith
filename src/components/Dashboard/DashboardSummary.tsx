@@ -124,64 +124,6 @@ const DashboardSummary = () => {
           />
         </div>
       )}
-      
-      <div>
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="text-lg font-medium">Quick Actions</h3>
-        </div>
-        <div className="grid grid-cols-2 gap-2 sm:gap-3 sm:grid-cols-4">
-          <Button 
-            variant="outline" 
-            className="h-auto py-3 sm:py-4 flex flex-col items-center justify-center gap-1 sm:gap-2 shadow-purple-sm hover:shadow-purple" 
-            onClick={() => document.querySelector<HTMLButtonElement>('[data-transaction-form-trigger]')?.click()}
-          >
-            <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
-              <CreditCard size={16} className="sm:w-5 sm:h-5" />
-            </div>
-            <span className="text-xs sm:text-sm font-medium">New Transaction</span>
-          </Button>
-          
-          <Button 
-            variant="outline" 
-            className="h-auto py-3 sm:py-4 flex flex-col items-center justify-center gap-1 sm:gap-2 shadow-purple-sm hover:shadow-purple" 
-            onClick={() => {
-              // Create and dispatch custom event to open the budget form
-              const event = new CustomEvent('openBudgetForm', { 
-                bubbles: true, 
-                detail: { source: 'DashboardQuickAction' } 
-              });
-              document.dispatchEvent(event);
-            }}
-          >
-            <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
-              <Wallet size={16} className="sm:w-5 sm:h-5" />
-            </div>
-            <span className="text-xs sm:text-sm font-medium">Set Budget</span>
-          </Button>
-          
-          <Button 
-            variant="outline" 
-            className="h-auto py-3 sm:py-4 flex flex-col items-center justify-center gap-1 sm:gap-2 shadow-purple-sm hover:shadow-purple" 
-            onClick={() => window.location.href = '/reports'}
-          >
-            <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
-              <TrendingUp size={16} className="sm:w-5 sm:h-5" />
-            </div>
-            <span className="text-xs sm:text-sm font-medium">View Reports</span>
-          </Button>
-          
-          <Button 
-            variant="outline" 
-            className="h-auto py-3 sm:py-4 flex flex-col items-center justify-center gap-1 sm:gap-2 shadow-purple-sm hover:shadow-purple" 
-            onClick={() => console.log('Export data clicked')}
-          >
-            <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
-              <ArrowUpRight size={16} className="sm:w-5 sm:h-5" />
-            </div>
-            <span className="text-xs sm:text-sm font-medium">Export Data</span>
-          </Button>
-        </div>
-      </div>
     </div>
   );
 };

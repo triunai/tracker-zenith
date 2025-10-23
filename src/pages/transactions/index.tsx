@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import Layout from '@/components/Layout/Layout';
+import PageHeader from '@/components/Layout/PageHeader';
 import TransactionList from '@/components/Transactions/TransactionList';
 import { DocumentUploader } from '@/components/Documents/DocumentUploader';
 import { ProcessedDocuments } from '@/components/Documents/ProcessedDocuments';
@@ -10,6 +11,17 @@ import { Document } from '@/interfaces/document-interface';
 const TransactionsPage = () => {
   const { dateRangeText } = useDashboard();
   const [processedDocuments, setProcessedDocuments] = useState<Document[]>([]);
+  const [showScanner, setShowScanner] = useState(false);
+
+  // Listen for central button triggering scanner
+  React.useEffect(() => {
+    const handleOpenScanner = () => {
+      setShowScanner(true);
+    };
+    
+    document.addEventListener('openDocumentScanner', handleOpenScanner);
+    return () => document.removeEventListener('openDocumentScanner', handleOpenScanner);
+  }, []);
 
   const handleDocumentProcessed = (document: Document) => {
     setProcessedDocuments(prev => {
@@ -24,6 +36,8 @@ const TransactionsPage = () => {
         return [...prev, document];
       }
     });
+    // Auto-hide scanner after processing
+    setShowScanner(false);
   };
 
   const handleDocumentRemove = (documentId: number) => {
@@ -32,7 +46,8 @@ const TransactionsPage = () => {
 
   return (
     <Layout>
-      <div className="p-4 md:p-8 pt-6">
+      <PageHeader title="Transactions" showBack={true} />
+      <div className="p-4 md:p-8 pt-6 lg:pt-6 pt-20">
         {/* Header */}
         <div className="space-y-4 mb-6">
           <div>
@@ -50,8 +65,8 @@ const TransactionsPage = () => {
 
         {/* Main Content - New Layout */}
         <div className="space-y-6">
-          {/* Document Upload Section - Full Width */}
-          <div className="w-full animate-in fade-in-0 duration-500">
+          {/* Document Upload Section - Full Width on Desktop, Hidden on Mobile */}
+          <div className="w-full animate-in fade-in-0 duration-500 hidden md:block">
             <DocumentUploader onDocumentProcessed={handleDocumentProcessed} />
           </div>
 
@@ -73,6 +88,29 @@ const TransactionsPage = () => {
           </div>
         </div>
       </div>
+
+      {/* Mobile Scanner Overlay */}
+      {showScanner && (
+        <div className="fixed inset-0 z-[60] bg-background animate-in fade-in-0 slide-in-from-bottom-5 duration-300">
+          <div className="flex flex-col h-full">
+            {/* Header */}
+            <div className="flex items-center justify-between p-4 border-b">
+              <h2 className="text-lg font-semibold">Scan Receipt</h2>
+              <button
+                onClick={() => setShowScanner(false)}
+                className="p-2 rounded-lg hover:bg-muted transition-colors"
+              >
+                ✕
+              </button>
+            </div>
+            
+            {/* Scanner Content */}
+            <div className="flex-1 p-4 overflow-auto">
+              <DocumentUploader onDocumentProcessed={handleDocumentProcessed} />
+            </div>
+          </div>
+        </div>
+      )}
     </Layout>
   );
 };
