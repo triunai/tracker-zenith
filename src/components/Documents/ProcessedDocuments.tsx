@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { CheckCircle, AlertCircle, Clock, DollarSign, Calendar, Building2, Loader2, Sparkles, Brain, Zap, X, Trash2, Edit2 } from 'lucide-react';
+import { PacmanLoader } from 'react-spinners';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -285,9 +286,13 @@ export const ProcessedDocuments = ({ documents, onDocumentUpdate, onDocumentRemo
                     
                     {/* Processing State */}
                     {document.status === 'processing' && (
-                      <div className="flex items-center gap-2 text-purple-600 dark:text-purple-400">
-                        <Loader2 className="h-3 w-3 animate-spin" />
-                        <span className="text-xs">AI processing...</span>
+                      <div className="flex items-center justify-between text-purple-600 dark:text-purple-400 mt-3">
+                        <PacmanLoader 
+                          color="#8b5cf6" 
+                          size={20} 
+                          speedMultiplier={1.5}
+                        />
+                        <span className="text-sm font-medium">AI processing...</span>
                       </div>
                     )}
                     
@@ -372,9 +377,13 @@ export const ProcessedDocuments = ({ documents, onDocumentUpdate, onDocumentRemo
                         
                         {/* Processing State */}
                         {document.status === 'processing' && (
-                          <div className="flex items-center gap-2 text-purple-600 dark:text-purple-400">
-                            <Loader2 className="h-3 w-3 animate-spin" />
-                            <span className="text-xs">AI is analyzing your document...</span>
+                          <div className="flex items-center justify-between text-purple-600 dark:text-purple-400 mt-3">
+                            <PacmanLoader 
+                              color="#8b5cf6" 
+                              size={20} 
+                              speedMultiplier={1.5}
+                            />
+                            <span className="text-sm font-medium">AI is analyzing your document...</span>
                           </div>
                         )}
                         
@@ -428,9 +437,13 @@ export const ProcessedDocuments = ({ documents, onDocumentUpdate, onDocumentRemo
                         </div>
                       )}
                       {document.status === 'processing' && (
-                        <div className="flex items-center gap-1 text-purple-600 dark:text-purple-400 px-2">
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                          <span className="text-xs">Processing</span>
+                        <div className="flex items-center justify-between text-purple-600 dark:text-purple-400 px-2">
+                          <PacmanLoader 
+                            color="#8b5cf6" 
+                            size={22} 
+                            speedMultiplier={1.5}
+                          />
+                          <span className="text-sm font-medium">Processing</span>
                         </div>
                       )}
                     </div>
