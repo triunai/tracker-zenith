@@ -178,7 +178,19 @@ const Index = () => {
 
   const handleDocumentProcessed = (document: Document) => {
     console.log('[Index] Document processed:', document);
-    setProcessedDocuments((prev) => [document, ...prev]);
+    setProcessedDocuments((prev) => {
+      // Check if document already exists and update it, otherwise add it
+      const existingIndex = prev.findIndex(d => d.id === document.id);
+      if (existingIndex !== -1) {
+        console.log('🔄 [Index] Document already exists, updating:', document.id);
+        const updated = [...prev];
+        updated[existingIndex] = document;
+        return updated;
+      } else {
+        console.log('🔄 [Index] New document, adding:', document.id);
+        return [document, ...prev];
+      }
+    });
     closeScanner();
     setShowProcessedDocuments(true);
     // Invalidate queries to refresh the transaction list
@@ -312,7 +324,7 @@ const Index = () => {
       {/* Processed Documents Overlay */}
       {showProcessedDocuments && processedDocuments.length > 0 && (
         <div className="fixed inset-0 z-[60] bg-background/40 backdrop-blur-xl lg:hidden supports-[backdrop-filter]:bg-background/30">
-          <div className="flex flex-col h-full">
+          <div className="flex flex-col h-full max-w-[500px] mx-auto">
             <div className="flex items-center justify-between p-4 border-b">
               <h2 className="text-xl font-bold">Processed Documents</h2>
               <Button
@@ -328,9 +340,19 @@ const Index = () => {
               <ProcessedDocuments
                 documents={processedDocuments}
                 onDocumentUpdate={(doc) => {
-                  setProcessedDocuments((prev) => 
-                    prev.map((d) => (d.id === doc.id ? doc : d))
-                  );
+                  console.log('🔄 [Index] onDocumentUpdate called with:', doc);
+                  setProcessedDocuments((prev) => {
+                    console.log('🔄 [Index] Previous documents:', prev.map(d => ({ id: d.id, filename: d.original_filename })));
+                    const updated = prev.map((d) => {
+                      if (d.id === doc.id) {
+                        console.log('🔄 [Index] Replacing document:', d.id, 'with updated:', doc.id);
+                        return doc;
+                      }
+                      return d;
+                    });
+                    console.log('🔄 [Index] Updated processedDocuments:', updated.map(d => ({ id: d.id, filename: d.original_filename })));
+                    return updated;
+                  });
                 }}
                 onDocumentRemove={(documentId) => {
                   setProcessedDocuments((prev) => 

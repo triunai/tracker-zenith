@@ -24,10 +24,15 @@ export const EditDocumentDialog: React.FC<EditDocumentDialogProps> = ({
   document,
   onSave
 }) => {
+  // Debug props changes
+  useEffect(() => {
+    console.log('🔄 [EditDocumentDialog] Props changed:', { open, document: document?.id });
+  }, [open, document]);
   const [vendorName, setVendorName] = useState('');
   const [amount, setAmount] = useState('');
   const [transactionType, setTransactionType] = useState<'expense' | 'income'>('expense');
   const [date, setDate] = useState<Date | undefined>(new Date());
+  const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
 
   // Reset form when document changes
   useEffect(() => {
@@ -40,7 +45,11 @@ export const EditDocumentDialog: React.FC<EditDocumentDialogProps> = ({
   }, [document]);
 
   const handleSave = () => {
-    if (!document) return;
+    console.log('🔄 [EditDocumentDialog] handleSave called');
+    if (!document) {
+      console.error('❌ [EditDocumentDialog] No document to save');
+      return;
+    }
 
     const updated: Document = {
       ...document,
@@ -50,16 +59,24 @@ export const EditDocumentDialog: React.FC<EditDocumentDialogProps> = ({
       transaction_date: date ? format(date, 'yyyy-MM-dd') : null
     };
     
-    onSave(updated);
-    onOpenChange(false);
+    console.log('🔄 [EditDocumentDialog] Updated document data:', updated);
+    console.log('🔄 [EditDocumentDialog] Calling onSave callback');
+    
+    try {
+      onSave(updated);
+      console.log('✅ [EditDocumentDialog] onSave called successfully');
+      onOpenChange(false);
+    } catch (error) {
+      console.error('❌ [EditDocumentDialog] Error in onSave:', error);
+    }
   };
 
   if (!document) return null;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-[500px] z-[70] !p-6 !mx-0">
+        <DialogHeader className="text-left">
           <div className="flex items-center gap-2">
             <Edit2 className="h-5 w-5 text-primary" />
             <DialogTitle>Edit Transaction Details</DialogTitle>
@@ -107,7 +124,7 @@ export const EditDocumentDialog: React.FC<EditDocumentDialogProps> = ({
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="z-[80]">
                 <SelectItem value="expense">💸 Expense</SelectItem>
                 <SelectItem value="income">💰 Income</SelectItem>
               </SelectContent>
@@ -117,7 +134,7 @@ export const EditDocumentDialog: React.FC<EditDocumentDialogProps> = ({
           {/* Date */}
           <div className="grid gap-2">
             <Label>Date</Label>
-            <Popover>
+            <Popover open={isDatePickerOpen} onOpenChange={setIsDatePickerOpen}>
               <PopoverTrigger asChild>
                 <Button 
                   variant="outline" 
@@ -130,11 +147,14 @@ export const EditDocumentDialog: React.FC<EditDocumentDialogProps> = ({
                   {date ? format(date, 'PPP') : 'Pick a date'}
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
+              <PopoverContent className="w-auto p-0 z-[80]" align="start">
                 <Calendar
                   mode="single"
                   selected={date}
-                  onSelect={setDate}
+                  onSelect={(selectedDate) => {
+                    setDate(selectedDate);
+                    setIsDatePickerOpen(false);
+                  }}
                   initialFocus
                 />
               </PopoverContent>
