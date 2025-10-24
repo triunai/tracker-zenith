@@ -21,6 +21,7 @@ import { budgetApi } from '@/lib/api/budgetApi';
 import { PeriodEnum } from '@/interfaces/enums/PeriodEnum';
 import { useToast } from '@/components/ui/use-toast';
 import BlurText from '@/components/ui/BlurText';
+import ShinyText from '@/components/ui/ShinyText';
 
 const Index = () => {
   const { userId, dateRangeText } = useDashboard();
@@ -99,10 +100,11 @@ const Index = () => {
   });
 
   const handleBudgetSubmit = (formData: {
-    amount: number;
+    amount: string;
     period: PeriodEnum;
     categoryId?: number;
     categoryName?: string;
+    alert_threshold?: number;
   }) => {
     console.log('Dashboard handleBudgetSubmit called with form data:', formData);
     console.log('Current editingBudget state:', editingBudget);
@@ -112,10 +114,16 @@ const Index = () => {
         throw new Error("User ID is missing. Cannot proceed.");
       }
 
+      // Convert string amount to number
+      const amount = parseFloat(formData.amount);
+      if (isNaN(amount) || amount <= 0) {
+        throw new Error("Invalid amount provided.");
+      }
+
       if (editingBudget) {
         const updatePayload: UpdateBudgetRequest = {
           name: editingBudget.name,
-          amount: formData.amount,
+          amount: amount,
           period: formData.period,
         };
 
@@ -132,13 +140,13 @@ const Index = () => {
         const newBudget: CreateBudgetRequest = {
           user_id: userId,
           name: `${formData.categoryName || 'New'} Budget`,
-          amount: formData.amount,
+          amount: amount,
           period: formData.period,
           start_date: new Date().toISOString(),
           categories: [
             {
               category_id: formData.categoryId,
-              alert_threshold: formData.amount * 0.8
+              alert_threshold: formData.alert_threshold || amount * 0.8
             }
           ]
         };
@@ -209,9 +217,11 @@ const Index = () => {
                 enableFallback={true}
                 onFallback={() => console.log('BlurText animation failed, using fallback')}
               />
-              <p className="text-muted-foreground">
-                Your financial overview for {dateRangeText}.
-              </p>
+              <ShinyText 
+                text={`Your financial overview for ${dateRangeText}.`}
+                speed={8}
+                className="text-muted-foreground"
+              />
             </div>
 
             {/* Date Filter */}

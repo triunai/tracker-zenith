@@ -21,6 +21,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Card, CardContent } from '@/components/ui/card';
 import { useDrag } from '@use-gesture/react';
+import ShinyText from '@/components/ui/ShinyText';
 
 // Helper function to format trend values
 const formatTrendValue = (value: number | null): { value: number, isPositive: boolean } => {
@@ -223,8 +224,12 @@ const DashboardSummary = () => {
           </Tabs>
           
           {/* Swipe hint for mobile */}
-          <div className="text-center text-xs text-muted-foreground">
-            Swipe left or right to switch between metrics
+          <div className="text-center">
+            <ShinyText 
+              text="Swipe left or right to switch between metrics"
+              speed={3}
+              className="text-xs text-muted-foreground"
+            />
           </div>
         </div>
       ) : (
