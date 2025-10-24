@@ -106,7 +106,7 @@ export const DocumentUploader = ({ onDocumentProcessed, autoOpen = false }: Docu
           original_filename: file.name,
           file_size: file.size,
           mime_type: file.type || 'application/octet-stream',
-          status: 'uploaded',
+          status: 'processing',
           currency: 'MYR',
           created_at: new Date().toISOString(),
           isdeleted: false
