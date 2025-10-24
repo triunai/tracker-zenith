@@ -40,9 +40,10 @@ const budgetFormSchema = z.object({
     required_error: "Please select a category",
   }).optional(),
   categoryName: z.string().optional(),
-  amount: z.number({
-    required_error: "Please enter an amount",
-  }).positive("Amount must be greater than 0"),
+  amount: z.string().min(1, "Please enter an amount").refine((val) => {
+    const num = parseFloat(val);
+    return !isNaN(num) && num > 0;
+  }, "Amount must be greater than 0"),
   period: z.nativeEnum(PeriodEnum, {
     required_error: "Please select a period",
   }),
@@ -66,7 +67,7 @@ const BudgetForm = ({ open, onOpenChange, onSubmit, initialData, categories = []
     resolver: zodResolver(budgetFormSchema),
     defaultValues: {
       period: PeriodEnum.MONTHLY,
-      amount: 0,
+      amount: '',
       categoryId: undefined,
       alert_threshold: 80,
     },
@@ -78,7 +79,7 @@ const BudgetForm = ({ open, onOpenChange, onSubmit, initialData, categories = []
 
       form.reset({
         categoryId: firstCategory?.category_id,
-        amount: Number(initialData.amount) || 0,
+        amount: initialData.amount?.toString() || '',
         period: initialData.period,
         alert_threshold: firstCategory?.alert_threshold ?? 80,
         categoryName: undefined,
@@ -86,7 +87,7 @@ const BudgetForm = ({ open, onOpenChange, onSubmit, initialData, categories = []
     } else {
       form.reset({
         period: PeriodEnum.MONTHLY,
-        amount: 0,
+        amount: '',
         categoryId: undefined,
         alert_threshold: 80,
         categoryName: undefined,
@@ -95,6 +96,15 @@ const BudgetForm = ({ open, onOpenChange, onSubmit, initialData, categories = []
   }, [initialData, isEditing, form.reset]);
 
   const handleSubmit = async (data: BudgetFormValues) => {
+    // Convert string amount to number
+    const amount = parseFloat(data.amount);
+    
+    // Ensure we have a valid amount before proceeding
+    if (!data.amount || isNaN(amount) || amount <= 0) {
+      console.error('Invalid amount:', data.amount);
+      return;
+    }
+
     const selectedCategory = categories.find(c => c.id === data.categoryId);
     if (selectedCategory) {
       data.categoryName = selectedCategory.name;
@@ -102,10 +112,16 @@ const BudgetForm = ({ open, onOpenChange, onSubmit, initialData, categories = []
       data.categoryName = undefined;
     }
 
-    console.log(`BudgetForm submitting (${isEditing ? 'Edit' : 'Create'}):`, data);
+    // Convert the form data to the expected format
+    const submitData = {
+      ...data,
+      amount: amount,
+    };
+
+    console.log(`BudgetForm submitting (${isEditing ? 'Edit' : 'Create'}):`, submitData);
 
     if (typeof onSubmit === 'function') {
-      onSubmit(data);
+      onSubmit(submitData);
     } else {
       console.error('Invalid onSubmit handler provided to BudgetForm!', onSubmit);
       alert(`Error: Cannot ${isEditing ? 'update' : 'create'} budget. Please try again or refresh the page.`);
@@ -116,7 +132,7 @@ const BudgetForm = ({ open, onOpenChange, onSubmit, initialData, categories = []
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-[425px] !p-6 !mx-0">
         <DialogHeader>
           <DialogTitle>{isEditing ? 'Edit Budget' : 'Create New Budget'}</DialogTitle>
           <DialogDescription>
@@ -182,13 +198,17 @@ const BudgetForm = ({ open, onOpenChange, onSubmit, initialData, categories = []
                       </div>
                       <Input
                         id="amount"
-                        type="number"
-                        min="0.01"
-                        step="0.01"
+                        type="text"
                         placeholder="0.00"
                         className="pl-10"
-                        {...field}
-                        onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                        value={field.value}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          // Allow only numbers, decimal point, and empty string
+                          if (value === '' || /^\d*\.?\d*$/.test(value)) {
+                            field.onChange(value);
+                          }
+                        }}
                       />
                     </div>
                     {form.formState.errors.amount && (
@@ -253,11 +273,12 @@ const BudgetForm = ({ open, onOpenChange, onSubmit, initialData, categories = []
               )}
             />
 
-            <DialogFooter>
+            <DialogFooter className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-center sm:space-x-2 sm:gap-0">
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => onOpenChange(false)}
+                className="bg-red-500 hover:bg-red-600 text-white border-red-500 hover:border-red-600"
               >
                 Cancel
               </Button>

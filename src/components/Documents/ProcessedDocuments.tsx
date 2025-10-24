@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { CheckCircle, AlertCircle, Clock, DollarSign, Calendar, Building2, Loader2, Sparkles, Brain, Zap, X, Trash2, Edit2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -24,6 +24,11 @@ export const ProcessedDocuments = ({ documents, onDocumentUpdate, onDocumentRemo
   const queryClient = useQueryClient();
   const isMobile = useIsMobile();
   const [editingDocument, setEditingDocument] = useState<Document | null>(null);
+
+  // Debug editingDocument state changes
+  useEffect(() => {
+    console.log('🔄 [ProcessedDocuments] editingDocument state changed:', editingDocument);
+  }, [editingDocument]);
 
   const handleRemoveDocument = (documentId: number) => {
     if (onDocumentRemove) {
@@ -134,7 +139,7 @@ export const ProcessedDocuments = ({ documents, onDocumentUpdate, onDocumentRemo
 
   if (documents.length === 0) {
     return (
-      <Card className="shadow-purple hover:shadow-purple-md transition-all duration-300">
+      <Card className="shadow-purple hover:shadow-purple-md transition-all duration-300 max-w-[500px] mx-auto">
         <CardHeader className="pb-4">
           <div className="flex items-center gap-2">
             <Zap className="h-5 w-5 text-primary" />
@@ -160,7 +165,7 @@ export const ProcessedDocuments = ({ documents, onDocumentUpdate, onDocumentRemo
   }
 
   return (
-    <Card className="shadow-purple hover:shadow-purple-md transition-all duration-300">
+    <Card className="shadow-purple hover:shadow-purple-md transition-all duration-300 max-w-[500px] mx-auto">
       <CardHeader className="pb-4">
         <div className="flex items-center gap-2">
           <Zap className="h-5 w-5 text-primary" />
@@ -172,9 +177,9 @@ export const ProcessedDocuments = ({ documents, onDocumentUpdate, onDocumentRemo
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
-          {documents.map((document) => (
+          {documents.map((document, index) => (
             <div
-              key={document.id}
+              key={`${document.id}-${index}`}
               className={cn(
                 "relative overflow-hidden rounded-xl border transition-all duration-300",
                 "bg-gradient-to-r from-background to-muted/20",
@@ -257,7 +262,10 @@ export const ProcessedDocuments = ({ documents, onDocumentUpdate, onDocumentRemo
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={() => setEditingDocument(document)}
+                            onClick={() => {
+                              console.log('🔄 [ProcessedDocuments] Edit button clicked for document:', document);
+                              setEditingDocument(document);
+                            }}
                             className="flex-1"
                           >
                             <Edit2 className="h-3 w-3 mr-1" />
@@ -395,7 +403,10 @@ export const ProcessedDocuments = ({ documents, onDocumentUpdate, onDocumentRemo
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={() => setEditingDocument(document)}
+                            onClick={() => {
+                              console.log('🔄 [ProcessedDocuments] Desktop Edit button clicked for document:', document);
+                              setEditingDocument(document);
+                            }}
                           >
                             <Edit2 className="h-3 w-3 mr-1" />
                             Edit
@@ -439,8 +450,14 @@ export const ProcessedDocuments = ({ documents, onDocumentUpdate, onDocumentRemo
         onOpenChange={(open) => !open && setEditingDocument(null)}
         document={editingDocument}
         onSave={(updated) => {
-          onDocumentUpdate(updated);
-          setEditingDocument(null);
+          console.log('🔄 [ProcessedDocuments] Saving updated document:', updated);
+          try {
+            onDocumentUpdate(updated);
+            setEditingDocument(null);
+            console.log('✅ [ProcessedDocuments] Document updated successfully');
+          } catch (error) {
+            console.error('❌ [ProcessedDocuments] Error updating document:', error);
+          }
         }}
       />
     </Card>

@@ -39,7 +39,9 @@ const BudgetTracker: React.FC<BudgetTrackerProps> = ({
   const handleNewBudgetClick = () => {
     // This will require the parent component (`Index.tsx`) to handle the modal state
     // We can dispatch a custom event for this.
-    document.dispatchEvent(new CustomEvent('openBudgetForm'));
+    document.dispatchEvent(new CustomEvent('openBudgetForm', { 
+      detail: { source: 'BudgetTracker' } 
+    }));
   };
 
   const spendingQueries = useQueries({

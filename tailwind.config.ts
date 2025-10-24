@@ -140,6 +140,10 @@ export default {
 					'50%': { 
 						transform: 'translateY(-4px)'
 					}
+				},
+				'shine': {
+					'0%': { 'background-position': '100%' },
+					'100%': { 'background-position': '-100%' }
 				}
 			},
 			animation: {
@@ -149,7 +153,8 @@ export default {
 				'fade-up': 'fade-up 0.5s ease-out',
 				'scale-in': 'scale-in 0.3s ease-out',
 				'glow-pulse': 'glow-pulse 3s ease-in-out infinite',
-				'float': 'float 3s ease-in-out infinite'
+				'float': 'float 3s ease-in-out infinite',
+				'shine': 'shine 5s linear infinite'
 			},
 			boxShadow: {
 				'soft': '0 2px 15px rgba(0, 0, 0, 0.03)',
