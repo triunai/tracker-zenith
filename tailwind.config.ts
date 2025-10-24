@@ -65,16 +65,16 @@ export default {
 				},
 				// Finance tracker custom colors - more muted for iOS look
 				finance: {
-					'income': '#73B17C', // Softer green
-					'expense': '#E57373', // Softer red
-					'budget-safe': '#F1F8F1', // Very light green
-					'budget-warning': '#FFF8E1', // Very light yellow
-					'budget-danger': '#FEF5F5', // Very light red
-					'chart-1': '#8E9BC7', // Muted blue-purple
-					'chart-2': '#93C0DA', // Muted light blue
-					'chart-3': '#D6A99A', // Muted salmon
-					'chart-4': '#92C1B8', // Muted teal
-					'chart-5': '#B7A7CC' // Muted lavender
+					'income': '#10B981', // Emerald green
+					'expense': '#EF4444', // Red
+					'budget-safe': '#ECFDF5', // Very light green
+					'budget-warning': '#FEF3C7', // Very light yellow
+					'budget-danger': '#FEE2E2', // Very light red
+					'chart-1': '#3B82F6', // Blue
+					'chart-2': '#8B5CF6', // Purple
+					'chart-3': '#F59E0B', // Amber
+					'chart-4': '#06B6D4', // Cyan
+					'chart-5': '#EC4899' // Pink
 				}
 			},
 			borderRadius: {
@@ -122,6 +122,28 @@ export default {
 						opacity: '1',
 						transform: 'scale(1)'
 					}
+				},
+				'glow-pulse': {
+					'0%, 100%': { 
+						opacity: '0.5',
+						transform: 'scale(1)'
+					},
+					'50%': { 
+						opacity: '0.8',
+						transform: 'scale(1.05)'
+					}
+				},
+				'float': {
+					'0%, 100%': { 
+						transform: 'translateY(0px)'
+					},
+					'50%': { 
+						transform: 'translateY(-4px)'
+					}
+				},
+				'shine': {
+					'0%': { 'background-position': '100%' },
+					'100%': { 'background-position': '-100%' }
 				}
 			},
 			animation: {
@@ -129,7 +151,10 @@ export default {
 				'accordion-up': 'accordion-up 0.2s ease-out',
 				'fade-in': 'fade-in 0.5s ease-out',
 				'fade-up': 'fade-up 0.5s ease-out',
-				'scale-in': 'scale-in 0.3s ease-out'
+				'scale-in': 'scale-in 0.3s ease-out',
+				'glow-pulse': 'glow-pulse 3s ease-in-out infinite',
+				'float': 'float 3s ease-in-out infinite',
+				'shine': 'shine 5s linear infinite'
 			},
 			boxShadow: {
 				'soft': '0 2px 15px rgba(0, 0, 0, 0.03)',

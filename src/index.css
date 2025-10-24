@@ -93,6 +93,16 @@
     @apply bg-background text-foreground antialiased;
     font-feature-settings: "rlig" 1, "calt" 1;
   }
+
+  /* Safe area support for mobile devices (iOS notch, etc) */
+  @supports (padding: env(safe-area-inset-bottom)) {
+    .pb-safe {
+      padding-bottom: env(safe-area-inset-bottom);
+    }
+    .pt-safe {
+      padding-top: env(safe-area-inset-top);
+    }
+  }
 }
 
 /* Standard component styling with purple shadow */
@@ -187,4 +197,29 @@
   opacity: 0;
   transform: translateY(-8px);
   transition: opacity 200ms, transform 200ms;
+}
+
+/* Landing page specific animations */
+@keyframes gradient-shift {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+.animate-gradient {
+  background-size: 200% 200%;
+  animation: gradient-shift 6s ease infinite;
+}
+
+/* Enhanced shadow utilities for landing page */
+.shadow-purple-2xl {
+  box-shadow: 0 25px 50px -12px rgba(139, 92, 246, 0.25);
+}
+
+/* Smooth scroll for anchor links */
+html {
+  scroll-behavior: smooth;
 }

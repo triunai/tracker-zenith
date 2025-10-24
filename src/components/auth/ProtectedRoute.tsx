@@ -84,7 +84,7 @@ const testStoredProcedures = async (userId: string) => {
 
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   children,
-  redirectTo = '/login'
+  redirectTo = '/landing'
 }) => {
   const { isAuthenticated, isLoading, user } = useAuth();
   const [authTimeout, setAuthTimeout] = useState(false);

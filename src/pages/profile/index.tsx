@@ -10,6 +10,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { Loader2 } from 'lucide-react';
 import { BackButton } from '@/components/ui/back-button';
 import Layout from '@/components/Layout/Layout';
+import PageHeader from '@/components/Layout/PageHeader';
 
 const Profile: React.FC = () => {
   const { user, profile, updateProfile, isLoading } = useAuth();
@@ -48,6 +49,7 @@ const Profile: React.FC = () => {
   if (!user || !profile) {
     return (
       <Layout>
+        <PageHeader title="Profile" showBack={true} />
         <div className="container flex h-screen items-center justify-center">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
@@ -57,9 +59,10 @@ const Profile: React.FC = () => {
   
   return (
     <Layout>
-      <div className="container py-10">
+      <PageHeader title="Profile" showBack={true} />
+      <div className="container py-10 lg:pt-10 pt-20">
         <div className="max-w-md mx-auto">
-          <div className="mb-6">
+          <div className="mb-6 lg:block hidden">
             <BackButton />
           </div>
           <Card>

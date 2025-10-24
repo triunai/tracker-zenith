@@ -14,24 +14,15 @@ import {
 
 interface DatePickerWithRangeProps {
   className?: string;
-  initialDateRange?: DateRange;
-  onUpdate?: (range: DateRange) => void;
+  date: DateRange | undefined;
+  onDateChange: (date: DateRange | undefined) => void;
 }
 
 export function DatePickerWithRange({
   className,
-  initialDateRange,
-  onUpdate,
+  date,
+  onDateChange,
 }: DatePickerWithRangeProps) {
-  const [date, setDate] = React.useState<DateRange | undefined>(initialDateRange);
-
-  // When the date range changes, notify the parent if onUpdate is provided
-  React.useEffect(() => {
-    if (date && onUpdate) {
-      onUpdate(date);
-    }
-  }, [date, onUpdate]);
-
   return (
     <div className={cn("grid gap-2", className)}>
       <Popover>
@@ -65,7 +56,7 @@ export function DatePickerWithRange({
             mode="range"
             defaultMonth={date?.from}
             selected={date}
-            onSelect={setDate}
+            onSelect={onDateChange}
             numberOfMonths={2}
           />
         </PopoverContent>

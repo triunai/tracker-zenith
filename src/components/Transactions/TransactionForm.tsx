@@ -118,7 +118,8 @@ const TransactionForm = ({
             data-transaction-form-trigger
           >
             {finalButtonIcon}
-            {finalButtonText}
+            <span className="hidden sm:inline ml-2">{finalButtonText}</span>
+            <span className="sr-only sm:hidden">{finalButtonText}</span>
           </Button>
         </DialogTrigger>
       )}
