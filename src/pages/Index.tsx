@@ -20,6 +20,7 @@ import { PlusCircle, MinusCircle, X, Loader2 } from 'lucide-react';
 import { budgetApi } from '@/lib/api/budgetApi';
 import { PeriodEnum } from '@/interfaces/enums/PeriodEnum';
 import { useToast } from '@/components/ui/use-toast';
+import BlurText from '@/components/ui/BlurText';
 
 const Index = () => {
   const { userId, dateRangeText } = useDashboard();
@@ -198,9 +199,16 @@ const Index = () => {
           <div className="space-y-4">
             {/* Welcome Message */}
             <div>
-              <h2 className="text-3xl font-bold tracking-tight">
-                Hi, Welcome back {user?.display_name ?? 'User'} 👋
-              </h2>
+              <BlurText
+                text={`Hi, Welcome back ${user?.display_name ?? 'User'} 👋`}
+                delay={150}
+                animateBy="words"
+                direction="top"
+                className="text-3xl font-bold tracking-tight"
+                fallbackText={`Hi, Welcome back ${user?.display_name ?? 'User'} 👋`}
+                enableFallback={true}
+                onFallback={() => console.log('BlurText animation failed, using fallback')}
+              />
               <p className="text-muted-foreground">
                 Your financial overview for {dateRangeText}.
               </p>
