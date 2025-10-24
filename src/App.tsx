@@ -14,6 +14,7 @@ import { AuthProvider, initTokenManager } from '@/lib/auth';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 
 // Pages
+import Landing from './pages/Landing';
 import Index from './pages/Index';
 import TransactionsPage from './pages/transactions';
 import NotFound from './pages/NotFound';
@@ -131,6 +132,9 @@ function App() {
               <ScannerProvider>
                 <DashboardProvider>
                   <Routes>
+                  {/* Landing Page - Public */}
+                  <Route path="/landing" element={<Landing />} />
+                  
                   {/* Public Routes */}
                   <Route path="/login" element={<Login />} />
                   <Route path="/signup" element={<Signup />} />

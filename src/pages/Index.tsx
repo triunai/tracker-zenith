@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import Layout from '@/components/Layout/Layout';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQueryClient, useQuery, useMutation } from '@tanstack/react-query';
 import { useAuth } from '@/lib/auth/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { useDashboard } from '@/context/DashboardContext';
@@ -10,18 +10,22 @@ import SpendingChart from '@/components/Charts/SpendingChart';
 import TransactionList from '@/components/Transactions/TransactionList';
 import BudgetTracker from '@/components/Budgets/BudgetTracker';
 import BudgetForm from '@/components/Budgets/BudgetForm';
-import { Budget } from '@/interfaces/budget-interface';
+import { Budget, CreateBudgetRequest, UpdateBudgetRequest } from '@/interfaces/budget-interface';
 import { Document } from '@/interfaces/document-interface';
 import DateFilter from '@/components/Dashboard/DateFilter';
 import TransactionForm from '@/components/Transactions/TransactionForm';
 import { DocumentUploader } from '@/components/Documents/DocumentUploader';
 import { ProcessedDocuments } from '@/components/Documents/ProcessedDocuments';
 import { PlusCircle, MinusCircle, X, Loader2 } from 'lucide-react';
+import { budgetApi } from '@/lib/api/budgetApi';
+import { PeriodEnum } from '@/interfaces/enums/PeriodEnum';
+import { useToast } from '@/components/ui/use-toast';
 
 const Index = () => {
   const { userId, dateRangeText } = useDashboard();
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const { toast } = useToast();
   const { isOpen: isScannerOpen, closeScanner, isLoading: isScannerLoading } = useScanner();
   
   const [isNewBudgetOpen, setIsNewBudgetOpen] = useState(false);
@@ -29,10 +33,128 @@ const Index = () => {
   const [processedDocuments, setProcessedDocuments] = useState<Document[]>([]);
   const [showProcessedDocuments, setShowProcessedDocuments] = useState(false);
 
-  const handleBudgetSubmit = () => {
-    queryClient.invalidateQueries({ queryKey: ['budgets', userId] });
+  // Fetch categories for the budget form
+  const { data: categories = [] } = useQuery({
+    queryKey: ['expenseCategories'],
+    queryFn: budgetApi.getCategories,
+  });
+
+  // Create budget mutation
+  const createBudget = useMutation({
+    mutationFn: (newBudget: CreateBudgetRequest) => budgetApi.create(newBudget),
+    onSuccess: (data) => {
+      console.log('Budget created successfully from dashboard:', data);
+      
+      queryClient.invalidateQueries({ queryKey: ['budgets'] });
+      queryClient.invalidateQueries({ queryKey: ['budgetSpending'] });
+      queryClient.invalidateQueries({ queryKey: ['budgetCategorySpending'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboardSummary'] });
+      
       setIsNewBudgetOpen(false);
-    setEditingBudget(null);
+      setEditingBudget(null);
+      toast({
+        title: "Success!",
+        description: "Budget has been created successfully.",
+      });
+    },
+    onError: (error) => {
+      console.error('Failed to create budget from dashboard:', error);
+      toast({
+        title: "Error",
+        description: `Failed to create budget: ${error.message}`,
+        variant: "destructive",
+      });
+    }
+  });
+
+  // Update budget mutation
+  const updateBudget = useMutation({
+    mutationFn: async (updatedBudgetData: { id: number; data: UpdateBudgetRequest }) => {
+      console.log(`Updating budget from dashboard, ID: ${updatedBudgetData.id}`);
+      return await budgetApi.update(updatedBudgetData.id, updatedBudgetData.data);
+    },
+    onSuccess: (data) => {
+      console.log('Budget updated successfully from dashboard:', data);
+      queryClient.invalidateQueries({ queryKey: ['budgets'] });
+      queryClient.invalidateQueries({ queryKey: ['budgetSpending', data.id] });
+      queryClient.invalidateQueries({ queryKey: ['budgetCategorySpending', data.id] });
+      queryClient.invalidateQueries({ queryKey: ['dashboardSummary'] });
+
+      setIsNewBudgetOpen(false);
+      setEditingBudget(null);
+      toast({
+        title: "Success!",
+        description: "Budget has been updated successfully.",
+      });
+    },
+    onError: (error: Error, variables) => {
+      console.error(`Failed to update budget ${variables.id} from dashboard:`, error);
+      toast({
+        title: "Error",
+        description: `Failed to update budget: ${error.message}`,
+        variant: "destructive",
+      });
+    }
+  });
+
+  const handleBudgetSubmit = (formData: {
+    amount: number;
+    period: PeriodEnum;
+    categoryId?: number;
+    categoryName?: string;
+  }) => {
+    console.log('Dashboard handleBudgetSubmit called with form data:', formData);
+    console.log('Current editingBudget state:', editingBudget);
+
+    try {
+      if (!userId) {
+        throw new Error("User ID is missing. Cannot proceed.");
+      }
+
+      if (editingBudget) {
+        const updatePayload: UpdateBudgetRequest = {
+          name: editingBudget.name,
+          amount: formData.amount,
+          period: formData.period,
+        };
+
+        console.log('Updating budget with payload:', updatePayload);
+        updateBudget.mutate({ id: editingBudget.id, data: updatePayload });
+
+      } else {
+        console.log("Preparing to CREATE new budget from dashboard");
+        
+        if (!formData.categoryId) {
+            throw new Error("Category is required to create a budget.");
+        }
+
+        const newBudget: CreateBudgetRequest = {
+          user_id: userId,
+          name: `${formData.categoryName || 'New'} Budget`,
+          amount: formData.amount,
+          period: formData.period,
+          start_date: new Date().toISOString(),
+          categories: [
+            {
+              category_id: formData.categoryId,
+              alert_threshold: formData.amount * 0.8
+            }
+          ]
+        };
+
+        console.log('Creating budget with data:', newBudget);
+        createBudget.mutate(newBudget);
+      }
+
+    } catch (error: unknown) {
+      console.error('Error in dashboard handleBudgetSubmit:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      toast({
+        title: "Submission Error",
+        description: `Failed to process budget: ${errorMessage}`,
+        variant: "destructive",
+      });
+    }
   };
 
   const handleEditBudget = (budget: Budget) => {
@@ -56,8 +178,11 @@ const Index = () => {
 
   useEffect(() => {
     const handleOpenBudgetFormEvent = (event: CustomEvent) => {
-      if(event.detail.source === 'BudgetTracker'){
-      setIsNewBudgetOpen(true);
+      console.log('Dashboard received openBudgetForm event:', event.detail);
+      if(event.detail?.source === 'BudgetTracker'){
+        console.log('Opening budget form from BudgetTracker');
+        setIsNewBudgetOpen(true);
+        setEditingBudget(null);
       }
     };
     document.addEventListener('openBudgetForm', handleOpenBudgetFormEvent as EventListener);
@@ -107,9 +232,15 @@ const Index = () => {
 
         <BudgetForm 
           open={isNewBudgetOpen} 
-          onOpenChange={setIsNewBudgetOpen}
+          onOpenChange={(isOpen) => {
+            setIsNewBudgetOpen(isOpen);
+            if (!isOpen) {
+              setEditingBudget(null);
+            }
+          }}
           onSubmit={handleBudgetSubmit}
           initialData={editingBudget}
+          categories={categories}
         />
       </div>
 
