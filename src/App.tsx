@@ -125,7 +125,7 @@ function App() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider defaultTheme="light" storageKey="zenith-theme">
+      <ThemeProvider defaultTheme="dark" storageKey="zenith-theme">
         <TooltipProvider>
           <AuthProvider>
             <Router>
