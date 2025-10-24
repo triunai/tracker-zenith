@@ -26,6 +26,17 @@ import {
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/lib/auth';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
+import LogoLoop from '@/components/ui/LogoLoop';
+import { 
+  SiReact, 
+  SiTypescript, 
+  SiTailwindcss, 
+  SiSupabase, 
+  SiReactquery, 
+  SiOpenai,
+  SiVite,
+  SiPostgresql
+} from 'react-icons/si';
 
 const Landing = () => {
   const { isAuthenticated } = useAuth();
@@ -81,13 +92,59 @@ const Landing = () => {
     }
   ];
 
-  const techStack = [
-    { name: 'React 18', color: '#61DAFB' },
-    { name: 'TypeScript', color: '#3178C6' },
-    { name: 'Supabase', color: '#3ECF8E' },
-    { name: 'Tailwind', color: '#06B6D4' },
-    { name: 'React Query', color: '#FF4154' },
-    { name: 'Mistral AI', color: '#FF7000' },
+  const techLogos = [
+    { 
+      node: <SiReact className="text-[#61DAFB]" />, 
+      title: "React 18", 
+      href: "https://react.dev" 
+    },
+    { 
+      node: <SiTypescript className="text-[#3178C6]" />, 
+      title: "TypeScript", 
+      href: "https://www.typescriptlang.org" 
+    },
+    { 
+      node: <SiSupabase className="text-[#3ECF8E]" />, 
+      title: "Supabase", 
+      href: "https://supabase.com" 
+    },
+    { 
+      node: <SiTailwindcss className="text-[#06B6D4]" />, 
+      title: "Tailwind CSS", 
+      href: "https://tailwindcss.com" 
+    },
+    { 
+      node: <SiReactquery className="text-[#FF4154]" />, 
+      title: "React Query", 
+      href: "https://tanstack.com/query" 
+    },
+    { 
+      node: <SiVite className="text-[#646CFF]" />, 
+      title: "Vite", 
+      href: "https://vitejs.dev" 
+    },
+    { 
+      node: <SiPostgresql className="text-[#336791]" />, 
+      title: "PostgreSQL", 
+      href: "https://postgresql.org" 
+    },
+    { 
+      node: <SiOpenai className="text-[#412991]" />, 
+      title: "OpenAI", 
+      href: "https://openai.com" 
+    },
+    { 
+      src: "/logos/Mistral_AI_logo_(2025–).svg.png", 
+      alt: "Mistral AI", 
+      title: "Mistral AI",
+      href: "https://mistral.ai" 
+    },
+    { 
+      src: "/logos/openrouter.svg", 
+      alt: "OpenRouter", 
+      title: "OpenRouter",
+      href: "https://openrouter.ai" 
+    }
   ];
 
   const stats = [
@@ -499,27 +556,36 @@ const Landing = () => {
             </p>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-6">
-            {techStack.map((tech, i) => (
-              <Card 
-                key={i}
-                className="group hover:shadow-xl transition-all duration-300 hover:-translate-y-2 cursor-pointer border-2 hover:border-purple-500/30"
-              >
-                <CardContent className="p-6 text-center space-y-3">
-                  <div 
-                    className="w-14 h-14 mx-auto rounded-xl flex items-center justify-center text-2xl font-bold text-white shadow-lg"
-                    style={{ backgroundColor: tech.color }}
-                  >
-                    {tech.name.charAt(0)}
-                  </div>
-                  <p className="font-semibold text-sm">{tech.name}</p>
-                </CardContent>
-              </Card>
-            ))}
+          {/* LogoLoop Component */}
+          <div className="mb-16 -mx-4 sm:-mx-6 lg:-mx-8 xl:-mx-12 2xl:-mx-16">
+            <div 
+              className="relative bg-gradient-to-r from-purple-50/50 to-indigo-50/50 dark:from-purple-950/20 dark:to-indigo-950/20 py-8 border-y border-purple-200/20 dark:border-purple-800/20"
+              style={{ 
+                height: '120px',
+                marginLeft: 'calc(-50vw + 50%)',
+                marginRight: 'calc(-50vw + 50%)',
+                width: '100vw'
+              }}
+            >
+              <LogoLoop
+                logos={techLogos}
+                speed={80}
+                direction="left"
+                logoHeight={48}
+                gap={48}
+                pauseOnHover={true}
+                scaleOnHover={true}
+                fadeOut={true}
+                fadeOutColor="hsl(var(--background))"
+                ariaLabel="Technology stack logos"
+                className="h-full w-full"
+                width="100vw"
+              />
+            </div>
           </div>
 
           {/* GitHub CTA */}
-          <div className="mt-16 text-center">
+          <div className="text-center">
             <a 
               href="https://github.com/your-username/tracker-zenith"
               target="_blank"
