@@ -327,7 +327,7 @@ const Layout = ({ children }: LayoutProps) => {
           }
         }}
         className={cn(
-          "flex-1 transition-all duration-300",
+          "flex-1 transition-all duration-300 overflow-auto",
           isMobile 
             ? "ml-0 p-4 pb-24" // Extra bottom padding for mobile nav
             : (sidebarOpen ? "ml-64 p-6 md:p-10" : "ml-20 p-6 md:p-10")
