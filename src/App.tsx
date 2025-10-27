@@ -132,8 +132,9 @@ function App() {
               <ScannerProvider>
                 <DashboardProvider>
                   <Routes>
-                  {/* Landing Page - Public */}
+                  {/* Landing Page - Public (root for non-authenticated users) */}
                   <Route path="/landing" element={<Landing />} />
+                  <Route path="/" element={<Landing />} />
                   
                   {/* Public Routes */}
                   <Route path="/login" element={<Login />} />
@@ -141,7 +142,7 @@ function App() {
                   <Route path="/forget-password" element={<ForgetPassword />} />
 
                   {/* Protected Routes */}
-                  <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
+                  <Route path="/dashboard" element={<ProtectedRoute><Index /></ProtectedRoute>} />
                   <Route path="/transactions" element={<ProtectedRoute><TransactionsPage /></ProtectedRoute>} />
                   <Route path="/budgets" element={<ProtectedRoute><BudgetPage /></ProtectedRoute>} />
                   <Route path="/payment-methods" element={<ProtectedRoute><PaymentMethodsPage /></ProtectedRoute>} />

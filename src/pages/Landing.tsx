@@ -187,11 +187,11 @@ const Landing = () => {
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16 sm:h-20">
             {/* Logo */}
-            <Link to="/landing" className="flex items-center gap-2 group">
-              <div className="bg-gradient-to-br from-purple-500 to-indigo-600 text-white rounded-xl w-10 h-10 flex items-center justify-center font-bold text-lg shadow-lg group-hover:scale-110 transition-transform">
+            <Link to="/" className="flex items-center gap-2 group">
+              <div className="bg-primary text-primary-foreground rounded-xl w-10 h-10 flex items-center justify-center font-bold text-lg shadow-lg group-hover:scale-110 transition-transform">
                 F
               </div>
-              <span className="font-bold text-xl sm:text-2xl bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
+              <span className="font-bold text-xl sm:text-2xl bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent">
                 Finance Zen
               </span>
             </Link>
@@ -218,8 +218,8 @@ const Landing = () => {
               </a>
               <ThemeToggle />
               {isAuthenticated ? (
-                <Link to="/">
-                  <Button size="sm" className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 shadow-lg">
+                <Link to="/dashboard">
+                  <Button size="sm" className="bg-primary hover:bg-primary/90 shadow-lg">
                     Dashboard
                     <ArrowRight className="w-4 h-4 ml-1" />
                   </Button>
@@ -232,7 +232,7 @@ const Landing = () => {
                     </Button>
                   </Link>
                   <Link to="/signup">
-                    <Button size="sm" className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 shadow-lg">
+                    <Button size="sm" className="bg-primary hover:bg-primary/90 shadow-lg">
                       Get Started
                       <ArrowRight className="w-4 h-4 ml-1" />
                     </Button>
@@ -278,8 +278,8 @@ const Landing = () => {
                 </a>
                 <div className="border-t pt-3 mt-2 flex flex-col gap-2 px-4">
                   {isAuthenticated ? (
-                    <Link to="/">
-                      <Button className="w-full bg-gradient-to-r from-purple-600 to-indigo-600">
+                    <Link to="/dashboard">
+                      <Button className="w-full bg-primary hover:bg-primary/90">
                         Go to Dashboard
                         <ArrowRight className="w-4 h-4 ml-1" />
                       </Button>
@@ -292,7 +292,7 @@ const Landing = () => {
                         </Button>
                       </Link>
                       <Link to="/signup">
-                        <Button className="w-full bg-gradient-to-r from-purple-600 to-indigo-600">
+                        <Button className="w-full bg-primary hover:bg-primary/90">
                           Get Started
                           <ArrowRight className="w-4 h-4 ml-1" />
                         </Button>
@@ -311,9 +311,9 @@ const Landing = () => {
         {/* Animated Background - Placeholder for React Bits components */}
         <div className="absolute inset-0 -z-10">
           {/* Gradient Orbs */}
-          <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-purple-500/20 rounded-full blur-3xl animate-float" />
-          <div className="absolute top-1/3 right-1/4 w-96 h-96 bg-indigo-500/20 rounded-full blur-3xl animate-float" style={{ animationDelay: '1s' }} />
-          <div className="absolute bottom-1/4 left-1/2 w-96 h-96 bg-pink-500/10 rounded-full blur-3xl animate-float" style={{ animationDelay: '2s' }} />
+          <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/20 rounded-full blur-3xl animate-float" />
+          <div className="absolute top-1/3 right-1/4 w-96 h-96 bg-primary/15 rounded-full blur-3xl animate-float" style={{ animationDelay: '1s' }} />
+          <div className="absolute bottom-1/4 left-1/2 w-96 h-96 bg-primary/10 rounded-full blur-3xl animate-float" style={{ animationDelay: '2s' }} />
           
           {/* Dot Pattern Overlay */}
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_1px_1px,rgb(148_163_184/0.05)_1px,transparent_0)] [background-size:40px_40px]" />
@@ -322,7 +322,7 @@ const Landing = () => {
         <div className="container mx-auto max-w-7xl relative z-10">
           <div className="text-center space-y-8 animate-fade-up pt-20">
             {/* Badge */}
-            <Badge variant="secondary" className="px-4 py-2 text-sm font-medium shadow-purple-sm border-purple-500/20">
+            <Badge variant="secondary" className="px-4 py-2 text-sm font-medium shadow-soft border-primary/20">
               <Sparkles className="w-4 h-4 mr-2 inline" />
               AI-Powered · Web-Based · No Download Required
             </Badge>
@@ -330,17 +330,17 @@ const Landing = () => {
             {/* Main Headline */}
             <div className="space-y-4">
               <h1 className="text-5xl sm:text-7xl lg:text-8xl font-bold tracking-tight leading-tight">
-                <span className="block bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent animate-gradient">
+                <span className="block bg-gradient-to-r from-primary via-primary/80 to-primary bg-clip-text text-transparent animate-gradient">
                   The Future of
                 </span>
-                <span className="block bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent animate-gradient" style={{ animationDelay: '0.1s' }}>
+                <span className="block bg-gradient-to-r from-primary via-primary/80 to-primary bg-clip-text text-transparent animate-gradient" style={{ animationDelay: '0.1s' }}>
                   Finance Tracking
                 </span>
               </h1>
               
               {/* Animated underline */}
               <div className="flex justify-center">
-                <div className="h-1 w-64 bg-gradient-to-r from-transparent via-purple-600 to-transparent rounded-full animate-pulse" />
+                <div className="h-1 w-64 bg-gradient-to-r from-transparent via-primary to-transparent rounded-full animate-pulse" />
               </div>
             </div>
 
@@ -353,20 +353,44 @@ const Landing = () => {
 
             {/* CTA Buttons */}
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-6">
-              <Link to={isAuthenticated ? "/" : "/signup"}>
-                <Button 
-                  size="lg" 
-                  className="w-full sm:w-auto text-lg h-14 px-10 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 shadow-2xl shadow-purple-500/30 hover:shadow-purple-500/50 transition-all hover:scale-105"
-                >
-                  {isAuthenticated ? "Go to Dashboard" : "Start Tracking Free"}
-                  <ArrowRight className="w-5 h-5 ml-2" />
-                </Button>
-              </Link>
+              {isAuthenticated ? (
+                <Link to="/dashboard">
+                  <Button 
+                    size="lg" 
+                    className="w-full sm:w-auto text-lg h-14 px-10 bg-primary hover:bg-primary/90 shadow-2xl shadow-primary/30 hover:shadow-primary/50 transition-all hover:scale-105"
+                  >
+                    Go to Dashboard
+                    <ArrowRight className="w-5 h-5 ml-2" />
+                  </Button>
+                </Link>
+              ) : (
+                <>
+                  <Link to="/signup">
+                    <Button 
+                      size="lg" 
+                      className="w-full sm:w-auto text-lg h-14 px-10 bg-primary hover:bg-primary/90 shadow-2xl shadow-primary/30 hover:shadow-primary/50 transition-all hover:scale-105"
+                    >
+                      Start Tracking Free
+                      <ArrowRight className="w-5 h-5 ml-2" />
+                    </Button>
+                  </Link>
+                  <Link to="/login">
+                    <Button 
+                      size="lg" 
+                      variant="outline" 
+                      className="w-full sm:w-auto text-lg h-14 px-10 border-2 hover:bg-muted/50 hover:scale-105 transition-all"
+                    >
+                      Log In
+                      <ChevronRight className="w-5 h-5 ml-1" />
+                    </Button>
+                  </Link>
+                </>
+              )}
               <a href="#how-it-works">
                 <Button 
                   size="lg" 
-                  variant="outline" 
-                  className="w-full sm:w-auto text-lg h-14 px-10 border-2 hover:bg-muted/50 hover:scale-105 transition-all"
+                  variant="ghost" 
+                  className="w-full sm:w-auto text-lg h-14 px-10 hover:bg-muted/50 hover:scale-105 transition-all"
                 >
                   <Eye className="w-5 h-5 mr-2" />
                   See How It Works
@@ -398,7 +422,7 @@ const Landing = () => {
                   className="text-center animate-fade-up" 
                   style={{ animationDelay: `${i * 100 + 200}ms` }}
                 >
-                  <div className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
+                  <div className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
                     {stat.value}
                   </div>
                   <div className="text-xs sm:text-sm text-muted-foreground mt-1">
@@ -420,13 +444,13 @@ const Landing = () => {
       <section className="py-20 px-4 bg-muted/30">
         <div className="container mx-auto max-w-6xl">
           <div className="relative">
-            <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 to-indigo-500/5 rounded-3xl blur-3xl" />
+            <div className="absolute inset-0 bg-primary/5 rounded-3xl blur-3xl" />
             
-            <Card className="relative shadow-2xl overflow-hidden border-2 border-purple-500/20">
-              <div className="aspect-video bg-gradient-to-br from-purple-50 to-indigo-50 dark:from-purple-950/20 dark:to-indigo-950/20 flex items-center justify-center p-8">
+            <Card className="relative shadow-2xl overflow-hidden border-2 border-primary/20">
+              <div className="aspect-video bg-gradient-to-br from-muted to-muted/50 flex items-center justify-center p-8">
                 <div className="text-center space-y-6">
-                  <div className="w-24 h-24 mx-auto bg-gradient-to-br from-purple-500 to-indigo-600 rounded-2xl flex items-center justify-center shadow-xl">
-                    <Camera className="w-12 h-12 text-white" />
+                  <div className="w-24 h-24 mx-auto bg-primary rounded-2xl flex items-center justify-center shadow-xl">
+                    <Camera className="w-12 h-12 text-primary-foreground" />
                   </div>
                   <div>
                     <p className="text-2xl font-bold mb-2">App Screenshot Coming Soon</p>
@@ -445,14 +469,14 @@ const Landing = () => {
       <section id="how-it-works" className="py-20 sm:py-32 px-4">
         <div className="container mx-auto max-w-6xl">
           <div className="text-center mb-16 space-y-4">
-            <Badge variant="secondary" className="px-4 py-2 border-purple-500/20">
+            <Badge variant="secondary" className="px-4 py-2 border-primary/20">
               <CheckCircle2 className="w-4 h-4 mr-2 inline" />
               How It Works
             </Badge>
             <h2 className="text-4xl sm:text-6xl font-bold">
               Snap. Scan. Track.
               <br />
-              <span className="bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
+              <span className="bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
                 It's That Simple.
               </span>
             </h2>
@@ -463,18 +487,18 @@ const Landing = () => {
               <div key={i} className="relative">
                 {/* Connection line - desktop only */}
                 {i < 2 && (
-                  <div className="hidden md:block absolute top-16 left-1/2 w-full h-0.5 bg-gradient-to-r from-purple-500 to-indigo-500 opacity-20 z-0" />
+                  <div className="hidden md:block absolute top-16 left-1/2 w-full h-0.5 bg-gradient-to-r from-primary to-primary/70 opacity-20 z-0" />
                 )}
                 
                 <div className="relative text-center space-y-6 z-10">
                   {/* Step number background */}
-                  <div className="absolute -top-4 -right-4 text-8xl font-bold text-purple-500/5 select-none">
+                  <div className="absolute -top-4 -right-4 text-8xl font-bold text-primary/5 select-none">
                     {item.step}
                   </div>
                   
                   {/* Icon */}
-                  <div className="inline-flex w-32 h-32 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 items-center justify-center shadow-2xl shadow-purple-500/25 relative">
-                    <item.icon className="w-14 h-14 text-white relative z-10" />
+                  <div className="inline-flex w-32 h-32 rounded-full bg-primary items-center justify-center shadow-2xl shadow-primary/25 relative">
+                    <item.icon className="w-14 h-14 text-primary-foreground relative z-10" />
                     {/* Inner glow */}
                     <div className="absolute inset-0 rounded-full bg-gradient-to-br from-white/30 to-transparent opacity-50" />
                   </div>
@@ -494,14 +518,14 @@ const Landing = () => {
       <section id="features" className="py-20 sm:py-32 px-4 bg-muted/30">
         <div className="container mx-auto max-w-6xl">
           <div className="text-center mb-16 sm:mb-20 space-y-4">
-            <Badge variant="secondary" className="px-4 py-2 border-purple-500/20">
+            <Badge variant="secondary" className="px-4 py-2 border-primary/20">
               <Zap className="w-4 h-4 mr-2 inline" />
               Features
             </Badge>
             <h2 className="text-4xl sm:text-6xl font-bold">
               Everything You Need,
               <br />
-              <span className="bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
+              <span className="bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
                 Nothing You Don't
               </span>
             </h2>
@@ -514,7 +538,7 @@ const Landing = () => {
             {features.map((feature, i) => (
               <Card 
                 key={i} 
-                className="group hover:shadow-2xl hover:shadow-purple-500/20 transition-all duration-300 border-2 hover:border-purple-500/30 animate-fade-up hover:-translate-y-1"
+                className="group hover:shadow-2xl hover:shadow-primary/20 transition-all duration-300 border-2 hover:border-primary/30 animate-fade-up hover:-translate-y-1"
                 style={{ animationDelay: `${i * 100}ms` }}
               >
                 <CardContent className="p-6 space-y-4">
@@ -540,14 +564,14 @@ const Landing = () => {
       <section id="tech" className="py-20 sm:py-32 px-4">
         <div className="container mx-auto max-w-6xl">
           <div className="text-center mb-16 space-y-4">
-            <Badge variant="secondary" className="px-4 py-2 border-purple-500/20">
+            <Badge variant="secondary" className="px-4 py-2 border-primary/20">
               <Code2 className="w-4 h-4 mr-2 inline" />
               For Developers
             </Badge>
             <h2 className="text-4xl sm:text-6xl font-bold">
               Built With
               <br />
-              <span className="bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
+              <span className="bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
                 Modern Tech Stack
               </span>
             </h2>
@@ -559,7 +583,7 @@ const Landing = () => {
           {/* LogoLoop Component */}
           <div className="mb-16 -mx-4 sm:-mx-6 lg:-mx-8 xl:-mx-12 2xl:-mx-16">
             <div 
-              className="relative bg-gradient-to-r from-purple-50/50 to-indigo-50/50 dark:from-purple-950/20 dark:to-indigo-950/20 py-8 border-y border-purple-200/20 dark:border-purple-800/20"
+              className="relative bg-muted/50 py-8 border-y border-primary/10"
               style={{ 
                 height: '120px',
                 marginLeft: 'calc(-50vw + 50%)',
@@ -604,9 +628,9 @@ const Landing = () => {
       {/* Final CTA Section */}
       <section className="py-20 sm:py-32 px-4">
         <div className="container mx-auto max-w-4xl">
-          <Card className="relative overflow-hidden border-2 border-purple-500/30 shadow-2xl shadow-purple-500/20">
+          <Card className="relative overflow-hidden border-2 border-primary/30 shadow-2xl shadow-primary/20">
             {/* Background gradient */}
-            <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 via-indigo-500/10 to-pink-500/10" />
+            <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-primary/5 to-primary/10" />
             
             <CardContent className="relative p-12 sm:p-16 text-center space-y-8">
               <div className="space-y-4">
@@ -619,10 +643,10 @@ const Landing = () => {
               </div>
 
               <div className="flex flex-col sm:flex-row items-center justify-center gap-6">
-                <Link to={isAuthenticated ? "/" : "/signup"}>
+                <Link to={isAuthenticated ? "/dashboard" : "/signup"}>
                   <Button 
                     size="lg" 
-                    className="w-full sm:w-auto text-xl h-16 px-12 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 shadow-2xl shadow-purple-500/30 hover:scale-105 transition-all"
+                    className="w-full sm:w-auto text-xl h-16 px-12 bg-primary hover:bg-primary/90 shadow-2xl shadow-primary/30 hover:scale-105 transition-all"
                   >
                     {isAuthenticated ? "Go to Dashboard" : "Get Started for Free"}
                     <ArrowRight className="w-6 h-6 ml-2" />
@@ -656,7 +680,7 @@ const Landing = () => {
             {/* Brand */}
             <div className="space-y-4">
               <div className="flex items-center gap-2">
-                <div className="bg-gradient-to-br from-purple-500 to-indigo-600 text-white rounded-xl w-10 h-10 flex items-center justify-center font-bold text-lg shadow-lg">
+                <div className="bg-primary text-primary-foreground rounded-xl w-10 h-10 flex items-center justify-center font-bold text-lg shadow-lg">
                   F
                 </div>
                 <span className="font-bold text-xl">Finance Zen</span>
