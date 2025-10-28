@@ -27,6 +27,7 @@ import { cn } from '@/lib/utils';
 import { useAuth } from '@/lib/auth';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
 import LogoLoop from '@/components/ui/LogoLoop';
+import Prism from '@/components/ui/Prism';
 import { 
   SiReact, 
   SiTypescript, 
@@ -43,6 +44,7 @@ const Landing = () => {
   const navigate = useNavigate();
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
 
   // Redirect authenticated users to dashboard
   useEffect(() => {
@@ -50,6 +52,17 @@ const Landing = () => {
       navigate('/dashboard', { replace: true });
     }
   }, [isAuthenticated, navigate]);
+
+  // Detect mobile screen size for responsive Prism
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   // Handle scroll for navbar
   useEffect(() => {
@@ -315,25 +328,27 @@ const Landing = () => {
 
       {/* Hero Section */}
       <section className="relative min-h-screen flex items-center justify-center px-4 overflow-hidden">
-        {/* Animated Background - Placeholder for React Bits components */}
-        <div className="absolute inset-0 -z-10">
-          {/* Gradient Orbs */}
-          <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/20 rounded-full blur-3xl animate-float" />
-          <div className="absolute top-1/3 right-1/4 w-96 h-96 bg-primary/15 rounded-full blur-3xl animate-float" style={{ animationDelay: '1s' }} />
-          <div className="absolute bottom-1/4 left-1/2 w-96 h-96 bg-primary/10 rounded-full blur-3xl animate-float" style={{ animationDelay: '2s' }} />
-          
-          {/* Dot Pattern Overlay */}
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_1px_1px,rgb(148_163_184/0.05)_1px,transparent_0)] [background-size:40px_40px]" />
+        {/* Animated Prism Background */}
+        <div className="absolute inset-0 z-0">
+          {/* Prism at the back */}
+          <div className="absolute inset-0">
+            <Prism
+              animationType="3drotate"
+              timeScale={0.8}
+              height={isMobile ? 2.0 : 3.5}
+              baseWidth={isMobile ? 3.0 : 5.5}
+              scale={1.2}
+              hueShift={0.16}
+              colorFrequency={0.5}
+              noise={0}
+              glow={1.4}
+              bloom={1.5}
+            />
+          </div>
         </div>
 
         <div className="container mx-auto max-w-7xl relative z-10">
           <div className="text-center space-y-8 animate-fade-up pt-20">
-            {/* Badge */}
-            <Badge variant="secondary" className="px-4 py-2 text-sm font-medium shadow-soft border-primary/20">
-              <Sparkles className="w-4 h-4 mr-2 inline" />
-              AI-Powered · Web-Based · No Download Required
-            </Badge>
-
             {/* Main Headline */}
             <div className="space-y-4">
               <h1 className="text-5xl sm:text-7xl lg:text-8xl font-bold tracking-tight leading-tight">
@@ -344,11 +359,6 @@ const Landing = () => {
                   Finance Tracking
                 </span>
               </h1>
-              
-              {/* Animated underline */}
-              <div className="flex justify-center">
-                <div className="h-1 w-64 bg-gradient-to-r from-transparent via-primary to-transparent rounded-full animate-pulse" />
-              </div>
             </div>
 
             {/* Subheading */}
