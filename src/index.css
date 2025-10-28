@@ -223,3 +223,50 @@
 html {
   scroll-behavior: smooth;
 }
+
+/* Toast / Sonner customizations - MUST be outside @layer for highest specificity */
+/* Fix close button positioning in toasts - centered vertically on right */
+li[data-sonner-toast] button[data-close-button] {
+  position: absolute !important;
+  top: 50% !important;
+  right: 8px !important;
+  left: auto !important;
+  margin: 0 !important;
+  transform: translateY(-50%) !important;
+  z-index: 10 !important;
+}
+
+/* Ensure toast content doesn't overlap with close button */
+li[data-sonner-toast] > div {
+  max-width: calc(100% - 40px) !important;
+  padding-right: 8px !important;
+}
+
+/* Enable smooth swiping on mobile - let sonner handle touch events */
+li[data-sonner-toast] {
+  position: relative !important;
+  /* Removed cursor: grab to prevent sticky behavior */
+  /* Let sonner handle all touch interactions natively */
+}
+
+/* Better touch target for close button */
+li[data-sonner-toast] button[data-close-button] {
+  min-width: 28px !important;
+  min-height: 28px !important;
+  width: 28px !important;
+  height: 28px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 0 !important;
+}
+
+/* Responsive close button sizing */
+@media (min-width: 640px) {
+  li[data-sonner-toast] button[data-close-button] {
+    min-width: 32px !important;
+    min-height: 32px !important;
+    width: 32px !important;
+    height: 32px !important;
+  }
+}

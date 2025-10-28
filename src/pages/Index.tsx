@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Layout from '@/components/Layout/Layout';
 import { useQueryClient, useQuery, useMutation } from '@tanstack/react-query';
 import { useAuth } from '@/lib/auth/hooks/useAuth';
@@ -22,6 +22,7 @@ import { PeriodEnum } from '@/interfaces/enums/PeriodEnum';
 import { useToast } from '@/components/ui/use-toast';
 import BlurText from '@/components/ui/BlurText';
 import ShinyText from '@/components/ui/ShinyText';
+import { cn } from '@/lib/utils';
 
 const Index = () => {
   const { userId, dateRangeText } = useDashboard();
@@ -34,6 +35,28 @@ const Index = () => {
   const [editingBudget, setEditingBudget] = useState<Budget | null>(null);
   const [processedDocuments, setProcessedDocuments] = useState<Document[]>([]);
   const [showProcessedDocuments, setShowProcessedDocuments] = useState(false);
+  const [isClosingOverlay, setIsClosingOverlay] = useState(false);
+
+  // Reusable function to handle smooth overlay closing with double RAF
+  const closeOverlayWithAnimation = useCallback(() => {
+    if (isClosingOverlay) return; // Prevent multiple close animations
+    
+    console.log('🎬 [Index] closeOverlayWithAnimation - Starting close sequence');
+    
+    // Use double RAF to ensure browser has painted the current state
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        setIsClosingOverlay(true);
+        
+        // Wait for CSS transition to complete
+        setTimeout(() => {
+          setShowProcessedDocuments(false);
+          setIsClosingOverlay(false);
+          console.log('🎬 [Index] closeOverlayWithAnimation - Complete');
+        }, 800);
+      });
+    });
+  }, [isClosingOverlay]);
 
   // Fetch categories for the budget form
   const { data: categories = [] } = useQuery({
@@ -212,6 +235,50 @@ const Index = () => {
     };
   }, []);
 
+  // Handle smooth overlay closing when all documents are removed
+  useEffect(() => {
+    if (processedDocuments.length === 0 && showProcessedDocuments) {
+      console.log('🎬 [Index] Starting close animation sequence...');
+      
+      // Use double requestAnimationFrame to ensure browser has fully painted the initial state
+      // This is critical for CSS transitions to work smoothly
+      let rafId1: number;
+      let rafId2: number;
+      let hideTimer: NodeJS.Timeout;
+      
+      rafId1 = requestAnimationFrame(() => {
+        console.log('🎬 [Index] First RAF - Browser scheduled paint');
+        
+        rafId2 = requestAnimationFrame(() => {
+          console.log('🎬 [Index] Second RAF - Initial state painted, starting fade out');
+          
+          // NOW the browser has definitely painted the overlay with opacity-100
+          // Setting isClosingOverlay will trigger a smooth CSS transition
+          setIsClosingOverlay(true);
+          
+          // Wait for the CSS transition to complete (800ms) before unmounting
+          hideTimer = setTimeout(() => {
+            console.log('🎬 [Index] Animation complete, hiding overlay');
+            setShowProcessedDocuments(false);
+            setIsClosingOverlay(false);
+          }, 800);
+        });
+      });
+      
+      // Cleanup function
+      return () => {
+        console.log('🎬 [Index] Cleaning up animation timers');
+        if (rafId1) cancelAnimationFrame(rafId1);
+        if (rafId2) cancelAnimationFrame(rafId2);
+        if (hideTimer) clearTimeout(hideTimer);
+      };
+    } else if (processedDocuments.length > 0 && isClosingOverlay) {
+      // Reset closing state if new documents arrive
+      console.log('🎬 [Index] New documents arrived, canceling close animation');
+      setIsClosingOverlay(false);
+    }
+  }, [processedDocuments.length, showProcessedDocuments, isClosingOverlay]);
+
   return (
     <Layout>
       <div className="flex-1 space-y-4 p-4 pt-6 md:p-8">
@@ -322,15 +389,31 @@ const Index = () => {
       )}
 
       {/* Processed Documents Overlay */}
-      {showProcessedDocuments && processedDocuments.length > 0 && (
-        <div className="fixed inset-0 z-[60] bg-background/40 backdrop-blur-xl lg:hidden supports-[backdrop-filter]:bg-background/30">
-          <div className="flex flex-col h-full max-w-[500px] mx-auto">
-            <div className="flex items-center justify-between p-4 border-b">
+      {showProcessedDocuments && (processedDocuments.length > 0 || isClosingOverlay) && (
+        <div 
+          className={cn(
+            "fixed inset-0 z-[60] bg-background/40 backdrop-blur-xl lg:hidden supports-[backdrop-filter]:bg-background/30",
+            "transition-opacity duration-[800ms] ease-in-out",
+            isClosingOverlay ? "opacity-0 pointer-events-none" : "opacity-100"
+          )}
+          onClick={(e) => {
+            // Close overlay when clicking backdrop
+            if (e.target === e.currentTarget && !isClosingOverlay) {
+              closeOverlayWithAnimation();
+            }
+          }}
+        >
+          <div className={cn(
+            "flex flex-col h-full max-w-[500px] mx-auto",
+            "transition-opacity duration-[800ms] ease-in-out",
+            isClosingOverlay ? "opacity-0" : "opacity-100"
+          )}>
+            <div className="flex items-center justify-between p-4 border-b bg-background/30 backdrop-blur-md">
               <h2 className="text-xl font-bold">Processed Documents</h2>
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={() => setShowProcessedDocuments(false)}
+                onClick={closeOverlayWithAnimation}
                 className="h-10 w-10"
               >
                 <X className="h-6 w-6" />
