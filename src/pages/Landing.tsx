@@ -341,7 +341,7 @@ const Landing = () => {
               hueShift={0.16}
               colorFrequency={0.5}
               noise={0}
-              glow={1.1}
+              glow={0.7}
               bloom={1.5}
             />
           </div>
