@@ -83,6 +83,13 @@ export const ProcessedDocuments = ({ documents, onDocumentUpdate, onDocumentRemo
         `${currencySymbol} ${document.total_amount?.toFixed(2) || '0.00'}`
       );
 
+      // Auto-remove document after 2 seconds to close the window
+      setTimeout(() => {
+        if (onDocumentRemove) {
+          onDocumentRemove(document.id);
+        }
+      }, 2000);
+
     } catch (error) {
       console.error('Error creating transaction:', error);
       toastNotifications.transactionError(
@@ -140,7 +147,7 @@ export const ProcessedDocuments = ({ documents, onDocumentUpdate, onDocumentRemo
 
   if (documents.length === 0) {
     return (
-      <Card className="shadow-purple hover:shadow-purple-md transition-all duration-300 max-w-[500px] mx-auto">
+      <Card className="shadow-none border-none bg-transparent max-w-[500px] mx-auto">
         <CardHeader className="pb-4">
           <div className="flex items-center gap-2">
             <Zap className="h-5 w-5 text-primary" />
@@ -166,7 +173,7 @@ export const ProcessedDocuments = ({ documents, onDocumentUpdate, onDocumentRemo
   }
 
   return (
-    <Card className="shadow-purple hover:shadow-purple-md transition-all duration-300 max-w-[500px] mx-auto">
+    <Card className="shadow-none border-none bg-transparent max-w-[500px] mx-auto">
       <CardHeader className="pb-4">
         <div className="flex items-center gap-2">
           <Zap className="h-5 w-5 text-primary" />
