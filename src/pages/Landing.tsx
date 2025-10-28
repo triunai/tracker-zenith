@@ -336,12 +336,12 @@ const Landing = () => {
               animationType="3drotate"
               timeScale={0.8}
               height={isMobile ? 2.0 : 3.5}
-              baseWidth={isMobile ? 3.0 : 5.5}
-              scale={1.2}
+              baseWidth={isMobile ? 2.0 : 5.5}
+              scale={1.0}
               hueShift={0.16}
-              colorFrequency={0.5}
+              colorFrequency={0.3}
               noise={0}
-              glow={0.7}
+              glow={0.4}
               bloom={1.5}
             />
           </div>
