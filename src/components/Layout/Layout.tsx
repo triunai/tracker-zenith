@@ -179,7 +179,7 @@ const Layout = ({ children }: LayoutProps) => {
     try {
       await signOut();
       toast.success("Logged out");
-      navigate('/login');
+      navigate('/');
     } catch (error: unknown) {
       toast.error(error instanceof Error ? error.message : "An error occurred during logout.");
     }

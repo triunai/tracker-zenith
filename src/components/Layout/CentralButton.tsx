@@ -14,12 +14,12 @@ const CentralButton = () => {
   const getButtonState = () => {
     const path = location.pathname;
     
-    if (path === '/') {
+    if (path === '/dashboard') {
       return {
         icon: Camera,
         label: 'Scan',
         action: () => {
-          console.log('[CentralButton] Opening scanner from home');
+          console.log('[CentralButton] Opening scanner from dashboard');
           openScanner();
         },
         glow: 'from-purple-500 to-indigo-500'
@@ -28,7 +28,7 @@ const CentralButton = () => {
       return {
         icon: Home,
         label: 'Home',
-        action: () => navigate('/'),
+        action: () => navigate('/dashboard'),
         glow: 'from-purple-500 to-indigo-500'
       };
     }
@@ -76,7 +76,7 @@ const CentralButton = () => {
           "transition-all duration-300 ease-out",
           "active:scale-90 touch-manipulation",
           "hover:scale-110 hover:shadow-[0_0_40px_rgba(99,102,241,0.5)]",
-          location.pathname === '/' && "animate-float",
+          location.pathname === '/dashboard' && "animate-float",
           isPressed && "scale-90"
         )}
         style={{

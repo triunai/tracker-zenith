@@ -16,8 +16,8 @@ export const LoginForm: React.FC = () => {
   const { signIn, isLoading, error, clearError } = useAuth();
   const { toast } = useToast();
   
-  // Get the previous location from state, or default to home
-  const from = (location.state as any)?.from || '/';
+  // Get the previous location from state, or default to dashboard
+  const from = (location.state as any)?.from || '/dashboard';
   
   const [formData, setFormData] = useState<SignInCredentials>({
     email: '',

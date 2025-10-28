@@ -76,7 +76,7 @@ const MobileMenuDrawer: React.FC<MobileMenuDrawerProps> = ({ open, onOpenChange 
     try {
       await signOut();
       toast.success('Logged out successfully');
-      navigate('/login');
+      navigate('/');
       onOpenChange(false);
     } catch (error: unknown) {
       toast.error(error instanceof Error ? error.message : 'Logout failed');
