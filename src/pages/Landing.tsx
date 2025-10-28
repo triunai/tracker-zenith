@@ -334,8 +334,8 @@ const Landing = () => {
           <div className="absolute inset-0">
             <Prism
               animationType="3drotate"
-              timeScale={0.8}
-              height={isMobile ? 2.0 : 3.5}
+              timeScale={1.1}
+              height={isMobile ? 2.5 : 3.5}
               baseWidth={isMobile ? 2.0 : 5.5}
               scale={1.0}
               hueShift={0.16}
