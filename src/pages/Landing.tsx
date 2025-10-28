@@ -342,7 +342,7 @@ const Landing = () => {
               colorFrequency={0.3}
               noise={0}
               glow={0.4}
-              bloom={1.5}
+              bloom={1.0}
             />
           </div>
         </div>
