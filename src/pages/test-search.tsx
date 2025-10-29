@@ -7,7 +7,7 @@ const TestSearchPage = () => {
   return (
     <Layout>
       <PageHeader title="Smart Search" showBack={true} />
-      <div className="flex-1 space-y-4 p-4 pt-6 md:p-8 lg:pt-6 pt-20">
+      <div className="flex-1 space-y-4 p-4 md:p-8 pt-20 lg:pt-6">
         <div className="space-y-4">
           <div className="lg:block hidden">
             <h2 className="text-3xl font-bold tracking-tight">
