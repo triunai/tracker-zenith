@@ -38,7 +38,7 @@ import { Slider } from '@/components/ui/slider';
 const budgetFormSchema = z.object({
   categoryId: z.number({
     required_error: "Please select a category",
-  }).optional(),
+  }),
   categoryName: z.string().optional(),
   amount: z.string().min(1, "Please enter an amount").refine((val) => {
     const num = parseFloat(val);
@@ -73,6 +73,8 @@ const BudgetForm = ({ open, onOpenChange, onSubmit, initialData, categories = []
     },
   });
 
+  // Reset form when initialData or editing state changes
+  // Note: form.reset is intentionally excluded from deps to prevent unnecessary re-renders
   useEffect(() => {
     if (isEditing && initialData) {
       const firstCategory = initialData.budget_categories?.[0];
@@ -93,29 +95,22 @@ const BudgetForm = ({ open, onOpenChange, onSubmit, initialData, categories = []
         categoryName: undefined,
       });
     }
-  }, [initialData, isEditing, form.reset]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialData, isEditing]);
 
   const handleSubmit = async (data: BudgetFormValues) => {
-    // Convert string amount to number
+    // Validate amount
     const amount = parseFloat(data.amount);
-    
-    // Ensure we have a valid amount before proceeding
     if (!data.amount || isNaN(amount) || amount <= 0) {
       console.error('Invalid amount:', data.amount);
       return;
     }
 
+    // Find category name from the selected category ID
     const selectedCategory = categories.find(c => c.id === data.categoryId);
-    if (selectedCategory) {
-      data.categoryName = selectedCategory.name;
-    } else {
-      data.categoryName = undefined;
-    }
-
-    // Convert the form data to the expected format
-    const submitData = {
+    const submitData: BudgetFormValues = {
       ...data,
-      amount: amount,
+      categoryName: selectedCategory?.name,
     };
 
     console.log(`BudgetForm submitting (${isEditing ? 'Edit' : 'Create'}):`, submitData);
