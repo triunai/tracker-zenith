@@ -47,7 +47,7 @@ const TransactionsPage = () => {
   return (
     <Layout>
       <PageHeader title="Transactions" showBack={true} />
-      <div className="p-4 md:p-8 pt-6 lg:pt-6 pt-20">
+      <div className="p-4 md:p-8 pt-20 lg:pt-6">
         {/* Header */}
         <div className="space-y-4 mb-6">
           <div>
