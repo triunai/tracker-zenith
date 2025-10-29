@@ -4,7 +4,7 @@ import Layout from '@/components/Layout/Layout';
 import PageHeader from '@/components/Layout/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card.tsx';
 import { Button } from '@/components/ui/button.tsx';
-import { Edit, Plus, AlertTriangle, Trash } from 'lucide-react';
+import { Edit, Plus, AlertTriangle, Trash, Loader2 } from 'lucide-react';
 import { Progress } from '@/components/ui/progress.tsx';
 import { PeriodEnum } from '@/interfaces/enums/PeriodEnum';
 import { cn } from '@/lib/utils';
@@ -274,7 +274,14 @@ const BudgetPage = () => {
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel onClick={cancelDelete}>Cancel</AlertDialogCancel>
-              <AlertDialogAction onClick={confirmDelete} className="bg-red-500 hover:bg-red-600">Delete</AlertDialogAction>
+              <AlertDialogAction 
+                onClick={confirmDelete} 
+                disabled={deleteBudget.isPending}
+                className="bg-red-500 hover:bg-red-600"
+              >
+                {deleteBudget.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Delete
+              </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>

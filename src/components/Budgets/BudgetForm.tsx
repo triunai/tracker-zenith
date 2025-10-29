@@ -132,7 +132,7 @@ const BudgetForm = ({ open, onOpenChange, onSubmit, initialData, categories = []
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px] !p-6 !mx-0">
+      <DialogContent className="sm:max-w-[425px] max-w-[85vw] mx-0 p-6">
         <DialogHeader>
           <DialogTitle>{isEditing ? 'Edit Budget' : 'Create New Budget'}</DialogTitle>
           <DialogDescription>
@@ -237,8 +237,10 @@ const BudgetForm = ({ open, onOpenChange, onSubmit, initialData, categories = []
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
+                      <SelectItem value={PeriodEnum.DAILY}>Daily</SelectItem>
                       <SelectItem value={PeriodEnum.WEEKLY}>Weekly</SelectItem>
                       <SelectItem value={PeriodEnum.MONTHLY}>Monthly</SelectItem>
+                      <SelectItem value={PeriodEnum.QUARTERLY}>Quarterly</SelectItem>
                       <SelectItem value={PeriodEnum.YEARLY}>Yearly</SelectItem>
                     </SelectContent>
                   </Select>
@@ -278,7 +280,7 @@ const BudgetForm = ({ open, onOpenChange, onSubmit, initialData, categories = []
                 type="button"
                 variant="outline"
                 onClick={() => onOpenChange(false)}
-                className="bg-red-500 hover:bg-red-600 text-white border-red-500 hover:border-red-600"
+                className="hover:bg-red-500 hover:text-white hover:border-red-500 transition-colors"
               >
                 Cancel
               </Button>
