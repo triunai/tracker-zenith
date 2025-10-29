@@ -30,13 +30,28 @@ const Squares: React.FC<SquaresProps> = ({
   const hoveredSquareRef = useRef<GridOffset | null>(null);
 
   useEffect(() => {
+    console.log('🟦 Squares component mounted - DEBUG');
     const canvas = canvasRef.current;
-    if (!canvas) return;
+    if (!canvas) {
+      console.error('🟥 Canvas ref is null!');
+      return;
+    }
+    console.log('🟦 Canvas element found:', canvas);
     const ctx = canvas.getContext('2d');
+    if (!ctx) {
+      console.error('🟥 Failed to get 2d context!');
+      return;
+    }
 
     const resizeCanvas = () => {
       canvas.width = canvas.offsetWidth;
       canvas.height = canvas.offsetHeight;
+      console.log('🟦 Canvas resized:', { 
+        width: canvas.width, 
+        height: canvas.height,
+        offsetWidth: canvas.offsetWidth,
+        offsetHeight: canvas.offsetHeight 
+      });
       numSquaresX.current = Math.ceil(canvas.width / squareSize) + 1;
       numSquaresY.current = Math.ceil(canvas.height / squareSize) + 1;
     };
@@ -149,7 +164,14 @@ const Squares: React.FC<SquaresProps> = ({
     };
   }, [direction, speed, borderColor, hoverFillColor, squareSize]);
 
-  return <canvas ref={canvasRef} className="w-full h-full border-none block"></canvas>;
+  return (
+    <canvas 
+      ref={canvasRef} 
+      className="w-full h-full border-none block"
+      data-component="squares-canvas"
+      style={{ minHeight: '100vh', minWidth: '100vw' }}
+    />
+  );
 };
 
 export default Squares;
