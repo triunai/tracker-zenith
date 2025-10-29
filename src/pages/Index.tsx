@@ -23,6 +23,16 @@ import { useToast } from '@/components/ui/use-toast';
 import BlurText from '@/components/ui/BlurText';
 import ShinyText from '@/components/ui/ShinyText';
 import { cn } from '@/lib/utils';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 const Index = () => {
   const { userId, dateRangeText } = useDashboard();
@@ -33,6 +43,7 @@ const Index = () => {
   
   const [isNewBudgetOpen, setIsNewBudgetOpen] = useState(false);
   const [editingBudget, setEditingBudget] = useState<Budget | null>(null);
+  const [budgetToDelete, setBudgetToDelete] = useState<number | null>(null);
   const [processedDocuments, setProcessedDocuments] = useState<Document[]>([]);
   const [showProcessedDocuments, setShowProcessedDocuments] = useState(false);
   const [isClosingOverlay, setIsClosingOverlay] = useState(false);
@@ -122,6 +133,35 @@ const Index = () => {
     }
   });
 
+  // Delete budget mutation
+  const deleteBudget = useMutation({
+    mutationFn: (budgetId: number) => budgetApi.delete(budgetId),
+    onSuccess: (_, deletedBudgetId) => {
+      console.log(`Budget ${deletedBudgetId} deleted successfully from dashboard`);
+      
+      queryClient.invalidateQueries({ queryKey: ['budgets'] });
+      queryClient.invalidateQueries({ queryKey: ['budgetSpending', deletedBudgetId] });
+      queryClient.invalidateQueries({ queryKey: ['budgetCategorySpending', deletedBudgetId] });
+      queryClient.invalidateQueries({ queryKey: ['budgetSpending'] });
+      queryClient.invalidateQueries({ queryKey: ['budgetCategorySpending'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboardSummary'] });
+      
+      setBudgetToDelete(null);
+      toast({
+        title: "Success!",
+        description: "Budget has been deleted successfully.",
+      });
+    },
+    onError: (error) => {
+      console.error('Failed to delete budget from dashboard:', error);
+      toast({
+        title: "Error",
+        description: `Failed to delete budget: ${error.message}`,
+        variant: "destructive",
+      });
+    }
+  });
+
   const handleBudgetSubmit = (formData: {
     amount: string;
     period: PeriodEnum;
@@ -192,6 +232,20 @@ const Index = () => {
   const handleEditBudget = (budget: Budget) => {
     setEditingBudget(budget);
     setIsNewBudgetOpen(true);
+  };
+
+  const handleDeleteBudget = (budgetId: number) => {
+    setBudgetToDelete(budgetId);
+  };
+
+  const confirmDelete = () => {
+    if (budgetToDelete) {
+      deleteBudget.mutate(budgetToDelete);
+    }
+  };
+
+  const cancelDelete = () => {
+    setBudgetToDelete(null);
   };
 
   const handleOpenNewBudgetForm = () => {
@@ -281,6 +335,31 @@ const Index = () => {
 
   return (
     <Layout>
+      {/* Delete Budget Confirmation Dialog */}
+      <AlertDialog open={budgetToDelete !== null} onOpenChange={(open) => {
+        if (!open) setBudgetToDelete(null);
+      }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete this budget. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={cancelDelete}>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmDelete} 
+              disabled={deleteBudget.isPending}
+              className="bg-red-500 hover:bg-red-600"
+            >
+              {deleteBudget.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <div className="flex-1 space-y-4 p-4 pt-6 md:p-8">
           {/* Header */}
           <div className="space-y-4">
@@ -318,7 +397,10 @@ const Index = () => {
             </div>
             {/* Right Column */}
             <div className="lg:col-span-3 h-full">
-              <BudgetTracker />
+              <BudgetTracker 
+                onEditBudget={handleEditBudget}
+                onDeleteBudget={handleDeleteBudget}
+              />
             </div>
             
             {/* Bottom Row */}

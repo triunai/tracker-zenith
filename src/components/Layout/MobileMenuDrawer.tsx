@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { 
   Wallet, 
@@ -17,6 +17,8 @@ import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { useAuth } from '@/lib/auth';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { useDrag } from '@use-gesture/react';
+import ShinyText from '@/components/ui/ShinyText';
 
 interface MobileMenuDrawerProps {
   open: boolean;
@@ -27,6 +29,61 @@ const MobileMenuDrawer: React.FC<MobileMenuDrawerProps> = ({ open, onOpenChange 
   const navigate = useNavigate();
   const location = useLocation();
   const { signOut, user } = useAuth();
+  const sheetRef = useRef<HTMLDivElement>(null);
+  const [dragOffset, setDragOffset] = React.useState(0);
+  const [isClosing, setIsClosing] = React.useState(false);
+  const [isDragging, setIsDragging] = React.useState(false);
+
+  // Swipe gesture handler - swipe right to close (menu slides right off screen)
+  const bind = useDrag(
+    ({ movement: [mx], down, velocity: [vx], direction: [dirX], last }) => {
+      // Only allow swipe to the right (positive mx values)
+      if (down && mx > 0) {
+        setIsDragging(true);
+        setDragOffset(mx);
+        setIsClosing(false);
+      } else if (!down && last) {
+        // When finger/mouse is released
+        const swipeThreshold = 80; // pixels
+        const velocityThreshold = 0.4;
+        
+        // Close if swiped far enough right or fast enough
+        if (mx > swipeThreshold || (vx > velocityThreshold && dirX > 0)) {
+          setIsClosing(true);
+          setIsDragging(false);
+          // Animate all the way off screen (400px should be enough)
+          setDragOffset(400);
+          // Wait for animation to complete THEN close
+          setTimeout(() => {
+            onOpenChange(false);
+          }, 320);
+        } else {
+          // Snap back smoothly
+          setIsDragging(false);
+          setDragOffset(0);
+        }
+      }
+    },
+    {
+      axis: 'x',
+      filterTaps: true,
+      pointer: { touch: true },
+      rubberband: true,
+    }
+  );
+
+  // Reset states when Sheet closes
+  React.useEffect(() => {
+    if (!open) {
+      // Wait a bit before resetting to avoid visual jump
+      const timer = setTimeout(() => {
+        setDragOffset(0);
+        setIsClosing(false);
+        setIsDragging(false);
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [open]);
 
   const menuItems = [
     { 
@@ -85,11 +142,26 @@ const MobileMenuDrawer: React.FC<MobileMenuDrawerProps> = ({ open, onOpenChange 
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-[300px] sm:w-[350px] p-0 bg-background/40 backdrop-blur-xl supports-[backdrop-filter]:bg-background/30 border-l border-border/30 flex flex-col">
-        <SheetHeader className="px-6 pt-6 pb-4 flex-shrink-0">
-          <div className="flex items-center justify-between">
-            <SheetTitle className="text-2xl font-bold">Menu</SheetTitle>
-            <ThemeToggle />
+      <SheetContent 
+        side="right" 
+        ref={sheetRef}
+        className="w-[300px] sm:w-[350px] p-0 bg-background/40 backdrop-blur-xl supports-[backdrop-filter]:bg-background/30 border-l border-border/30 flex flex-col"
+        style={{
+          transform: `translateX(${dragOffset}px)`,
+          transition: isDragging ? 'none' : 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+          willChange: 'transform',
+        }}
+        {...bind()}
+      >
+        <SheetHeader className="px-6 pt-6 pb-2 flex-shrink-0">
+          <SheetTitle className="text-2xl font-bold">Menu</SheetTitle>
+          {/* Swipe hint - centered below Menu title */}
+          <div className="text-xs text-center font-semibold mt-1" style={{ color: '#C0C0C0' }}>
+            <ShinyText 
+              text="Swipe right or tap outside to close"
+              speed={3}
+              className="inline-block"
+            />
           </div>
         </SheetHeader>
 
@@ -124,13 +196,26 @@ const MobileMenuDrawer: React.FC<MobileMenuDrawerProps> = ({ open, onOpenChange 
                   )} />
                   <div className="flex-1 min-w-0">
                     <div className="font-medium">{displayLabel}</div>
-                    <div className="text-xs text-muted-foreground mt-0.5">
-                      {item.description}
+                    <div className="text-xs mt-0.5" style={{ color: '#C0C0C0' }}>
+                      <ShinyText 
+                        text={item.description}
+                        speed={3}
+                        className="inline-block"
+                      />
                     </div>
                   </div>
                 </button>
               );
             })}
+
+            {/* Theme Toggle - Always at the bottom of nav items */}
+            {/* NOTE: This will always render last, regardless of new menu items added above */}
+            <div className="pt-2 mt-2 border-t border-border/30">
+              <div className="flex items-center justify-between p-3 rounded-lg bg-accent/50">
+                <span className="text-sm font-medium">Theme</span>
+                <ThemeToggle />
+              </div>
+            </div>
           </div>
         </nav>
 

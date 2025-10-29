@@ -639,9 +639,9 @@ const TransactionList = () => {
     <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+          <AlertDialogTitle>Are you sure?</AlertDialogTitle>
           <AlertDialogDescription>
-            This action cannot be undone. This will permanently delete this transaction record.
+            This will permanently delete this transaction. This action cannot be undone.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
@@ -649,9 +649,10 @@ const TransactionList = () => {
           <AlertDialogAction
             onClick={handleDelete}
             disabled={deleteMutation.isPending}
+            className="bg-red-500 hover:bg-red-600"
           >
             {deleteMutation.isPending && <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />}
-            Continue
+            Delete
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
