@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { formatCurrency } from '@/lib/utils';
 import TransactionForm from './TransactionForm';
 import { 
@@ -39,7 +39,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog.tsx";
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 // Custom MYR currency formatter with error handling
 const formatMYR = (amount: number): string => {
@@ -57,12 +58,7 @@ const formatMYR = (amount: number): string => {
 };
 
 const TransactionList = () => {
-  // State management
-  const [expenses, setExpenses] = useState<Expense[]>([]);
-  const [categories, setCategories] = useState<ExpenseCategory[]>([]);
-  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  // UI State management
   const [expenseToEdit, setExpenseToEdit] = useState<Expense | null>(null);
   const [expenseToDelete, setExpenseToDelete] = useState<number | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -75,300 +71,77 @@ const TransactionList = () => {
   const [transactionTypeFilter, setTransactionTypeFilter] = useState<'all' | 'expense' | 'income'>('all');
   
   const { toast } = useToast();
-  const { refreshData, dateFilter, dateRangeText, userId } = useDashboard();
+  const { refreshData, dateFilter, dateRangeText, userId, startDate, endDate } = useDashboard();
   const queryClient = useQueryClient();
-  
-  // Get date range based on filter
-  const getDateRangeForFilter = useCallback(() => {
-    let startDate, endDate;
-    
-    switch (dateFilter.type) {
-      case 'month': {
-        const year = dateFilter.year;
-        const month = dateFilter.month || 0;
-        startDate = new Date(year, month, 1);
-        endDate = new Date(year, month + 1, 0);
-        break;
+  const isMobile = useIsMobile();
+
+  // 🎯 CRITICAL FIX: Use React Query for data fetching
+  const { 
+    data: expenses = [], 
+    isLoading, 
+    error: queryError,
+    refetch: refetchTransactions 
+  } = useQuery({
+    queryKey: ['expenses', userId, startDate, endDate],
+    queryFn: async () => {
+      if (!userId) {
+        console.warn("💡 DIAGNOSTIC: useQuery called with no userId");
+        return [];
       }
-      case 'quarter': {
-        const year = dateFilter.year;
-        const quarter = dateFilter.quarter || 1;
-        const startMonth = (quarter - 1) * 3;
-        startDate = new Date(year, startMonth, 1);
-        endDate = new Date(year, startMonth + 3, 0);
-        break;
-      }
-      case 'year': {
-        const year = dateFilter.year;
-        startDate = new Date(year, 0, 1);
-        endDate = new Date(year, 11, 31);
-        break;
-      }
-      case 'custom': {
-        if (dateFilter.customRange) {
-          startDate = dateFilter.customRange.startDate;
-          endDate = dateFilter.customRange.endDate;
-        } else {
-          // Default to current month if no custom range
-          const now = new Date();
-          startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-          endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-        }
-        break;
-      }
-      default: {
-        // Default to current month
-        const now = new Date();
-        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-        endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-      }
-    }
-    
-    // Fix timezone issues by using a timezone-safe approach
-    // Method 1: Create a timezone-safe range by directly formatting dates
-    // to avoid the implicit timezone conversion of toISOString()
-    
-    // Format start date as YYYY-MM-DDT00:00:00Z to ensure correct day
-    const formatDate = (date: Date, isEndDate = false) => {
-      const year = date.getFullYear();
-      // Month is 0-based in JS, but we want 1-based for formatting
-      const month = String(date.getMonth() + 1).padStart(2, '0');
-      const day = String(date.getDate()).padStart(2, '0');
       
-      // Set to beginning of day for start date, end of day for end date
-      const time = isEndDate ? 'T23:59:59.999Z' : 'T00:00:00.000Z';
-      
-      return `${year}-${month}-${day}${time}`;
-    };
-    
-    // Use our safer date formatting method
-    const formattedStartDate = formatDate(startDate, false);
-    const formattedEndDate = formatDate(endDate, true);
-    
-    console.log(`Transaction List: Using date range ${formattedStartDate} to ${formattedEndDate}`);
-    console.log(`Debug - Original dates: start=${startDate.toDateString()}, end=${endDate.toDateString()}`);
-    console.log(`Debug - Formatted without timezone shift: start=${formattedStartDate}, end=${formattedEndDate}`);
-    
-    return {
-      startDate: formattedStartDate,
-      endDate: formattedEndDate
-    };
-  }, [dateFilter]);
-  
-  // Fetch data from API
-  const fetchTransactions = useCallback(async () => {
-    // Only fetch if we have a user ID
-    if (!userId) {
-      console.warn("💡 DIAGNOSTIC: fetchTransactions called with no userId");
-      setIsLoading(false);
-      return;
-    }
-    
-    try {
-      setIsLoading(true);
-      setError(null);
-      
-      // Get date range from filter
-      const { startDate, endDate } = getDateRangeForFilter();
-      
-      // Add enhanced debugging information
-      console.log(`💡 DIAGNOSTIC: TransactionList fetchTransactions STARTING with filters:`, {
-        userId,
-        dateFilter: {
-          type: dateFilter.type,
-          year: dateFilter.year,
-          month: dateFilter.month,
-          quarter: dateFilter.quarter,
-          hasCustomRange: !!dateFilter.customRange
-        },
-        startDate,
-        endDate,
-        startDateObj: new Date(startDate),
-        endDateObj: new Date(endDate),
-        startDateFormatted: new Date(startDate).toLocaleString(),
-        endDateFormatted: new Date(endDate).toLocaleString(),
-        current_time: new Date().toISOString(),
-        current_component_state: {
-          transactionTypeFilter,
-          selectedCategory,
-          selectedPaymentMethod
-        }
-      });
-      
-      // Log for diagnostics
-      console.time("💡 DIAGNOSTIC: expenseApi.getAllByUser call duration");
-      console.log(`💡 DIAGNOSTIC: Calling expenseApi.getAllByUser with:`, {
-        userId, 
-        options: {
-          limit: 100, // Increased from 50 to ensure we capture all transactions
-          startDate: startDate,
-          startDateType: typeof startDate,
-          endDate: endDate,
-          endDateType: typeof endDate
-        }
-      });
+      console.log(`💡 DIAGNOSTIC: React Query fetching transactions for user ${userId} from ${startDate} to ${endDate}`);
       
       // Convert dates to ISO strings to match expected types in expenseApi
       const startDateIso = typeof startDate === 'string' ? startDate : new Date(startDate).toISOString();
       const endDateIso = typeof endDate === 'string' ? endDate : new Date(endDate).toISOString();
       
-      // Fetch expenses with pagination and date range - increased limit to ensure all transactions are captured
+      // Fetch expenses with date range
       const expenseData = await expenseApi.getAllByUser(userId, {
-        limit: 100, // Increased from 50 to ensure we capture all transactions
+        limit: 100,
         startDate: startDateIso, 
         endDate: endDateIso
       });
       
-      console.timeEnd("💡 DIAGNOSTIC: expenseApi.getAllByUser call duration");
-      
-      // TARGETED DEBUG: Look specifically for expense ID 52
-      const targetExpense = expenseData.find(e => e.id === 52);
-      if (targetExpense) {
-        console.log("🎯 TARGET FOUND: Expense ID 52 was returned from the API:", {
-          id: targetExpense.id,
-          date: targetExpense.date,
-          dateObj: new Date(targetExpense.date),
-          inDateRange: isDateInRange(targetExpense.date, startDateIso, endDateIso),
-          payment_method_id: targetExpense.payment_method_id,
-          description: targetExpense.description,
-          transaction_type: targetExpense.transaction_type,
-          items: targetExpense.expense_items?.map(item => ({
-            id: item.id,
-            amount: item.amount,
-            category_id: item.category_id,
-            description: item.description
-          })) || 'No items'
-        });
-      } else {
-        console.warn("🎯 TARGET MISSING: Expense ID 52 was NOT returned from the API");
-        console.log("Current date filter:", { startDateIso, endDateIso });
-        console.log("Try temporarily removing date filters to see if it appears");
-      }
-      
-      // Add more detailed logging about results
-      console.log(`💡 DIAGNOSTIC: TransactionList: Got ${expenseData.length} expenses from API`, {
-        hasSomeData: expenseData.length > 0,
-        newest_expense: expenseData.length > 0 ? {
-          id: expenseData[0]?.id,
-          date: expenseData[0]?.date,
-          dateFormatted: new Date(expenseData[0]?.date).toLocaleString(),
-          dateInRange: isDateInRange(expenseData[0]?.date, startDateIso, endDateIso),
-          description: expenseData[0]?.description,
-          first_item: expenseData[0]?.expense_items?.[0]?.description || 'No items',
-          transaction_type: expenseData[0]?.transaction_type,
-          expense_items: expenseData[0]?.expense_items?.map(item => ({
-            id: item.id,
-            category_id: item.category_id,
-            amount: item.amount,
-            description: item.description
-          }))
-        } : 'No expenses',
-        originalDateRange: {
-          startDate: startDateIso,
-          endDate: endDateIso
-        }
-      });
-      
-      // Check for expenses with no valid expense_items
-      let validExpenses = expenseData.filter(expense => 
+      // Filter out expenses with no valid expense_items
+      const validExpenses = expenseData.filter(expense => 
         expense.expense_items && expense.expense_items.length > 0
       );
       
-      if (validExpenses.length !== expenseData.length) {
-        console.warn(`💡 DIAGNOSTIC: Found ${expenseData.length - validExpenses.length} expenses with no valid expense items`);
-        
-        // Log the expenses with no items for debugging
-        const invalidExpenses = expenseData.filter(expense => 
-          !expense.expense_items || expense.expense_items.length === 0
-        );
-        
-        invalidExpenses.forEach((expense, index) => {
-          if (index < 3) { // Just log the first 3 to avoid console spam
-            console.warn(`💡 DIAGNOSTIC: Expense with no items: ID=${expense.id}, Date=${expense.date}, Type=${expense.transaction_type}`);
-          }
-        });
-      }
-      
-      // TARGETED DEBUG: Check if expense ID 52 was filtered out due to no items
-      if (targetExpense && !validExpenses.some(e => e.id === 52)) {
-        console.warn("🎯 TARGET FILTERED: Expense ID 52 was filtered out because it has no valid expense_items");
-        console.log("Original expense:", targetExpense);
-      }
-      
       // Sort expenses by date (newest first)
-      validExpenses = validExpenses.sort((a, b) => 
+      return validExpenses.sort((a, b) => 
         new Date(b.date).getTime() - new Date(a.date).getTime()
       );
-      
-      console.log(`💡 DIAGNOSTIC: Setting ${validExpenses.length} valid expenses in state for date range: ${startDateIso} to ${endDateIso}`);
-      
-      // Log each expense date for debugging
-      if (validExpenses.length > 0) {
-        console.log("💡 DIAGNOSTIC: Transaction dates in result set:");
-        validExpenses.forEach((expense, index) => {
-          if (index < 10) { // Log more, but still limit to avoid spam
-            console.log(`  ${index}: ID=${expense.id}, Date=${expense.date} (${new Date(expense.date).toLocaleString()}), Type=${expense.transaction_type}, Description=${expense.description || 'No description'}, Items: ${expense.expense_items?.length || 0}`);
-          }
-        });
-      } else {
-        console.warn("💡 DIAGNOSTIC: No valid transactions found in the specified date range");
-        console.log("💡 DIAGNOSTIC: Checking dateFilter state:", dateFilter);
-      }
-      
-      setExpenses(validExpenses);
-      
-      // Fetch categories and payment methods for filters
-      const categoryData = await expenseApi.getCategories();
-      setCategories(categoryData);
-      
-      // Fetch payment methods from the API
-      const paymentMethodsData = await expenseApi.getPaymentMethods();
-      setPaymentMethods(paymentMethodsData);
-    } catch (err) {
-      console.error('💡 DIAGNOSTIC: Error fetching expense data:', err);
-      setError('Failed to fetch transaction data. Please try again.');
-      toast({
-        title: 'Error',
-        description: 'Failed to load transactions',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  }, [toast, getDateRangeForFilter, userId, dateFilter, transactionTypeFilter, selectedCategory, selectedPaymentMethod]);
+    },
+    enabled: !!userId, // Only run when userId is available
+    staleTime: 30 * 1000, // Data is fresh for 30 seconds
+    gcTime: 5 * 60 * 1000, // Keep in cache for 5 minutes
+  });
+
+  // Fetch categories and payment methods for filtering
+  const { data: categories = [] } = useQuery({
+    queryKey: ['expenseCategories'],
+    queryFn: expenseApi.getCategories,
+    staleTime: 10 * 60 * 1000, // Categories don't change often
+  });
+
+  const { data: paymentMethods = [] } = useQuery({
+    queryKey: ['paymentMethods'],
+    queryFn: expenseApi.getPaymentMethods,
+    staleTime: 10 * 60 * 1000, // Payment methods don't change often
+  });
+
+  const error = queryError?.message ?? null;
   
-  // Helper function to check if a date is within a range - improved with better error handling
-  const isDateInRange = (dateStr, startDate, endDate) => {
-    if (!dateStr) return false;
-    
-    try {
-      const date = new Date(dateStr).getTime();
-      const start = new Date(startDate).getTime();
-      const end = new Date(endDate).getTime();
-      
-      const isInRange = date >= start && date <= end;
-      
-      if (!isInRange) {
-        console.log(`Date ${dateStr} (${new Date(dateStr).toLocaleString()}) is outside range: ${startDate} - ${endDate}`);
-      }
-      
-      return isInRange;
-    } catch (error) {
-      console.error(`Error checking if date ${dateStr} is in range:`, error);
-      return false; // Default to false on error
-    }
-  };
-  
+  // Set up real-time subscription for automatic updates
   useEffect(() => {
-    fetchTransactions();
-    
     // Only set up subscription if we have a user ID
     if (!userId) return;
     
     // Set up subscription to real-time updates
     const subscription = expenseApi.subscribeToExpenses(userId, (payload) => {
-      // Refetch data when changes occur
-      fetchTransactions();
+      console.log('🔄 Real-time update received, invalidating React Query cache...');
+      // Invalidate React Query cache to trigger refetch
+      queryClient.invalidateQueries({ queryKey: ['expenses', userId] });
       
       // Also refresh dashboard data
       refreshData();
@@ -377,7 +150,7 @@ const TransactionList = () => {
     return () => {
       subscription?.unsubscribe();
     };
-  }, [fetchTransactions, refreshData, userId]);
+  }, [userId, queryClient, refreshData]);
   
   // Open delete confirmation dialog
   const confirmDelete = (expenseId: number) => {
@@ -387,43 +160,28 @@ const TransactionList = () => {
   
   // --- Refactored Delete Mutation --- 
   const deleteMutation = useMutation({
-    mutationFn: async (expenseId: number) => {
-      return await expenseApi.delete(expenseId);
-    },
-    onSuccess: (data, expenseId) => {
-      toast({
-        title: 'Transaction deleted',
-        variant: 'default',
-      });
-      
-      // Invalidate queries after successful deletion
-      queryClient.invalidateQueries({ queryKey: ['expenses', userId] }); 
+    mutationFn: (expenseId: number) => expenseApi.delete(expenseId),
+    onSuccess: () => {
+      // 🎯 CRITICAL FIX: Use correct query key that matches our React Query setup
+      queryClient.invalidateQueries({ queryKey: ['expenses', userId] });
       queryClient.invalidateQueries({ queryKey: ['dashboardSummary', userId] });
       queryClient.invalidateQueries({ queryKey: ['spendingByCategory', userId] });
       queryClient.invalidateQueries({ queryKey: ['spendingByPayment', userId] });
       
-      // Invalidate BudgetTracker queries
-      queryClient.invalidateQueries({ queryKey: ['budgets'] }); // Invalidate all budgets queries
-      queryClient.invalidateQueries({ queryKey: ['budgetSpending'] }); // Invalidate all budget spending queries
-      queryClient.invalidateQueries({ queryKey: ['budgetCategorySpending'] }); // Invalidate all budget category spending queries
-      
-      // Optional: Update local state immediately for better UX (Optimistic update could also be used)
-      setExpenses(prev => prev.filter(expense => expense.id !== expenseId));
-
-      // Close the dialog
+      toast({
+        title: 'Success',
+        description: 'Transaction deleted successfully.',
+      });
+      refreshData();
       setIsDeleteDialogOpen(false);
       setExpenseToDelete(null);
-      
-      // Optional: refreshData();
     },
-    onError: (error) => {
-      console.error('Error deleting expense:', error);
+    onError: (error: Error) => {
       toast({
         title: 'Error',
-        description: 'Failed to delete transaction',
+        description: `Failed to delete transaction: ${error.message}`,
         variant: 'destructive',
       });
-      // Close the dialog even on error
       setIsDeleteDialogOpen(false);
       setExpenseToDelete(null);
     },
@@ -431,8 +189,9 @@ const TransactionList = () => {
 
   // Call the mutation when delete is confirmed
   const handleDelete = () => {
-    if (!expenseToDelete) return;
+    if (expenseToDelete !== null) {
     deleteMutation.mutate(expenseToDelete);
+    }
   };
   
   // Filter and paginate expenses
@@ -552,10 +311,10 @@ const TransactionList = () => {
   }, [searchTerm, selectedCategory, selectedPaymentMethod, transactionTypeFilter]);
   
   // Handle transaction added event
-  const handleTransactionAdded = useCallback(() => {
+  const handleTransactionAdded = () => {
     console.log('Transaction added, refreshing data...');
-    fetchTransactions();
-  }, [fetchTransactions]);
+    refetchTransactions();
+  };
   
   // Paginate transactions
   const paginatedExpenses = useMemo(() => {
@@ -570,11 +329,13 @@ const TransactionList = () => {
 
   return (
     <>
-    <Card className="shadow-purple">
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <div>
-          <CardTitle className="text-xl font-bold">Transactions</CardTitle>
-          <CardDescription>View and manage your transactions for {dateRangeText}</CardDescription>
+    <Card className="h-full shadow-purple">
+      <CardHeader className="flex flex-row items-start justify-between gap-4 pb-4">
+        <div className="flex-1 min-w-0">
+          <CardTitle className="text-lg sm:text-xl font-bold">Transactions</CardTitle>
+          <CardDescription className="text-sm text-muted-foreground mt-1">
+             {isMobile ? `For ${dateRangeText}`: `View and manage your transactions for ${dateRangeText}`}
+          </CardDescription>
         </div>
         <TransactionForm 
           key={expenseToEdit ? `edit-${expenseToEdit.id}` : 'add'}
@@ -586,7 +347,7 @@ const TransactionList = () => {
       
       <CardContent>
         {/* Transaction Type Filter */}
-        <div className="mb-6" onClick={(e) => e.stopPropagation()}>
+        <div className="mb-4" onClick={(e) => e.stopPropagation()}>
           <Tabs 
             defaultValue="all" 
             value={transactionTypeFilter} 
@@ -594,7 +355,7 @@ const TransactionList = () => {
             className="w-full"
           >
             <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="all">All Transactions</TabsTrigger>
+              <TabsTrigger value="all">{isMobile ? 'All' : 'All Transactions'}</TabsTrigger>
               <TabsTrigger value="expense">Expenses</TabsTrigger>
               <TabsTrigger value="income">Income</TabsTrigger>
             </TabsList>
@@ -602,24 +363,24 @@ const TransactionList = () => {
         </div>
         
         {/* Filters */}
-        <div className="space-y-4 mb-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
+        <div className="space-y-3 mb-4">
+          <div className="space-y-3 sm:space-y-0 sm:grid sm:grid-cols-1 md:grid-cols-3 sm:gap-4">
+            <div className="col-span-full md:col-span-1">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" size={16} />
                 <Input
                   className="pl-9"
-                  placeholder="Search transactions..."
+                  placeholder={isMobile ? "Search..." : "Search transactions..."}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
               </div>
             </div>
             
-            <div>
+            <div className="grid grid-cols-2 gap-2 sm:gap-4 md:grid-cols-2 md:col-span-2">
               <Select value={selectedCategory} onValueChange={setSelectedCategory}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Filter by category" />
+                  <SelectValue placeholder={isMobile ? "Category" : "Filter by category"} />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Categories</SelectItem>
@@ -630,12 +391,10 @@ const TransactionList = () => {
                   ))}
                 </SelectContent>
               </Select>
-            </div>
-            
-            <div>
+              
               <Select value={selectedPaymentMethod} onValueChange={setSelectedPaymentMethod}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Filter by payment" />
+                  <SelectValue placeholder={isMobile ? "Payment" : "Filter by payment"} />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Payment Methods</SelectItem>
@@ -661,14 +420,8 @@ const TransactionList = () => {
         {/* Error state */}
         {error && (
           <div className="text-center py-8 text-destructive">
+            <AlertTriangle className="mx-auto h-8 w-8 mb-2" />
             <p>{error}</p>
-            <Button 
-              variant="outline" 
-              className="mt-2"
-              onClick={() => expenseApi.getAllByUser(userId).then(setExpenses).catch(console.error)}
-            >
-              Try Again
-            </Button>
           </div>
         )}
         
@@ -696,82 +449,154 @@ const TransactionList = () => {
               const category = firstItem?.category;
               
               return (
-                <div key={expense.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 border rounded-md hover:bg-muted/50 transition-colors hover:shadow-purple-sm">
-                  <div className="flex items-start gap-3 mb-2 sm:mb-0">
-                    <div className="hidden sm:flex h-10 w-10 rounded-full items-center justify-center bg-primary/10">
-                      {expense.transaction_type === 'income' ? (
-                        <ArrowDownCircle className="h-5 w-5 text-green-500" />
-                      ) : (
-                        <CreditCard className="h-5 w-5 text-primary" />
-                      )}
-                    </div>
-                    
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <h3 className="font-medium">
-                          {firstItem?.description || expense.description || 'Unnamed Transaction'}
-                        </h3>
-                        {category && (
-                          <Badge variant="outline" className="text-xs">
-                            {category.name}
-                          </Badge>
-                        )}
-                        {/* Only show the Income badge, not the Expense badge */}
-                        {expense.transaction_type === 'income' && (
-                          <Badge variant="outline" className="text-xs text-green-500">
-                            Income
-                          </Badge>
-                        )}
-                      </div>
-                      
-                      <div className="flex items-center text-sm text-muted-foreground gap-3 mt-1">
-                        <div className="flex items-center gap-1">
-                          <CalendarIcon className="h-3 w-3" />
-                          <span>{format(new Date(expense.date), 'MMM d, yyyy')}</span>
+                <div key={expense.id} className="border rounded-md hover:bg-muted/50 transition-colors hover:shadow-purple-sm overflow-hidden">
+                  <div className="p-3 sm:p-4">
+                    {/* Mobile Layout */}
+                    {isMobile ? (
+                      <div className="space-y-3">
+                        {/* Header Row - Amount and Actions */}
+                        <div className="flex items-center justify-between">
+                          <div className={`text-lg font-bold ${expense.transaction_type === 'income' ? 'text-green-500' : 'text-destructive'}`}>
+                            {expense.transaction_type === 'income' ? '+' : '-'}{formatMYR(totalAmount)}
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Button 
+                              variant="ghost" 
+                              size="icon"
+                              className="h-8 w-8 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors"
+                              onClick={() => setExpenseToEdit(expense)}
+                            >
+                              <Edit className="h-3 w-3" />
+                              <span className="sr-only">Edit</span>
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="h-8 w-8 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors"
+                              onClick={() => confirmDelete(expense.id)}
+                            >
+                              <Trash2 className="h-3 w-3" />
+                              <span className="sr-only">Delete</span>
+                            </Button>
+                          </div>
                         </div>
                         
-                        {expense.payment_method && (
-                          <div>
-                            <span>{expense.payment_method.method_name}</span>
+                        {/* Transaction Info */}
+                        <div className="space-y-2">
+                          <div className="flex items-start justify-between">
+                            <h3 className="font-medium text-sm leading-tight flex-1 pr-2">
+                              {firstItem?.description || expense.description || 'Unnamed Transaction'}
+                            </h3>
+                            <div className="flex flex-wrap gap-1 justify-end">
+                              {category && (
+                                <Badge variant="outline" className="text-xs">
+                                  {category.name}
+                                </Badge>
+                              )}
+                              {expense.transaction_type === 'income' && (
+                                <Badge variant="outline" className="text-xs text-green-500">
+                                  Income
+                                </Badge>
+                              )}
+                            </div>
                           </div>
-                        )}
+                          
+                          <div className="flex items-center justify-between text-xs text-muted-foreground">
+                            <div className="flex items-center gap-1">
+                              <CalendarIcon className="h-3 w-3" />
+                              <span>{format(new Date(expense.date), 'MMM d')}</span>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              {expense.payment_method && (
+                                <span>{expense.payment_method.method_name}</span>
+                              )}
+                              {expense.expense_items && expense.expense_items.length > 1 && (
+                                <span>{expense.expense_items.length} items</span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      /* Desktop Layout - Existing */
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-start gap-3">
+                          <div className="flex h-10 w-10 rounded-full items-center justify-center bg-primary/10">
+                            {expense.transaction_type === 'income' ? (
+                              <ArrowDownCircle className="h-5 w-5 text-green-500" />
+                            ) : (
+                              <CreditCard className="h-5 w-5 text-primary" />
+                            )}
+                          </div>
+                          
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <h3 className="font-medium">
+                                {firstItem?.description || expense.description || 'Unnamed Transaction'}
+                              </h3>
+                              {category && (
+                                <Badge variant="outline" className="text-xs">
+                                  {category.name}
+                                </Badge>
+                              )}
+                              {expense.transaction_type === 'income' && (
+                                <Badge variant="outline" className="text-xs text-green-500">
+                                  Income
+                                </Badge>
+                              )}
+                            </div>
+                            
+                            <div className="flex items-center text-sm text-muted-foreground gap-3 mt-1">
+                              <div className="flex items-center gap-1">
+                                <CalendarIcon className="h-3 w-3" />
+                                <span>{format(new Date(expense.date), 'MMM d, yyyy')}</span>
+                              </div>
+                              
+                              {expense.payment_method && (
+                                <div>
+                                  <span>{expense.payment_method.method_name}</span>
+                                </div>
+                              )}
+                              
+                              {expense.expense_items && expense.expense_items.length > 1 && (
+                                <div>
+                                  <span>{expense.expense_items.length} items</span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
                         
-                        {expense.expense_items && expense.expense_items.length > 1 && (
-                          <div>
-                            <span>{expense.expense_items.length} items</span>
+                        <div className="flex items-center gap-3">
+                          <div className="text-right">
+                            <div className={`font-medium ${expense.transaction_type === 'income' ? 'text-green-500' : 'text-destructive'}`}>
+                              {expense.transaction_type === 'income' ? '+' : '-'}{formatMYR(totalAmount)}
+                            </div>
                           </div>
-                        )}
+                          
+                          <div className="flex items-center gap-1">
+                            <Button 
+                              variant="ghost" 
+                              size="icon"
+                              className="text-gray-500 hover:text-blue-800 hover:bg-blue-100 rounded-full transition-colors"
+                              onClick={() => setExpenseToEdit(expense)}
+                            >
+                              <Edit className="h-4 w-4" />
+                              <span className="sr-only">Edit Transaction</span>
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="text-gray-500 hover:text-red-600 hover:bg-red-100 rounded-full transition-colors"
+                              onClick={() => confirmDelete(expense.id)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                              <span className="sr-only">Delete Transaction</span>
+                            </Button>
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
-                    <div className="text-right">
-                      <div className={`font-medium ${expense.transaction_type === 'income' ? 'text-green-500' : 'text-destructive'}`}>
-                        {expense.transaction_type === 'income' ? '+' : '-'}{formatMYR(totalAmount)}
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-center gap-1">
-                      <Button 
-                        variant="ghost" 
-                        size="icon"
-                        className="text-gray-500 hover:text-blue-800 hover:bg-blue-100 rounded-full transition-colors"
-                        onClick={() => setExpenseToEdit(expense)}
-                      >
-                        <Edit className="h-4 w-4" />
-                        <span className="sr-only">Edit Transaction</span>
-                      </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        className="text-gray-500 hover:text-red-600 hover:bg-red-100 rounded-full transition-colors"
-                        onClick={() => confirmDelete(expense.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                        <span className="sr-only">Delete Transaction</span>
-                      </Button>
-                    </div>
+                    )}
                   </div>
                 </div>
               );
@@ -814,17 +639,19 @@ const TransactionList = () => {
     <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Are you sure you want to delete this transaction?</AlertDialogTitle>
+          <AlertDialogTitle>Are you sure?</AlertDialogTitle>
           <AlertDialogDescription>
-            This action cannot be undone. This will permanently delete the transaction.
+            This will permanently delete this transaction. This action cannot be undone.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogCancel onClick={() => setIsDeleteDialogOpen(false)}>Cancel</AlertDialogCancel>
           <AlertDialogAction
             onClick={handleDelete}
-            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            disabled={deleteMutation.isPending}
+            className="bg-red-500 hover:bg-red-600"
           >
+            {deleteMutation.isPending && <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />}
             Delete
           </AlertDialogAction>
         </AlertDialogFooter>

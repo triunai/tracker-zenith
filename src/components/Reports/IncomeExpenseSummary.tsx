@@ -46,7 +46,7 @@ export const IncomeExpenseSummary: React.FC<IncomeExpenseSummaryProps> = ({ date
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card>
+        <Card className="shadow-purple">
           <CardContent className="pt-6">
             <h3 className="text-lg font-medium mb-4">Income vs Expenses</h3>
             <div className="h-80 flex items-center justify-center bg-muted/20 rounded-md">
@@ -55,7 +55,7 @@ export const IncomeExpenseSummary: React.FC<IncomeExpenseSummaryProps> = ({ date
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="shadow-purple">
           <CardContent className="pt-6">
             <h3 className="text-lg font-medium mb-4">Monthly Breakdown</h3>
             <div className="h-80 flex items-center justify-center bg-muted/20 rounded-md">
@@ -65,7 +65,7 @@ export const IncomeExpenseSummary: React.FC<IncomeExpenseSummaryProps> = ({ date
         </Card>
       </div>
 
-      <Card>
+      <Card className="shadow-purple">
         <CardContent className="pt-6">
           <h3 className="text-lg font-medium mb-4">Cash Flow Timeline</h3>
           <div className="h-60 flex items-center justify-center bg-muted/20 rounded-md">

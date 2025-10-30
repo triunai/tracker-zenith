@@ -5,14 +5,16 @@ import {
   Route,
 } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { Toaster } from "@/components/ui/toaster.tsx";
+import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip.tsx";
 import { ThemeProvider } from '@/components/theme-provider';
 import { DashboardProvider } from '@/context/DashboardContext';
+import { ScannerProvider } from '@/context/ScannerContext';
 import { AuthProvider, initTokenManager } from '@/lib/auth';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 
 // Pages
+import Landing from './pages/Landing';
 import Index from './pages/Index';
 import TransactionsPage from './pages/transactions';
 import NotFound from './pages/NotFound';
@@ -23,12 +25,14 @@ import Signup from './pages/auth/Signup';
 import Profile from './pages/profile';
 import ForgetPassword from './pages/auth/ForgetPassword';
 import ReportsPage from './pages/reports';
+import NotificationsPage from './pages/notifications';
+import TestSearchPage from './pages/test-search';
 
 // Create a client
 const queryClient = new QueryClient();
 
 // Helper function for consistent timestamp logging
-const logWithTimestamp = (message: string, data?: any) => {
+const logWithTimestamp = (message: string, data?: unknown) => {
   console.log(`[${new Date().toISOString()}] ${message}`, data ? data : '');
 };
 
@@ -121,31 +125,39 @@ function App() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider defaultTheme="light" storageKey="zenith-theme">
+      <ThemeProvider defaultTheme="dark" storageKey="zenith-theme">
         <TooltipProvider>
           <AuthProvider>
-            <DashboardProvider>
-              <Router>
-                <Routes>
+            <Router>
+              <ScannerProvider>
+                <DashboardProvider>
+                  <Routes>
+                  {/* Landing Page - Public (root for non-authenticated users) */}
+                  <Route path="/landing" element={<Landing />} />
+                  <Route path="/" element={<Landing />} />
+                  
                   {/* Public Routes */}
                   <Route path="/login" element={<Login />} />
                   <Route path="/signup" element={<Signup />} />
                   <Route path="/forget-password" element={<ForgetPassword />} />
 
                   {/* Protected Routes */}
-                  <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
+                  <Route path="/dashboard" element={<ProtectedRoute><Index /></ProtectedRoute>} />
                   <Route path="/transactions" element={<ProtectedRoute><TransactionsPage /></ProtectedRoute>} />
                   <Route path="/budgets" element={<ProtectedRoute><BudgetPage /></ProtectedRoute>} />
                   <Route path="/payment-methods" element={<ProtectedRoute><PaymentMethodsPage /></ProtectedRoute>} />
                   <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
                   <Route path="/reports" element={<ProtectedRoute><ReportsPage /></ProtectedRoute>} />
+                  <Route path="/notifications" element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>} />
+                  <Route path="/test-search" element={<ProtectedRoute><TestSearchPage /></ProtectedRoute>} />
 
                   {/* 404 Route */}
                   <Route path="*" element={<NotFound />} />
-                </Routes>
-              </Router>
-              <Toaster />
-            </DashboardProvider>
+                  </Routes>
+                  <Toaster />
+                </DashboardProvider>
+              </ScannerProvider>
+            </Router>
           </AuthProvider>
         </TooltipProvider>
       </ThemeProvider>

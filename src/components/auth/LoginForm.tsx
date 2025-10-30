@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input.tsx';
 import { Button } from '@/components/ui/button.tsx';
 import { Label } from '@/components/ui/label.tsx';
 import { useToast } from '@/components/ui/use-toast.ts';
+import ShinyText from '@/components/ui/ShinyText';
 
 export const LoginForm: React.FC = () => {
   const navigate = useNavigate();
@@ -16,8 +17,8 @@ export const LoginForm: React.FC = () => {
   const { signIn, isLoading, error, clearError } = useAuth();
   const { toast } = useToast();
   
-  // Get the previous location from state, or default to home
-  const from = (location.state as any)?.from || '/';
+  // Get the previous location from state, or default to dashboard
+  const from = (location.state as any)?.from || '/dashboard';
   
   const [formData, setFormData] = useState<SignInCredentials>({
     email: '',
@@ -96,10 +97,16 @@ export const LoginForm: React.FC = () => {
   };
   
   return (
-    <Card className="w-full max-w-md">
+    <Card className="w-full max-w-md bg-white/5 dark:bg-black/10 backdrop-blur-2xl border border-white/20 dark:border-white/10 shadow-[0_8px_32px_0_rgba(133,139,173,0.2)] hover:shadow-[0_8px_32px_0_rgba(133,139,173,0.3)] transition-all duration-300 [box-shadow:0_0_20px_rgba(133,139,173,0.15)]">
       <CardHeader>
-        <CardTitle className="text-2xl">Sign In</CardTitle>
-        <CardDescription>Enter your credentials to access your account</CardDescription>
+        <CardTitle className="text-2xl bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">Sign In</CardTitle>
+        <CardDescription className="text-muted-foreground/90" style={{ color: '#C0C0C0' }}>
+          <ShinyText
+            text="Enter your credentials to access your account"
+            speed={3}
+            className="inline-block"
+          />
+        </CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit}>

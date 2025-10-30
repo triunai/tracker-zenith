@@ -91,7 +91,7 @@ const TransactionFormFields = ({
   });
 
   return (
-    <div className="grid gap-4 py-4">
+    <div className="flex flex-col gap-4 py-4">
       {setTransactionType && (
         <FormField id="transactionType" label="Transaction Type" error={null}>
           <ToggleGroup 

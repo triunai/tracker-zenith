@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Calendar, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
 import { format, addMonths, subMonths, getYear, getMonth, setMonth, setYear } from 'date-fns';
+import { DateRange } from 'react-day-picker';
 import { DateFilter as DateFilterType, DateFilterType as FilterType, useDashboard } from '@/context/DashboardContext';
 
 import {
@@ -40,7 +41,7 @@ const DateFilter = () => {
     };
     
     switch (value) {
-      case 'month':
+      case 'month': {
         newFilter = {
           type: 'month',
           month: now.getMonth(),
@@ -48,7 +49,8 @@ const DateFilter = () => {
         };
         setSelectedDate(now);
         break;
-      case 'quarter':
+      }
+      case 'quarter': {
         const currentQuarter = Math.floor(now.getMonth() / 3) + 1;
         newFilter = {
           type: 'quarter',
@@ -56,13 +58,15 @@ const DateFilter = () => {
           year: now.getFullYear(),
         };
         break;
-      case 'year':
+      }
+      case 'year': {
         newFilter = {
           type: 'year',
           year: now.getFullYear(),
         };
         break;
-      case 'custom':
+      }
+      case 'custom': {
         // Keep existing custom range or initialize a new one
         if (!dateFilter.customRange) {
           const startDate = new Date();
@@ -73,10 +77,11 @@ const DateFilter = () => {
           newFilter = {
             type: 'custom',
             year: now.getFullYear(),
-            customRange: { startDate, endDate }
+            customRange: { from: startDate, to: endDate }
           };
         }
         break;
+      }
     }
     
     setDateFilter(newFilter);
@@ -117,28 +122,32 @@ const DateFilter = () => {
     const newYear = parseInt(year);
     
     switch (dateFilter.type) {
-      case 'month':
+      case 'month': {
         setDateFilter({
           ...dateFilter,
           year: newYear,
         });
         setSelectedDate(setYear(selectedDate, newYear));
         break;
-      case 'quarter':
+      }
+      case 'quarter': {
         setDateFilter({
           ...dateFilter,
           year: newYear,
         });
         break;
-      case 'year':
+      }
+      case 'year': {
         setDateFilter({
           ...dateFilter,
           year: newYear,
         });
         break;
-      case 'custom':
+      }
+      case 'custom': {
         // For custom range, we don't change anything
         break;
+      }
     }
   };
   
@@ -154,14 +163,14 @@ const DateFilter = () => {
   };
   
   // Handle date range selection
-  const handleDateRangeChange = (range: { from: Date | undefined; to: Date | undefined }) => {
-    if (range.from && range.to) {
+  const handleDateRangeChange = (range: DateRange | undefined) => {
+    if (range?.from && range.to) {
       setDateFilter({
         type: 'custom',
         year: new Date().getFullYear(), // This is required but not used for custom
         customRange: {
-          startDate: range.from,
-          endDate: range.to,
+          from: range.from,
+          to: range.to,
         },
       });
     }
@@ -190,7 +199,7 @@ const DateFilter = () => {
   ));
   
   return (
-    <div className="mb-6">
+    <div>
       <Popover open={isOpen} onOpenChange={setIsOpen}>
         <PopoverTrigger asChild>
           <Button 
@@ -212,8 +221,8 @@ const DateFilter = () => {
                 onValueChange={(value) => handleFilterTypeChange(value as FilterType)}
                 className="w-full"
               >
-                <TabsList className="w-full grid grid-cols-3">
-                  {availableFilterOptions.map(option => (
+                <TabsList className="grid w-full grid-cols-4">
+                  {filterOptions.map(option => (
                     <TabsTrigger key={option.type} value={option.type}>
                       {option.label}
                     </TabsTrigger>
@@ -295,9 +304,9 @@ const DateFilter = () => {
                     </div>
                   </div>
                 </TabsContent>
-                
+
                 <TabsContent value="year" className="mt-4">
-                  <div>
+                  <div className="px-1">
                     <Select
                       value={dateFilter.year.toString()}
                       onValueChange={handleYearChange}
@@ -312,26 +321,16 @@ const DateFilter = () => {
                   </div>
                 </TabsContent>
                 
-                {/* Custom range is disabled for now */}
-                {/* <TabsContent value="custom" className="mt-4">
-                  <DatePickerWithRange 
-                    initialDateRange={dateFilter.customRange ? {
-                      from: dateFilter.customRange.startDate,
-                      to: dateFilter.customRange.endDate
-                    } : undefined}
-                    onUpdate={handleDateRangeChange}
-                  />
-                </TabsContent> */}
+                <TabsContent value="custom" className="mt-4">
+                   <DatePickerWithRange
+                      date={dateFilter.customRange}
+                      onDateChange={handleDateRangeChange}
+                    />
+                </TabsContent>
               </Tabs>
               
-              <div className="flex justify-end mt-4">
-                <Button 
-                  variant="default" 
-                  size="sm"
-                  onClick={() => setIsOpen(false)}
-                >
-                  Apply
-                </Button>
+              <div className="mt-4 flex justify-end">
+                <Button onClick={() => setIsOpen(false)} size="sm">Apply</Button>
               </div>
             </CardContent>
           </Card>

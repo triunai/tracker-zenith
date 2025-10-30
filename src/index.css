@@ -93,6 +93,16 @@
     @apply bg-background text-foreground antialiased;
     font-feature-settings: "rlig" 1, "calt" 1;
   }
+
+  /* Safe area support for mobile devices (iOS notch, etc) */
+  @supports (padding: env(safe-area-inset-bottom)) {
+    .pb-safe {
+      padding-bottom: env(safe-area-inset-bottom);
+    }
+    .pt-safe {
+      padding-top: env(safe-area-inset-top);
+    }
+  }
 }
 
 /* Standard component styling with purple shadow */
@@ -166,6 +176,22 @@
   @apply bg-muted-foreground/50;
 }
 
+/* Fix Radix UI scroll lock preventing dropdown scrolling on mobile */
+/* This is a known issue: https://github.com/radix-ui/primitives/discussions/1586 */
+body[data-scroll-locked] {
+  margin-right: 0 !important;
+  margin-left: 0 !important;
+  overflow: visible !important;
+  /* Allow scrolling within portaled content (dialogs, dropdowns) */
+  touch-action: auto !important;
+}
+
+/* Ensure portaled content (Select dropdowns, Dialogs) can scroll */
+[data-radix-popper-content-wrapper],
+[data-radix-portal] {
+  touch-action: auto !important;
+}
+
 /* Page transition animations */
 .page-transition-enter {
   opacity: 0;
@@ -187,4 +213,76 @@
   opacity: 0;
   transform: translateY(-8px);
   transition: opacity 200ms, transform 200ms;
+}
+
+/* Landing page specific animations */
+@keyframes gradient-shift {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+.animate-gradient {
+  background-size: 200% 200%;
+  animation: gradient-shift 6s ease infinite;
+}
+
+/* Enhanced shadow utilities for landing page */
+.shadow-purple-2xl {
+  box-shadow: 0 25px 50px -12px rgba(139, 92, 246, 0.25);
+}
+
+/* Smooth scroll for anchor links */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Toast / Sonner customizations - MUST be outside @layer for highest specificity */
+/* Fix close button positioning in toasts - centered vertically on right */
+li[data-sonner-toast] button[data-close-button] {
+  position: absolute !important;
+  top: 50% !important;
+  right: 8px !important;
+  left: auto !important;
+  margin: 0 !important;
+  transform: translateY(-50%) !important;
+  z-index: 10 !important;
+}
+
+/* Ensure toast content doesn't overlap with close button */
+li[data-sonner-toast] > div {
+  max-width: calc(100% - 40px) !important;
+  padding-right: 8px !important;
+}
+
+/* Enable smooth swiping on mobile - let sonner handle touch events */
+li[data-sonner-toast] {
+  position: relative !important;
+  /* Removed cursor: grab to prevent sticky behavior */
+  /* Let sonner handle all touch interactions natively */
+}
+
+/* Better touch target for close button */
+li[data-sonner-toast] button[data-close-button] {
+  min-width: 28px !important;
+  min-height: 28px !important;
+  width: 28px !important;
+  height: 28px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 0 !important;
+}
+
+/* Responsive close button sizing */
+@media (min-width: 640px) {
+  li[data-sonner-toast] button[data-close-button] {
+    min-width: 32px !important;
+    min-height: 32px !important;
+    width: 32px !important;
+    height: 32px !important;
+  }
 }

@@ -29,6 +29,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { supabase } from '@/lib/supabase/supabase';
 import { useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 // Colors for the chart
 const CATEGORY_COLORS = [
@@ -56,38 +57,53 @@ const CustomTooltip = ({ active, payload }: TooltipProps<number, string>) => {
 };
 
 // Helper function to format chart data (group small slices into "Other")
-const formatChartData = (rawData: any[], nameKey: string, valueKey: string, maxSlices = 8, minPercentage = 1) => {
+const formatChartData = (rawData: Array<Record<string, unknown>>, nameKey: string, valueKey: string, maxSlices = 8, minPercentage = 1) => {
   if (!rawData || rawData.length === 0) return [];
 
   // Filter out zero/invalid amounts and ensure value is numeric
   const validData = rawData
-    .map(item => ({ ...item, [valueKey]: parseFloat(item[valueKey]) })) // Ensure correct key is parsed
-    .filter(item => !isNaN(item[valueKey]) && item[valueKey] > 0);
+    .map(item => {
+      const numericValue = parseFloat(String(item[valueKey] || 0));
+      return { ...item, [valueKey]: numericValue };
+    })
+    .filter(item => {
+      const value = item[valueKey] as number;
+      return !isNaN(value) && value > 0;
+    });
 
   if (validData.length === 0) return [];
 
   // Sort by value descending
-  validData.sort((a, b) => b[valueKey] - a[valueKey]);
+  validData.sort((a, b) => {
+    const aValue = a[valueKey] as number;
+    const bValue = b[valueKey] as number;
+    return bValue - aValue;
+  });
 
   // Calculate total for percentage calculation
-  const totalValue = validData.reduce((sum, item) => sum + item[valueKey], 0);
+  const totalValue = validData.reduce((sum, item) => {
+    const value = item[valueKey] as number;
+    return sum + value;
+  }, 0);
+  
   if (totalValue === 0) return []; // Avoid division by zero
 
-  let formattedData = [];
+  const formattedData = [];
   let otherValue = 0;
 
   validData.forEach((item, index) => {
-    const percentage = (item[valueKey] / totalValue) * 100;
+    const value = item[valueKey] as number;
+    const percentage = (value / totalValue) * 100;
     
     if (index < maxSlices && percentage >= minPercentage) {
       formattedData.push({
-        name: item[nameKey] || 'Unknown',
-        value: item[valueKey],
+        name: String(item[nameKey] || 'Unknown'),
+        value: value,
         color: CATEGORY_COLORS[index % CATEGORY_COLORS.length],
         percentage: percentage
       });
     } else {
-      otherValue += item[valueKey];
+      otherValue += value;
     }
   });
 
@@ -103,66 +119,44 @@ const formatChartData = (rawData: any[], nameKey: string, valueKey: string, maxS
   return formattedData;
 };
 
+// Define interfaces for better type safety with index signatures
+interface CategoryData extends Record<string, unknown> {
+  category_name: string;
+  amount: number;
+}
+
+interface PaymentData extends Record<string, unknown> {
+  name: string;
+  value: number;
+}
+
 const SpendingChart = () => {
-  const { dateFilter, userId, dateRangeText } = useDashboard();
-  const [chartType, setChartType] = useState('pie');
-  const [dataType, setDataType] = useState('category');
+  const [dataType, setDataType] = useState<'category' | 'payment'>('category');
+  const [chartType, setChartType] = useState<'pie' | 'bar'>('pie');
+  const { userId, dateRangeText, startDate, endDate } = useDashboard();
+  const isMobile = useIsMobile();
   
-  // Get date range based on filter (memoized for stability)
-  const { startDate, endDate } = useMemo(() => {
-    let start: Date, end: Date;
-    switch (dateFilter.type) {
-      case 'month': {
-        const year = dateFilter.year;
-        const month = dateFilter.month || 0;
-        start = new Date(year, month, 1);
-        end = new Date(year, month + 1, 0);
-        break;
-      }
-      case 'quarter': {
-        const year = dateFilter.year;
-        const quarter = dateFilter.quarter || 1;
-        const startMonth = (quarter - 1) * 3;
-        start = new Date(year, startMonth, 1);
-        end = new Date(year, startMonth + 3, 0);
-        break;
-      }
-      case 'year': {
-        const year = dateFilter.year;
-        start = new Date(year, 0, 1);
-        end = new Date(year, 11, 31);
-        break;
-      }
-      case 'custom': {
-        if (dateFilter.customRange) {
-          start = new Date(dateFilter.customRange.startDate);
-          end = new Date(dateFilter.customRange.endDate);
-        } else {
-          const now = new Date();
-          start = new Date(now.getFullYear(), now.getMonth(), 1);
-          end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+  // Date ranges are now provided by DashboardContext for consistency
+
+  // Type-safe handlers for tab changes
+  const handleDataTypeChange = (value: string) => {
+    if (value === 'category' || value === 'payment') {
+      setDataType(value);
         }
-        break;
-      }
-      default: {
-        const now = new Date();
-        start = new Date(now.getFullYear(), now.getMonth(), 1);
-        end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-      }
+  };
+
+  const handleChartTypeChange = (value: string) => {
+    if (value === 'pie' || value === 'bar') {
+      setChartType(value);
     }
-     // Return ISO strings directly for query key stability
-    return {
-      startDate: start.toISOString(),
-      endDate: end.toISOString()
-    };
-  }, [dateFilter]);
+  };
 
   // --- Fetch Spending by Category using useQuery --- 
   const { 
     data: rawCategoryData, 
     isLoading: isLoadingCategory, 
     error: errorCategory 
-  } = useQuery<any[], Error>({
+  } = useQuery<CategoryData[], Error>({
     // Ensure query key updates when dependencies change
     queryKey: ['spendingByCategory', userId, startDate, endDate], 
     queryFn: async () => {
@@ -193,7 +187,7 @@ const SpendingChart = () => {
     data: rawPaymentData, 
     isLoading: isLoadingPayment, 
     error: errorPayment 
-  } = useQuery<any[], Error>({
+  } = useQuery<PaymentData[], Error>({
     // Ensure query key updates when dependencies change
     queryKey: ['spendingByPayment', userId, startDate, endDate], 
     queryFn: async () => {
@@ -205,8 +199,8 @@ const SpendingChart = () => {
          // Pass ISO strings for dates as the API likely expects strings
          const paymentSummary = await expenseApi.getSummaryByPaymentMethod(
           userId,
-          startDate, // startDate is already an ISO string from useMemo
-          endDate   // endDate is already an ISO string from useMemo
+          startDate, // startDate is already an ISO string from context
+          endDate   // endDate is already an ISO string from context
         );
          // Use item.total directly as it's already a number per API definition
         const data = paymentSummary.map(item => ({
@@ -217,7 +211,7 @@ const SpendingChart = () => {
         return data || [];
       } catch (err) {
          console.error('RQ Error fetching spending by payment:', err);
-         throw new Error(err.message);
+         throw new Error(err instanceof Error ? err.message : 'Unknown error');
       }
     },
     enabled: !!userId,
@@ -283,18 +277,20 @@ const SpendingChart = () => {
   
   return (
     <Card className="shadow-purple">
-      <CardHeader className="pb-2">
-        <div className="flex items-center justify-between">
-          <div>
+      <CardHeader className="pb-4">
+        <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex-1">
             <CardTitle>Spending Analysis</CardTitle>
-            <CardDescription>Breakdown of your expenses for {dateRangeText}</CardDescription>
+            <CardDescription className="mt-1">
+              {isMobile ? `For ${dateRangeText}` : `Breakdown of your expenses for ${dateRangeText}`}
+            </CardDescription>
           </div>
-          <div className="flex flex-col sm:flex-row gap-2">
+          <div className="flex w-full sm:w-auto flex-col sm:flex-row gap-2">
             <Tabs 
               defaultValue="category" 
               value={dataType} 
-              onValueChange={setDataType}
-              className="w-[240px]"
+              onValueChange={handleDataTypeChange}
+              className="w-full sm:w-auto"
             >
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="category">By Category</TabsTrigger>
@@ -305,8 +301,8 @@ const SpendingChart = () => {
             <Tabs 
               defaultValue="pie" 
               value={chartType} 
-              onValueChange={setChartType}
-              className="w-[240px]"
+              onValueChange={handleChartTypeChange}
+              className="w-full sm:w-auto"
             >
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="pie">Pie Chart</TabsTrigger>
