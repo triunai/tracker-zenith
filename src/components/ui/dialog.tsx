@@ -38,8 +38,8 @@ const DialogContent = React.forwardRef<
       className={cn(
         "fixed left-[50%] top-[50%] z-50 grid w-full translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background shadow-lg duration-200",
         // Mobile-first responsive sizing and spacing
-        "max-w-[95vw] max-h-[90vh] p-4 mx-4",
-        "sm:max-w-lg sm:p-6 sm:mx-0",
+        "max-w-[92vw] max-h-[90vh] p-5 mx-auto",
+        "sm:max-w-lg sm:p-6",
         // Overflow handling for tall content
         "overflow-y-auto",
         // Animations
