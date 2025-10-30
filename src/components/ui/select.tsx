@@ -79,11 +79,6 @@ const SelectContent = React.forwardRef<
         className
       )}
       position={position}
-      onInteractOutside={(e) => {
-        // DEBUG MODE: Prevent closing on outside interaction (for inspection)
-        // Comment out this line when done debugging
-        e.preventDefault();
-      }}
       {...props}
     >
       <SelectScrollUpButton />
