@@ -176,6 +176,22 @@
   @apply bg-muted-foreground/50;
 }
 
+/* Fix Radix UI scroll lock preventing dropdown scrolling on mobile */
+/* This is a known issue: https://github.com/radix-ui/primitives/discussions/1586 */
+body[data-scroll-locked] {
+  margin-right: 0 !important;
+  margin-left: 0 !important;
+  overflow: visible !important;
+  /* Allow scrolling within portaled content (dialogs, dropdowns) */
+  touch-action: auto !important;
+}
+
+/* Ensure portaled content (Select dropdowns, Dialogs) can scroll */
+[data-radix-popper-content-wrapper],
+[data-radix-portal] {
+  touch-action: auto !important;
+}
+
 /* Page transition animations */
 .page-transition-enter {
   opacity: 0;
