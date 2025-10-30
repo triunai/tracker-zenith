@@ -153,7 +153,7 @@ const BudgetForm = ({ open, onOpenChange, onSubmit, initialData, categories = []
                         <SelectValue placeholder="Select a category" />
                       </SelectTrigger>
                     </FormControl>
-                    <SelectContent className="max-h-[300px]">
+                    <SelectContent>
                       {isLoadingCategories ? (
                         <SelectItem value="loading" disabled>Loading categories...</SelectItem>
                       ) : (
