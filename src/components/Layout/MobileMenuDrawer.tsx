@@ -145,7 +145,7 @@ const MobileMenuDrawer: React.FC<MobileMenuDrawerProps> = ({ open, onOpenChange 
       <SheetContent 
         side="right" 
         ref={sheetRef}
-        className="w-[300px] sm:w-[350px] p-0 bg-background/40 backdrop-blur-xl supports-[backdrop-filter]:bg-background/30 border-l border-border/30 flex flex-col"
+        className="w-[240px] sm:w-[280px] p-0 bg-background/40 backdrop-blur-xl supports-[backdrop-filter]:bg-background/30 border-l border-border/30 flex flex-col"
         style={{
           transform: `translateX(${dragOffset}px)`,
           transition: isDragging ? 'none' : 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
